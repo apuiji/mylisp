@@ -3,7 +3,6 @@
 #include<filesystem>
 #include<memory>
 #include<string>
-#include"xyz.hh"
 
 namespace zlt::mylisp::ast {
   struct Node;
@@ -11,6 +10,7 @@ namespace zlt::mylisp::ast {
   struct Pos {
     const std::filesystem::path &file;
     int li;
+    Pos(const std::filesystem::path &file, int li) noexcept: file(file), li(li) {}
   };
 
   using UNode = std::unique_ptr<Node>;

@@ -1,6 +1,7 @@
 #include<algorithm>
 #include"ast_parse.hh"
 #include"ast_token.hh"
+#include"myccutils/xyz.hh"
 #include"rte.hh"
 
 using namespace std;
@@ -15,16 +16,17 @@ namespace zlt::mylisp::ast {
     It end;
     // source end
     Lexer &lexer;
-    It operator ()(UNode &dest, It it);
+    It operator ()(UNode &dest, UNode *&next, It it);
   };
 
   Pos makePos(const filesystem::path &file, It begin, It end, It it) noexcept;
 
-  int parse(UNode &dest, const filesystem::path &file, It begin, It end) {
+  UNode &parse(UNode &dest, const filesystem::path &file, It begin, It end) {
     Lexer lexer;
     It it;
+    UNode *next;
     try {
-      it = Parse(file, begin, end, lexer)(dest, begin);
+      it = Parse(file, begin, end, lexer)(dest, next, begin);
     } catch (LexerBad bad) {
       throw ParseBad(makePos(file, begin, end, bad.start), std::move(bad.what));
     }
@@ -32,7 +34,7 @@ namespace zlt::mylisp::ast {
     if (t != token::E0F) {
       throw ParseBad(makePos(file, begin, end, start1), "unexpected token");
     }
-    return 0;
+    return *next;
   }
 
   static int getPosLi(int li, It line, It end, It it) noexcept;
@@ -50,12 +52,13 @@ namespace zlt::mylisp::ast {
     return &*rte::positions.insert(makePos(file, begin, end, it)).first;
   }
 
-  It Parse::operator ()(UNode &dest, It it) {
+  It Parse::operator ()(UNode &dest, UNode *&next, It it) {
     auto [t0, start0, end0] = lexer(it, end);
     switch (t0) {
       case token::RPAREN:
         [[fallthrough]];
       [[unlikely]] case token::E0F: {
+        next = &dest;
         return start0;
       }
       case token::NUMBER: {
@@ -83,7 +86,7 @@ namespace zlt::mylisp::ast {
       }
       case token::LPAREN: {
         UNode first;
-        It end1 = operator ()(first, end0);
+        It end1 = operator ()(first, rtol<UNode *>(), end0);
         auto [t2, start2, end2] = lexer(end1, end);
         if (t2 != token::RPAREN) {
           throw ParseBad(makePos(file, begin, end, start0), "unterminated list");

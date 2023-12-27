@@ -1,5 +1,6 @@
 #include<algorithm>
 #include<cmath>
+#include<cstring>
 #include<cwchar>
 #include<cwctype>
 #include<regex>
@@ -16,6 +17,7 @@ namespace zlt::mylisp::ast {
   struct LexerStr {
     basic_stringstream<C> &dest;
     int quot;
+    LexerStr(basic_stringstream<C> &dest, int quot) noexcept: dest(dest), quot(quot) {}
     It operator ()(It it, It end);
   };
 
@@ -85,18 +87,19 @@ namespace zlt::mylisp::ast {
 
   struct StrHit {
     int quot;
+    StrHit(int quot) noexcept: quot(quot) {}
     bool operator ()(wchar_t c) noexcept;
   };
 
   static bool esch(int &dest, size_t &len, It it, It end);
 
   template<class C>
-  It LexerStr::operator ()(It it, It end) {
+  It LexerStr<C>::operator ()(It it, It end) {
     if (it == end) [[unlikely]] {
       return end;
     }
     if (It it1 = find_if(it, end, StrHit(quot)); it1 != it) {
-      dest.write(it, it1 - it);
+      dest << basic_string<C>(it, it1);
       return operator ()(it1, end);
     }
     if (*it == '\\') {
@@ -188,16 +191,16 @@ namespace zlt::mylisp::ast {
   }
 
   bool isRawChar(wchar_t c) noexcept {
-    return !strchr("\"'();") && !iswspace(c);
+    return !strchr("\"'();", c) && !iswspace(c);
   }
 
-  static bool isBaseInt(double &dest, wstring_view src)
+  static bool isBaseInt(double &dest, wstring_view src);
 
   bool isNumber(double &dest, wstring_view src) {
     if (isBaseInt(dest, src)) {
       return true;
     } else {
-      dest = stod(src);
+      dest = stod(wstring(src));
       return isnan(dest);
     }
   }

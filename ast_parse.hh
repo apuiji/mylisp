@@ -3,11 +3,12 @@
 #include"ast.hh"
 
 namespace zlt::mylisp::ast {
-  int parse(UNode &dest, const std::filesystem::path &file, const wchar_t *begin, const wchar_t *end);
+  UNode &parse(UNode &dest, const std::filesystem::path &file, const wchar_t *begin, const wchar_t *end);
 
   struct ParseBad {
     Pos pos;
     std::string what;
+    ParseBad(const Pos &pos, std::string &&what) noexcept: pos(pos), what(std::move(what)) {}
   };
 
   template<class T>
