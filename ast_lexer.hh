@@ -5,10 +5,8 @@
 
 namespace zlt::mylisp::ast {
   struct Lexer {
-    union {
-      double numval;
-      int charval;
-    };
+    double numval;
+    int charval;
     std::string strval;
     std::wstring wstrval;
     std::wstring_view raw;

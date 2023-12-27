@@ -9,7 +9,7 @@ namespace zlt::mylisp::ast {
   struct Node;
 
   struct Pos {
-    std::filesystem::path *path;
+    const std::filesystem::path &file;
     int li;
   };
 
@@ -22,9 +22,9 @@ namespace zlt::mylisp::ast {
     virtual ~Node() = default;
   };
 
-  static inline UNode shift(UNode &src) noexcept {
-    UNode u = std::move(src);
-    src = std::move(u->next);
-    return std::move(u);
+  static inline int shift(UNode &dest, UNode &src) noexcept {
+    dest = std::move(src);
+    src = std::move(dest->next);
+    return 0;
   }
 }
