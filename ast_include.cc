@@ -13,13 +13,13 @@ namespace zlt::mylisp::ast {
     wstring src;
     readAll(src, file);
     auto &file1 = *rte::files.insert(filesystem::canonical(file)).first;
-    return parse(dest, file1, src.data(), src.data() + src.size());
+    return parse(dest, &file1, src.data(), src.data() + src.size());
   }
 
   int readAll(wstring &dest, const filesystem::path &file) {
     wifstream ifs(file);
     if (!ifs) {
-      throw ParseBad(Pos(file, 0), "invalid include file");
+      throw IncludeBad(file, "invalid include file");
     }
     wstringstream ss;
     copy(istreambuf_iterator<wchar_t>(ifs), istreambuf_iterator<wchar_t>(), ostreambuf_iterator<wchar_t>(ss));

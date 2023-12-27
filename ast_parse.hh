@@ -3,7 +3,7 @@
 #include"ast.hh"
 
 namespace zlt::mylisp::ast {
-  UNode &parse(UNode &dest, const std::filesystem::path &file, const wchar_t *begin, const wchar_t *end);
+  UNode &parse(UNode &dest, const std::filesystem::path *file, const wchar_t *begin, const wchar_t *end);
 
   struct ParseBad {
     Pos pos;
@@ -19,12 +19,12 @@ namespace zlt::mylisp::ast {
 
   using NumberAtom = LiteralAtom<double>;
   using CharAtom = LiteralAtom<wchar_t>;
-  using StringAtom = LiteralAtom<const std::wstring &>;
-  using Latin1Atom = LiteralAtom<const std::string &>;
+  using StringAtom = LiteralAtom<const std::wstring *>;
+  using Latin1Atom = LiteralAtom<const std::string *>;
 
   struct IDAtom final: Node {
-    const std::wstring &name;
-    IDAtom(const Pos *pos, const std::wstring &name) noexcept: Node(pos), name(name) {}
+    const std::wstring *name;
+    IDAtom(const Pos *pos, const std::wstring *name) noexcept: Node(pos), name(name) {}
   };
 
   struct TokenAtom final: Node {

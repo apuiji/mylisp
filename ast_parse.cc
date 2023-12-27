@@ -12,19 +12,19 @@ namespace zlt::mylisp::ast {
 
   struct Parse {
     // source begin
-    const filesystem::path &file;
+    const filesystem::path *file;
     It begin;
     It end;
     // source end
     Lexer &lexer;
-    Parse(const filesystem::path &file, It begin, It end, Lexer &lexer) noexcept:
+    Parse(const filesystem::path *file, It begin, It end, Lexer &lexer) noexcept:
     file(file), begin(begin), end(end), lexer(lexer) {}
     It operator ()(UNode &dest, UNode *&next, It it);
   };
 
-  Pos makePos(const filesystem::path &file, It begin, It end, It it) noexcept;
+  Pos makePos(const filesystem::path *file, It begin, It end, It it) noexcept;
 
-  UNode &parse(UNode &dest, const filesystem::path &file, It begin, It end) {
+  UNode &parse(UNode &dest, const filesystem::path *file, It begin, It end) {
     Lexer lexer;
     It it;
     UNode *next;
@@ -42,7 +42,7 @@ namespace zlt::mylisp::ast {
 
   static int getPosLi(int li, It line, It end, It it) noexcept;
 
-  Pos makePos(const filesystem::path &file, It begin, It end, It it) noexcept {
+  Pos makePos(const filesystem::path *file, It begin, It end, It it) noexcept {
     return Pos(file, getPosLi(0, begin, end, it));
   }
 
@@ -51,7 +51,7 @@ namespace zlt::mylisp::ast {
     return eol > it ? li : getPosLi(li + 1, eol + 1, end, it);
   }
 
-  const Pos *makePos1(const filesystem::path &file, It begin, It end, It it) noexcept {
+  const Pos *makePos1(const filesystem::path *file, It begin, It end, It it) noexcept {
     return &*rte::positions.insert(makePos(file, begin, end, it)).first;
   }
 
@@ -74,17 +74,17 @@ namespace zlt::mylisp::ast {
       }
       case token::STRING: {
         auto &value = *rte::latin1s.insert(std::move(lexer.strval)).first;
-        dest.reset(new Latin1Atom(makePos1(file, begin, end, start0), value));
+        dest.reset(new Latin1Atom(makePos1(file, begin, end, start0), &value));
         return operator ()(dest->next, next, end0);
       }
       case token::WSTRING: {
         auto &value = *rte::strings.insert(std::move(lexer.wstrval)).first;
-        dest.reset(new StringAtom(makePos1(file, begin, end, start0), value));
+        dest.reset(new StringAtom(makePos1(file, begin, end, start0), &value));
         return operator ()(dest->next, next, end0);
       }
       case token::ID: {
         auto &name = *rte::strings.insert((wstring) lexer.raw).first;
-        dest.reset(new IDAtom(makePos1(file, begin, end, start0), name));
+        dest.reset(new IDAtom(makePos1(file, begin, end, start0), &name));
         return operator ()(dest->next, next, end0);
       }
       case token::LPAREN: {

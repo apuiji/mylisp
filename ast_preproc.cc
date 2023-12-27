@@ -1,3 +1,4 @@
+#include<cwchar>
 #include"ast_preproc.hh"
 #include"ast_token.hh"
 #include"myccutils/xyz.hh"
@@ -122,7 +123,7 @@ namespace zlt::mylisp::ast {
     if (!id) {
       throw PreprocBad(pos, "required macro name");
     }
-    if (rte::macros.find(&id->name) != rte::macros.end()) {
+    if (rte::macros.find(id->name) != rte::macros.end()) {
       throw PreprocBad(pos, "macro already defined");
     }
     auto ls = dynamic_cast<const List *>(src->next.get());
@@ -138,7 +139,23 @@ namespace zlt::mylisp::ast {
     return dest;
   }
 
-  int makeMacroParams(Macro::Params &dest, const UNode &src) {}
+  int makeMacroParams(Macro::Params &dest, const UNode &src) {
+    if (!src) [[unlikely]] {
+      return 0;
+    }
+    if (auto id = dynamic_cast<const IDAtom *>(src.get()); id) {
+      dest.push_back(id->name);
+      if (!wcsncmp(id->name->data(), L"...", 3) && src->next) {
+        throw PreprocBad(id->pos, "rest parameter must be last");
+      }
+      return makeMacroParams(dest, src->next);
+    }
+    if (auto ls = dynamic_cast<const List *>(src.get()); ls && !ls->first) {
+      dest.push_back(nullptr);
+      return makeMacroParams(dest, src->next);
+    }
+    throw PreprocBad(src->pos, "illegal macro parameter");
+  }
 
   UNode &preprocDir_ifndef(UNode &dest, const filesystem::path &file, const Pos *pos, const UNode &src) {
     auto id = dynamic_cast<const IDAtom *>(src.get());
@@ -170,15 +187,15 @@ namespace zlt::mylisp::ast {
       return true;
     }
     if (auto a = dynamic_cast<const StringAtom *>(src.get()); a) {
-      dest = filesystem::path(a->value);
+      dest = filesystem::path(*a->value);
       return true;
     }
     if (auto a = dynamic_cast<const Latin1Atom *>(src.get()); a) {
-      dest = filesystem::path(a->value);
+      dest = filesystem::path(*a->value);
       return true;
     }
     if (auto a = dynamic_cast<const IDAtom *>(src.get()); a) {
-      dest = filesystem::path(a->name);
+      dest = filesystem::path(*a->name);
       return true;
     }
     return false;

@@ -9,5 +9,7 @@ namespace zlt::mylisp {
     using ItParam = Params::const_iterator;
     Params params;
     ast::UNode body;
+    Macro() = default;
+    Macro(Params &&params, ast::UNode &&body) noexcept: params(std::move(params)), body(std::move(body)) {}
   };
 }

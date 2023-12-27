@@ -3,19 +3,12 @@
 #include<filesystem>
 #include<memory>
 #include<string>
+#include<utility>
 
 namespace zlt::mylisp::ast {
   struct Node;
 
-  struct Pos {
-    const std::filesystem::path &file;
-    int li;
-    Pos(const std::filesystem::path &file, int li) noexcept: file(file), li(li) {}
-    bool operator <(const Pos &pos) const noexcept {
-      return file < pos.file || li < pos.li;
-    }
-  };
-
+  using Pos = std::pair<const std::filesystem::path *, int>;
   using UNode = std::unique_ptr<Node>;
 
   struct Node {
