@@ -1,4 +1,5 @@
 #include<algorithm>
+#include"ast_lexer.hh"
 #include"ast_parse.hh"
 #include"ast_token.hh"
 #include"myccutils/xyz.hh"
@@ -16,6 +17,8 @@ namespace zlt::mylisp::ast {
     It end;
     // source end
     Lexer &lexer;
+    Parse(const filesystem::path &file, It begin, It end, Lexer &lexer) noexcept:
+    file(file), begin(begin), end(end), lexer(lexer) {}
     It operator ()(UNode &dest, UNode *&next, It it);
   };
 
@@ -63,26 +66,26 @@ namespace zlt::mylisp::ast {
       }
       case token::NUMBER: {
         dest.reset(new NumberAtom(makePos1(file, begin, end, start0), lexer.numval));
-        return operator ()(dest->next, end0);
+        return operator ()(dest->next, next, end0);
       }
       case token::CHAR: {
         dest.reset(new CharAtom(makePos1(file, begin, end, start0), lexer.charval));
-        return operator ()(dest->next, end0);
+        return operator ()(dest->next, next, end0);
       }
       case token::STRING: {
         auto &value = *rte::latin1s.insert(std::move(lexer.strval)).first;
         dest.reset(new Latin1Atom(makePos1(file, begin, end, start0), value));
-        return operator ()(dest->next, end0);
+        return operator ()(dest->next, next, end0);
       }
       case token::WSTRING: {
         auto &value = *rte::strings.insert(std::move(lexer.wstrval)).first;
         dest.reset(new StringAtom(makePos1(file, begin, end, start0), value));
-        return operator ()(dest->next, end0);
+        return operator ()(dest->next, next, end0);
       }
       case token::ID: {
-        auto &name = *rte::strings.insert(lexer.raw).first;
+        auto &name = *rte::strings.insert((wstring) lexer.raw).first;
         dest.reset(new IDAtom(makePos1(file, begin, end, start0), name));
-        return operator ()(dest->next, end0);
+        return operator ()(dest->next, next, end0);
       }
       case token::LPAREN: {
         UNode first;
@@ -92,11 +95,11 @@ namespace zlt::mylisp::ast {
           throw ParseBad(makePos(file, begin, end, start0), "unterminated list");
         }
         dest.reset(new List(makePos1(file, begin, end, start0), std::move(first)));
-        return operator ()(dest->next, end2);
+        return operator ()(dest->next, next, end2);
       }
       default: {
         dest.reset(new TokenAtom(makePos1(file, begin, end, start0), t0));
-        return operator ()(dest->next, end0);
+        return operator ()(dest->next, next, end0);
       }
     }
   }

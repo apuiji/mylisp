@@ -23,8 +23,8 @@ namespace zlt::mylisp::ast {
   using Latin1Atom = LiteralAtom<const std::string &>;
 
   struct IDAtom final: Node {
-    const std::string &name;
-    IDAtom(const Pos *pos, const std::string &name) noexcept: Node(pos), name(name) {}
+    const std::wstring &name;
+    IDAtom(const Pos *pos, const std::wstring &name) noexcept: Node(pos), name(name) {}
   };
 
   struct TokenAtom final: Node {

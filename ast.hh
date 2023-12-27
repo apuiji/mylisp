@@ -11,6 +11,9 @@ namespace zlt::mylisp::ast {
     const std::filesystem::path &file;
     int li;
     Pos(const std::filesystem::path &file, int li) noexcept: file(file), li(li) {}
+    bool operator <(const Pos &pos) const noexcept {
+      return file < pos.file || li < pos.li;
+    }
   };
 
   using UNode = std::unique_ptr<Node>;

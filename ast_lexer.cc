@@ -7,6 +7,7 @@
 #include<sstream>
 #include"ast_lexer.hh"
 #include"ast_token.hh"
+#include"myccutils/xyz.hh"
 
 using namespace std;
 
@@ -85,11 +86,7 @@ namespace zlt::mylisp::ast {
     return { token::ID, it, it + n };
   }
 
-  struct StrHit {
-    int quot;
-    StrHit(int quot) noexcept: quot(quot) {}
-    bool operator ()(wchar_t c) noexcept;
-  };
+  bool strHit(int quot, wchar_t c) noexcept;
 
   static bool esch(int &dest, size_t &len, It it, It end);
 
@@ -98,7 +95,7 @@ namespace zlt::mylisp::ast {
     if (it == end) [[unlikely]] {
       return end;
     }
-    if (It it1 = find_if(it, end, StrHit(quot)); it1 != it) {
+    if (It it1 = find_if(it, end, bind(strHit, quot, placeholders::_1)); it1 != it) {
       dest << basic_string<C>(it, it1);
       return operator ()(it1, end);
     }
@@ -116,7 +113,7 @@ namespace zlt::mylisp::ast {
     return it;
   }
 
-  bool StrHit::operator ()(wchar_t c) noexcept {
+  bool strHit(int quot, wchar_t c) noexcept {
     return c == '\\' || c == quot;
   }
 
@@ -181,7 +178,7 @@ namespace zlt::mylisp::ast {
   }
 
   bool eschu(int &dest, size_t &len, It it, It end) noexcept {
-    if (*it == 'u' && all_of(it + 1, it + 5, isxdigit)) {
+    if (*it == 'u' && all_of(it + 1, it + 5, ofr<int, int>(isxdigit))) {
       dest = (it[1] << 12) | (it[2] << 8) | (it[3] << 4) | it[4];
       len = 5;
       return true;
@@ -221,7 +218,7 @@ namespace zlt::mylisp::ast {
 
   bool isBaseInt(double &dest, const wregex &re, size_t base, wstring_view src) {
     match_results<wstring_view::const_iterator> m;
-    if (!regex_match(src, m, re)) {
+    if (!regex_match(src.begin(), src.end(), m, re)) {
       return false;
     }
     dest = stoi(m.str(1) + m.str(2), nullptr, base);

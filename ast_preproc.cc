@@ -1,4 +1,5 @@
 #include"ast_preproc.hh"
+#include"ast_token.hh"
 #include"myccutils/xyz.hh"
 #include"rte.hh"
 
@@ -121,7 +122,7 @@ namespace zlt::mylisp::ast {
     if (!id) {
       throw PreprocBad(pos, "required macro name");
     }
-    if (rte::macros.find(id->name) != rte::macros.end()) {
+    if (rte::macros.find(&id->name) != rte::macros.end()) {
       throw PreprocBad(pos, "macro already defined");
     }
     auto ls = dynamic_cast<const List *>(src->next.get());
