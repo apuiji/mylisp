@@ -86,6 +86,23 @@ namespace zlt::mylisp::ast {
     return { token::ID, it, it + n };
   }
 
+  template<class C>
+  struct StrHit {
+    int quot;
+    StrHit(int quot) noexcept: quot(quot) {}
+    bool operator ()(C c) noexcept {
+      if (c == '\\' || c == quot) {
+        return true;
+      }
+      if constexpr (is_same_v<C, char>) {
+        if (!(c >= 0 && c <= 0xFF)) {
+          return true;
+        }
+      }
+      return false;
+    }
+  };
+
   bool strHit(int quot, wchar_t c) noexcept;
 
   static bool esch(int &dest, size_t &len, It it, It end);
@@ -95,7 +112,7 @@ namespace zlt::mylisp::ast {
     if (it == end) [[unlikely]] {
       return end;
     }
-    if (It it1 = find_if(it, end, bind(strHit, quot, placeholders::_1)); it1 != it) {
+    if (It it1 = find_if(it, end, StrHit<C>(quot)); it1 != it) {
       dest << basic_string<C>(it, it1);
       return operator ()(it1, end);
     }
@@ -111,10 +128,6 @@ namespace zlt::mylisp::ast {
       }
     }
     return it;
-  }
-
-  bool strHit(int quot, wchar_t c) noexcept {
-    return c == '\\' || c == quot;
   }
 
   static bool esch1(int &dest, size_t &len, It it, It end) noexcept;
