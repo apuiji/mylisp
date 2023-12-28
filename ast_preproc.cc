@@ -82,7 +82,9 @@ namespace zlt::mylisp::ast {
     if (auto m = findMacro(first); m) {
       MacroExpand me;
       makeMacroExpand(me, m->params.begin(), m->params.end(), first->next);
-      return me(dest, file, m->body);
+      UNode a;
+      me(a, file, m->body);
+      return preproc(dest, file, a);
     }
     UNode first1;
     clones(first1, first);
@@ -115,6 +117,30 @@ namespace zlt::mylisp::ast {
       }
     }
   }
+
+  const Macro *findMacro(const UNode &src) noexcept {
+    auto id = dynamic_cast<const IDAtom *>(src.get());
+    if (!id) {
+      return nullptr;
+    }
+    auto it = rte::macros.find(id->name);
+    if (it == rte::macros.end()) {
+      return nullptr;
+    }
+    return &*it;
+  }
+
+  int makeMacroExpand(MacroExpand &dest, Macro::ItParam itParam, Macro::ItParam endParam, const UNode &src) {
+    if (itParam == endParam) [[unlikely]] {
+      return 0;
+    }
+    if (*itParam) {
+      dest.map[*itParam] = &src;
+    }
+    return makeMacroExpand(dest, itParam + 1, endParam, src->next);
+  }
+
+  UNode &MacroExpand::operator ()(UNode &dest, const filesystem::path &file, const UNode &src) {}
 
   static int makeMacroParams(Macro::Params &dest, const UNode &src);
 
