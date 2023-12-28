@@ -192,15 +192,20 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
-  int transKWD_defer(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+  template<class T>
+  static inline int trans2(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
     UNode a;
     if (src) {
       trans(a, defs, src);
     } else {
       a.reset(new Null);
     }
-    dest.reset(new Defer(pos, std::move(a)));
+    dest.reset(new T(pos, std::move(a)));
     return 0;
+  }
+
+  int transKWD_defer(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans2<Defer>(dest, defs, pos, src);
   }
 
   int transKWD_forward(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
@@ -241,24 +246,25 @@ namespace zlt::mylisp::ast {
   }
 
   int transKWD_length(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    UNode a;
-    if (src) {
-      trans(a, defs, src);
-    } else {
-      a.reset(new Null);
-    }
-    dest.reset(new Operation1<1, token::KWD_length>(pos, std::move(a)));
-    return 0;
+    return trans2<Operation1<1, token::KWD_length>>(dest, defs, pos, src);
   }
 
   int transKWD_return(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    UNode a;
-    if (src) {
-      trans(a, defs, src);
-    } else {
-      a.reset(new Null);
-    }
-    dest.reset(new Return(pos, std::move(a)));
-    return 0;
+    return trans2<Return>(dest, defs, pos, src);
   }
+
+  int transKWD_throw(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans2<Throw>(dest, defs, pos, src);
+  }
+
+  int transKWD_try(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans2<Try>(dest, defs, pos, src);
+  }
+
+  int transKWD_yield(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans2<Yield>(dest, defs, pos, src);
+  }
+
+  template<>
+  int transSymbol<token::symbol("!")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src);
 }
