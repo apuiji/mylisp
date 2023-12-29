@@ -98,5 +98,9 @@ namespace zlt::mylisp::ast {
   struct Operation1 final: Operation<N> {
     using Operation<N>::Operation;
   };
+
+  struct SetMemberOper final: Operation<3> {
+    using Operation<3>::Operation;
+  };
   // operations end
 }

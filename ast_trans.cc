@@ -1,3 +1,4 @@
+#include<cmath>
 #include"ast_token.hh"
 #include"ast_trans.hh"
 #include"myccutils/xyz.hh"
@@ -52,7 +53,6 @@ namespace zlt::mylisp::ast {
       {
         UNodes args;
         trans(args, defs, ls->first->next);
-        args.shrink_to_fit();
         UNode callee;
         trans1(callee, defs, ls->first);
         dest.reset(new Call(src->pos, std::move(callee), std::move(args)));
@@ -213,7 +213,6 @@ namespace zlt::mylisp::ast {
     UNodes args;
     if (src) {
       trans(args, defs, src->next);
-      args.shrink_to_fit();
       trans1(callee, defs, src);
     } else {
       callee.reset(new Null);
@@ -266,5 +265,185 @@ namespace zlt::mylisp::ast {
   }
 
   template<>
-  int transSymbol<token::symbol("!")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src);
+  int transSymbol<token::symbol("!")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans2<Operation1<1, token::symbol("!")>>(dest, defs, pos, src);
+  }
+
+  template<class T>
+  static inline int trans2a(UNode &dest, Defs &defs, const Pos *pos, UNode &src, double d = NAN, double d1 = d) {
+    UNodes a;
+    trans(a, defs, src);
+    switch (a.size()) {
+      case 0: {
+        a.emplace_back(new NumberAtom(nullptr, d));
+        [[fallthrough]];
+      }
+      case 1: {
+        a.emplace_back(new NumberAtom(nullptr, d1));
+        [[fallthrough]];
+      }
+    }
+    dest.reset(new T(pos, std::move(a)));
+    return 0;
+  }
+
+  template<>
+  int transSymbol<token::symbol("%")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans2a<Operation1<-1, token::symbol("%")>>(dest, defs, pos, src);
+  }
+
+  template<class T>
+  static inline int trans3(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    UNodes a;
+    trans(a, defs, src);
+    dest.reset(new T(pos, std::move(a)));
+    return 0;
+  }
+
+  template<>
+  int transSymbol<token::symbol("&&")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans3<Operation1<-1, token::symbol("&&")>>(dest, defs, pos, src);
+  }
+
+  template<>
+  int transSymbol<token::symbol("&")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans2a<Operation1<-1, token::symbol("&")>>(dest, defs, pos, src, 0);
+  }
+
+  template<>
+  int transSymbol<token::symbol("**")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans2a<Operation1<-1, token::symbol("**")>>(dest, defs, pos, src, NAN, 1);
+  }
+
+  template<>
+  int transSymbol<token::symbol("*")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans2a<Operation1<-1, token::symbol("*")>>(dest, defs, pos, src, NAN, 1);
+  }
+
+  template<>
+  int transSymbol<token::symbol("+")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans2a<Operation1<-1, token::symbol("+")>>(dest, defs, pos, src, 0);
+  }
+
+  template<>
+  int transSymbol<token::symbol(",")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans(dest, defs, src);
+  }
+
+  template<>
+  int transSymbol<token::symbol("-")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    UNodes items;
+    trans(items, defs, src);
+    if (items.empty()) {
+      dest.reset(new NumberAtom(nullptr, 0));
+      return 0;
+    }
+    if (items.size() == 1) {
+      items.push_back(std::move(items[0]));
+      items[0].reset(new NumberAtom(nullptr, 0));
+    }
+    dest.reset(new Operation1<-1, token::symbol("-")>(pos, std::move(items)));
+    return 0;
+  }
+
+  template<class T>
+  static inline int trans4(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    UNodes a;
+    trans(a, defs, src);
+    switch (a.size()) {
+      case 0: {
+        a.emplace_back(new Null);
+        [[fallthrough]];
+      }
+      case 1: {
+        a.emplace_back(new Null);
+      }
+    }
+    dest.reset(new T(pos, std::move(a)));
+  }
+
+  template<>
+  int transSymbol<token::symbol(".")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans4<Operation1<-1, token::symbol(".")>>(dest, defs, pos, src);
+  }
+
+  template<>
+  int transSymbol<token::symbol("/")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans2a<Operation1<-1, token::symbol("/")>>(dest, defs, pos, src, NAN, 1);
+  }
+
+  template<>
+  int transSymbol<token::symbol("<<")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans2a<Operation1<-1, token::symbol("<<")>>(dest, defs, pos, src, NAN, 0);
+  }
+
+  template<class T>
+  static inline int trans5(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    array<UNode, 2> a;
+    if (src && src->next) {
+      trans(a[1], defs, src->next);
+    } else {
+      a[1].reset(new Null);
+    }
+    if (src) {
+      trans1(a[0], defs, src);
+    } else {
+      a[0].reset(new Null);
+    }
+    dest.reset(new T(pos, std::move(a)));
+    return 0;
+  }
+
+  template<>
+  int transSymbol<token::symbol("<=")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans5<Operation1<2, token::symbol("<=")>>(dest, defs, pos, src);
+  }
+
+  template<>
+  int transSymbol<token::symbol("<")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans5<Operation1<2, token::symbol("<")>>(dest, defs, pos, src);
+  }
+
+  template<>
+  int transSymbol<token::symbol("==")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans5<Operation1<2, token::symbol("==")>>(dest, defs, pos, src);
+  }
+
+  template<>
+  int transSymbol<token::symbol("=")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    UNode a;
+    UNode b;
+    if (src && src->next) {
+      trans(b, defs, src->next);
+    } else {
+      b.reset(new Null);
+    }
+    if (src) {
+      trans1(a, defs, src);
+    } else {
+      throw Trans(pos, "nothing assign");
+    }
+    if (dynamic_cast<const IDAtom *>(a.get())) {
+      dest.reset(new Operation1<2, token::symbol("=")>(pos, { std::move(a), std::move(b) }));
+    } else if (auto c = dynamic_cast<Operation1<-1, token::symbol("=")> *>(a.get()); c) {
+      if (c->items.size() == 2) {
+        dest.reset(new SetMemberOper(pos, { std::move(c->items[0]), std::move(c->items[1]), std::move(b) }));
+      } else {
+        auto d = std::move(c->items.back());
+        c->items.pop_back();
+        dest.reset(new SetMemberOper(pos, { std::move(a), std::move(d), std::move(b) }));
+      }
+    } else {
+      throw TransBad(pos, "illegal assign");
+    }
+    return 0;
+  }
+
+  template<>
+  int transSymbol<token::symbol(">=")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans5<Operation1<token::symbol(">=")>>(dest, defs, pos, src);
+  }
+
+  template<>
+  int transSymbol<token::symbol(">>>")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {}
 }
