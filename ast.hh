@@ -26,6 +26,10 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
+  static inline int replace(UNode &dest, UNode &&src) noexcept {
+    return replace(dest, src);
+  }
+
   static inline UNode shift(UNode &src) noexcept {
     auto a = std::move(src);
     src = std::move(a->next);
