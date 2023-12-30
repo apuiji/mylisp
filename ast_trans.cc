@@ -21,8 +21,7 @@ namespace zlt::mylisp::ast {
       return 0;
     }
     {
-      auto a = std::move(src);
-      src = std::move(a->next);
+      auto a = shift(src);
       trans1(dest, defs, a);
     }
     return trans(dest->next, defs, src);
@@ -173,8 +172,7 @@ namespace zlt::mylisp::ast {
       return 0;
     }
     {
-      auto a = std::move(src);
-      src = std::move(a->next);
+      auto a = shift(src);
       dest.push_back({});
       trans1(dest.back(), defs, a);
     }
