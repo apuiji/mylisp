@@ -1,6 +1,7 @@
 #pragma once
 
 #include<array>
+#include<set>
 #include"ast_include.hh"
 
 namespace zlt::mylisp::ast {
@@ -128,6 +129,7 @@ namespace zlt::mylisp::ast {
   using CmpGtOper = Operation1<2, token::symbol(">")>;
   using CmpLteqOper = Operation1<2, token::symbol("<=")>;
   using CmpGteqOper = Operation1<2, token::symbol(">=")>;
+  using CompareOper = Operation1<2, token::symbol("<=>")>;
   // compare operations end
   using AssignOper = Operation1<2, token::symbol("=")>;
   using GetMemberOper = Operation1<-1, token::symbol(".")>;

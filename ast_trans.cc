@@ -270,7 +270,7 @@ namespace zlt::mylisp::ast {
   }
 
   template<class T>
-  static inline int trans2a(UNode &dest, Defs &defs, const Pos *pos, UNode &src, double d = NAN, double d1 = d) {
+  static inline int trans2a(UNode &dest, Defs &defs, const Pos *pos, UNode &src, double d, double d1) {
     UNodes a;
     trans(a, defs, src);
     switch (a.size()) {
@@ -285,6 +285,11 @@ namespace zlt::mylisp::ast {
     }
     dest.reset(new T(pos, std::move(a)));
     return 0;
+  }
+
+  template<class T>
+  static inline int trans2a(UNode &dest, Defs &defs, const Pos *pos, UNode &src, double d = NAN) {
+    return trans2a<T>(dest, defs, pos, src, d, d);
   }
 
   template<>
@@ -360,6 +365,7 @@ namespace zlt::mylisp::ast {
       }
     }
     dest.reset(new T(pos, std::move(a)));
+    return 0;
   }
 
   template<>
@@ -395,6 +401,11 @@ namespace zlt::mylisp::ast {
   }
 
   template<>
+  int transSymbol<token::symbol("<=>")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans5<CompareOper>(dest, defs, pos, src);
+  }
+
+  template<>
   int transSymbol<token::symbol("<=")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
     return trans5<CmpLteqOper>(dest, defs, pos, src);
   }
@@ -421,7 +432,7 @@ namespace zlt::mylisp::ast {
     if (src) {
       trans1(a, defs, src);
     } else {
-      throw Trans(pos, "nothing assign");
+      throw TransBad(pos, "nothing assign");
     }
     if (dynamic_cast<const IDAtom *>(a.get())) {
       dest.reset(new AssignOper(pos, { std::move(a), std::move(b) }));
@@ -476,4 +487,44 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
+  int fnParams(vector<const wstring *> &dest, Defs &defs, const UNode &src) {
+    if (!src) [[unlikely]] {
+      return 0;
+    }
+    if (auto id = dynamic_cast<const IDAtom *>(src.get()); id) {
+      dest.push_back(id->name);
+      defs.insert(id->name);
+      return fnParams(dest, defs, src->next);
+    }
+    if (auto ls = dynamic_cast<const List *>(src.get()); ls && !ls->first) {
+      dest.push_back(nullptr);
+      return fnParams(dest, defs, src->next);
+    }
+    throw TransBad(src->pos, "illegal function parameter");
+  }
+
+  template<>
+  int transSymbol<token::symbol("^^")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans4<LogicXorOper>(dest, defs, pos, src);
+  }
+
+  template<>
+  int transSymbol<token::symbol("^")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans2a<BitwsXorOper>(dest, defs, pos, src, 0);
+  }
+
+  template<>
+  int transSymbol<token::symbol("||")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans3<LogicOrOper>(dest, defs, pos, src);
+  }
+
+  template<>
+  int transSymbol<token::symbol("|")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans2a<BitwsOrOper>(dest, defs, pos, src, 0);
+  }
+
+  template<>
+  int transSymbol<token::symbol("~")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans2<BitwsNotOper>(dest, defs, pos, src);
+  }
 }
