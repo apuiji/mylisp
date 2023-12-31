@@ -1,4 +1,6 @@
+#include<algorithm>
 #include"ast_optimize.hh"
+#include"myccutils/xyz.hh"
 
 using namespace std;
 
@@ -41,18 +43,10 @@ namespace zlt::mylisp::ast {
   declOptimize(RshOper);
   declOptimize(UshOper);
   // bitwise operations end
-  // compare operations begin
-  declOptimize(CmpEqOper);
-  declOptimize(CmpLtOper);
-  declOptimize(CmpGtOper);
-  declOptimize(CmpLteqOper);
-  declOptimize(CmpGteqOper);
-  declOptimize(CompareOper);
-  // compare operations end
-  declOptimize(AssignOper);
-  declOptimize(GetMemberOper);
   declOptimize(LengthOper);
-  declOptimize(SetMemberOper);
+  declOptimize(Operation<1>);
+  template<int N>
+  declOptimize(Operation<N>);
   // operations end
   #undef declOptimize
 
@@ -61,12 +55,20 @@ namespace zlt::mylisp::ast {
     if (auto a = dynamic_cast<T *>(src.get()); a) { \
       return optimize(src, *a); \
     }
-    ifType(T);
+    // ast_parse.hh definitions begin
+    ifType(NumberAtom);
+    ifType(CharAtom);
+    ifType(StringAtom);
+    ifType(Latin1Atom);
+    ifType(IDAtom);
+    // ast_parse.hh definitions end
     ifType(Call);
+    ifType(Callee);
     ifType(Defer);
     ifType(Forward);
     ifType(Function);
     ifType(If);
+    ifType(Null);
     ifType(Return);
     ifType(Throw);
     ifType(Try);
@@ -113,11 +115,11 @@ namespace zlt::mylisp::ast {
 
   template<AnyOf<NumberAtom, CharAtom, StringAtom, Latin1Atom, IDAtom, Callee, Null> T>
   int optimize(UNode &dest, T &src) {
-    if (!src->next) {
+    if (!dest->next) {
       return 0;
     }
-    shift(src);
-    return optimize(src);
+    shift(dest);
+    return optimize(dest);
   }
 
   template<class It>
@@ -262,17 +264,21 @@ namespace zlt::mylisp::ast {
     return arithmetical(dest, it + 1, end, f);
   }
 
+  static inline UNode number(double d) {
+    return UNode(new NumberAtom(nullptr, d));
+  }
+
   template<class F>
   int arithmetical(UNodes &dest, double d, UNodes::iterator it, UNodes::iterator end, F &f) {
     if (it == end) [[unlikely]] {
-      dest.emplace_back(new NumberAtom(nullptr, d));
+      dest.push_back(number(d));
       return 0;
     }
     optimize(*it);
     if (double d1; isNumConst(d1, *it)) {
       return arithmetical(dest, f(d, d1), it + 1, end, f);
     }
-    dest.emplace_back(new NumberAtom(nullptr, d));
+    dest.push_back(number(d));
     dest.push_back(std::move(*it));
     return arithmetical(dest, it + 1, end, f);
   }
@@ -340,10 +346,10 @@ namespace zlt::mylisp::ast {
       }
     }
     dest.push_back(std::move(*it));
-    return logical(dest, it + 1, end);
+    return logical<B>(dest, it + 1, end);
   }
 
-  template<bool B>
+  template<bool B, class T>
   static inline int logical(UNode &dest, T &src) {
     if (src.items.empty()) {
       replace(dest, nvll());
@@ -370,7 +376,7 @@ namespace zlt::mylisp::ast {
   template<bool B>
   static inline UNode boo1() {
     if constexpr (B) {
-      return UNode(new NumberAtom(nullptr, 1));
+      return number(1);
     } else {
       return nvll();
     }
@@ -399,7 +405,9 @@ namespace zlt::mylisp::ast {
     UNodes items;
     logicXor(items, src.items.begin(), src.items.end());
     if (items.size() == 1) {
-      replace(dest, boo1(items[0]));
+      bool b;
+      isBoolConst(b, items[0]);
+      replace(dest, boo1(b));
       return optimize(dest);
     }
     src.items = std::move(items);
@@ -420,7 +428,7 @@ namespace zlt::mylisp::ast {
     return logicXor(dest, it + 1, end);
   }
 
-  int logicXor(UNodes &dest, bool b, UNodes::iterator it, Unodes::iterator end) {
+  int logicXor(UNodes &dest, bool b, UNodes::iterator it, UNodes::iterator end) {
     if (it == end) [[unlikely]] {
       dest.push_back(boo1(b));
       return 0;
@@ -479,21 +487,78 @@ namespace zlt::mylisp::ast {
   template<class F>
   int bitwise(UNodes &dest, int i, UNodes::iterator it, UNodes::iterator end, F &f) {
     if (it == end) [[unlikely]] {
-      dest.emplace_back(new NumberAtom(nullptr, i));
+      dest.push_back(number(i));
       return 0;
     }
     optimize(*it);
     if (int j; isIntConst(j, *it)) {
       return bitwise(dest, f(i, j), it + 1, end, f);
     }
-    dest.emplace_back(new NumberAtom(nullptr, i));
+    dest.push_back(number(i));
     dest.push_back(std::move(*it));
     return bitwise(dest, it + 1, end, f);
   }
 
   int optimize(UNode &dest, BitwsAndOper &src) {
-    return bitwise(dest, src, [] (int i, int j) => i & j);
+    return bitwise(dest, src, [] (int i, int j) { return i & j; });
+  }
+
+  int optimize(UNode &dest, BitwsOrOper &src) {
+    return bitwise(dest, src, [] (int i, int j) { return i | j; });
+  }
+
+  int optimize(UNode &dest, BitwsNotOper &src) {
+    optimize(src.item);
+    if (int i; isIntConst(i, src.item)) {
+      replace(dest, number(~i));
+      return optimize(dest);
+    }
+    return optimize(dest->next);
+  }
+
+  int optimize(UNode &dest, BitwsXorOper &src) {
+    return bitwise(dest, src, [] (int i, int j) { return i ^ j; });
+  }
+
+  int optimize(UNode &dest, LshOper &src) {
+    return bitwise(dest, src, [] (int i, int j) { return i << j; });
+  }
+
+  int optimize(UNode &dest, RshOper &src) {
+    return bitwise(dest, src, [] (int i, int j) { return i >> j; });
+  }
+
+  int optimize(UNode &dest, UshOper &src) {
+    return bitwise(dest, src, [] (int i, int j) { return (unsigned) i >> (unsigned) j; });
   }
   // bitwise operations end
+
+  int optimize(UNode &dest, LengthOper &src) {
+    optimize(src.item);
+    if (Dynamicastable<CharAtom> {}(*src.item)) {
+      replace(dest, number(1));
+      return optimize(dest);
+    }
+    if (auto a = dynamic_cast<const StringAtom *>(src.item.get()); a) {
+      replace(dest, number(a->value->size()));
+      return optimize(dest);
+    }
+    if (auto a = dynamic_cast<const Latin1Atom *>(src.item.get()); a) {
+      replace(dest, number(a->value->size()));
+      return optimize(dest);
+    }
+    return optimize(dest->next);
+  }
+
+  int optimize(UNode &dest, Operation<1> &src) {
+    optimize(src.item);
+    return optimize(dest->next);
+  }
+
+  template<int N>
+  int optimize(UNode &dest, Operation<N> &src) {
+    for_each(src.items.begin(), src.items.end(), ofr<int, UNode &>(optimize));
+    return optimize(dest->next);
+  }
   // operations end
 }
