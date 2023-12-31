@@ -254,8 +254,16 @@ namespace zlt::mylisp::ast {
     return trans2<Throw>(dest, defs, pos, src);
   }
 
+  static UNode &endOf(UNode &src) noexcept {
+    return src ? endOf(src->next) : src;
+  }
+
   int transKWD_try(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans2<Try>(dest, defs, pos, src);
+    UNode body;
+    trans(body, defs, src);
+    endOf(body).reset(new Throw(nullptr, UNode(new Null)));
+    dest.reset(new Try(pos, std::move(body)));
+    return 0;
   }
 
   int transKWD_yield(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
@@ -481,6 +489,7 @@ namespace zlt::mylisp::ast {
     fnParams(params, defs1, src);
     UNode body;
     trans(body, defs1, src->next);
+    endOf(body).reset(new Return(nullptr, UNode(new Null)));
     dest.reset(new Function(pos, std::move(defs1), std::move(params), std::move(body)));
     return 0;
   }

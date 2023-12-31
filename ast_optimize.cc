@@ -148,8 +148,6 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
-  static UNode &endOf(UNode &src) noexcept;
-
   static inline UNode nvll() {
     return UNode(new Null);
   }
@@ -159,13 +157,8 @@ namespace zlt::mylisp::ast {
       shift(dest);
       return optimize(dest);
     }
-    endOf(src.body).reset(new Return(nullptr, nvll()));
     optimize(src.body);
     return optimize(dest->next);
-  }
-
-  UNode &endOf(UNode &src) noexcept {
-    return src ? endOf(src->next) : src;
   }
 
   static bool isBoolConst(bool &dest, const UNode &src) noexcept;
