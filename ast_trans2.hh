@@ -5,8 +5,22 @@
 namespace zlt::mylisp::ast {
   int trans2(UNode &src);
 
+  struct Function2 final: Node {
+    std::set<const std::wstring *> defs;
+    UNode body;
+    UNode inputClosure;
+    Function2(const Pos *pos, std::set<const std::wstring *> &&defs, UNode &&body, UNode &&inputClosure) noexcept:
+    Node(pos), defs(std::move(defs)), body(std::move(body)), inputClosure(std::move(inputClosure)) {}
+  };
+
   struct GetPointerOper final: Operation<1> {
     using Operation<1>::Operation;
+  };
+
+  struct InputClosure final: Node {
+    const std::wstring *name;
+    Reference ref;
+    InputClosure(const std::wstring *name, const Reference &ref) noexcept: name(name), ref(ref) {}
   };
 
   struct MakePointer final: Node {

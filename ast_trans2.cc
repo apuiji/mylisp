@@ -141,8 +141,70 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
+  using ItClosure = map<const wstring *, Reference>::const_iterator;
+
+  static int makeInputClosure(UNode &dest, ItClosure it, ItClosure end);
+
+  using ItPtrDef = set<const wstring *>::const_iterator;
+
+  static UNode &makePointer(UNode &dest, ItPtrDef it, ItPtrDef end);
 
   int trans(UNode &dest, const PtrDefs &ptrDefs, Function1 &src) {
-    ;
+    UNode inputClosure;
+    makeInputClosure(inputClosure, src.closureDefs.begin(), src.closureDefs.end());
+    UNode body;
+    auto &next = makePointer(body, src.ptrDefs.begin(), src.ptrDefs.end());
+    trans(src.ptrDefs, src.body);
+    next = std::move(src.body);
+    UNode a(new Function2(src.pos, std::move(src.defs), std::move(body), std::move(inputClosure)));
+    replace(dest, a);
+    return 0;
+  }
+
+  int makeInputClosure(UNode &dest, ItClosure it, ItClosure end) {
+    if (it == end) [[unlikely]] {
+      return 0;
+    }
+    dest.reset(new InputClosure(it->first, it->second));
+    return makeInputClosure(dest->next, ++it, end);
+  }
+
+  UNode &makePointer(UNode &dest, ItPtrDef it, ItPtrDef end) {
+    if (it == end) [[unlikely]] {
+      return dest;
+    }
+    {
+      array<UNode, 2> items;
+      Reference ref(Reference::LOCAL_SCOPE, *it);
+      items[0].reset(new Reference1(nullptr, ref));
+      items[1].reset(new MakePointer);
+      dest.reset(new AssignOper(nullptr, std::move(items)));
+    }
+    return makePointer(dest->next, ++it, end);
+  }
+
+  static bool isPointer(const PtrDefs &ptrDefs, const Reference &src) noexcept;
+
+  int trans(UNode &dest, const PtrDefs &ptrDefs, Reference1 &src) {
+    if (isPointer(ptrDefs, src)) {
+      UNode a(new Reference1(src.pos, src));
+      a.reset(new GetPointerOper(src.pos, std::move(a)));
+      replace(dest, a);
+    }
+    return 0;
+  }
+
+  bool isPointer(const PtrDefs &ptrDefs, const Reference &src) noexcept {
+    switch (src.scope) {
+      case Reference::LOCAL_SCOPE: {
+        return ptrDefs.find(src.name) != ptrDefs.end();
+      }
+      case Reference::CLOSURE_SCOPE: {
+        return true;
+      }
+      default: {
+        return false;
+      }
+    }
   }
 }
