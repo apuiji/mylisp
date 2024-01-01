@@ -351,7 +351,7 @@ namespace zlt::mylisp {
     return dest << direction::CLN_ARGS;
   }
 
-  Compile &operator <<(Compile &dest, const Reference1 &src) {
+  Compile &operator <<(Compile &dest, const Reference &src) {
     switch (src.scope) {
       case Reference::LOCAL_SCOPE: {
         dest << direction::GET_LOCAL;
@@ -368,6 +368,10 @@ namespace zlt::mylisp {
     return dest << src.name;
   }
 
+  Compile &operator <<(Compile &dest, const Reference1 &src) {
+    return dest << static_cast<const Reference &>(src);
+  }
+
   Compile &operator <<(Compile &dest, const Function2 &src) {
     string body;
     compile(body, src.body);
@@ -380,6 +384,15 @@ namespace zlt::mylisp {
   }
 
   Compile &operator <<(Compile &dest, const InputClosure &src) {
-    return;
+    return dest << src.ref << direction::INPUT_CLOSURE << src.name;
+  }
+
+  Compile &operator <<(Compile &dest, const MakePointer &src) {
+    return dest << direction::MAKE_PTR;
+  }
+
+  Compile &operator <<(Compile &dest, const SetPointerOper &src) {
+    compile(dest, src.items.begin(), src.items.end());
+    return dest << direction::SET_PTR;
   }
 }
