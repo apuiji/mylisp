@@ -1,6 +1,7 @@
 #include<sstream>
 #include"compile.hh"
 #include"direction.hh"
+#include"rte.hh"
 
 using namespace std;
 
@@ -23,6 +24,16 @@ namespace zlt::mylisp {
     rtol(Compile(ss)) << src;
     dest = ss.str();
     return 0;
+  }
+
+  static Compile &compile1(Compile &dest, const UNode &src);
+
+  Compile &operator <<(Compile &dest, const UNode &src) {
+    if (!src) [[unlikely]] {
+      return dest;
+    }
+    compile1(dest, src);
+    return dest << src->next;
   }
 
   #define declCompile(T) \
@@ -67,7 +78,7 @@ namespace zlt::mylisp {
 
   #undef declCompile
 
-  Compile &operator <<(Compile &dest, const UNode &src) {
+  Compile &compile1(Compile &dest, const UNode &src) {
     #define ifType(T) \
     if (auto a = dynamic_cast<const T *>(src.get()); a) { \
       return dest << *a; \
@@ -139,7 +150,7 @@ namespace zlt::mylisp {
     // ast_trans2.hh definitions end
     #undef ifType
     // never
-    return o;
+    return dest;
   }
 
   template<class T>
@@ -357,5 +368,18 @@ namespace zlt::mylisp {
     return dest << src.name;
   }
 
-  Compile &operator <<(Compile &dest, const Function2 &src) {}
+  Compile &operator <<(Compile &dest, const Function2 &src) {
+    string body;
+    compile(body, src.body);
+    auto itBody = fnBodies.insert(std::move(body));
+    return dest << direction::MAKE_FN << &*itBody << src.inputClosure;
+  }
+
+  Compile &operator <<(Compile &dest, const GetPointerOper &src) {
+    return dest << src.item << direction::GET_PTR;
+  }
+
+  Compile &operator <<(Compile &dest, const InputClosure &src) {
+    return;
+  }
 }
