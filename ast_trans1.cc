@@ -152,7 +152,12 @@ namespace zlt::mylisp::ast {
 
   UNode &transParams(UNode &dest, size_t i, ItParam it, ItParam end) {
     if (it == end) [[unlikely]] {
-      return dest;
+      if (i) {
+        dest.reset(new CleanArguments);
+        return dest->next;
+      } else {
+        return dest;
+      }
     }
     if (*it) {
       {

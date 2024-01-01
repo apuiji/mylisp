@@ -11,6 +11,10 @@ namespace zlt::mylisp::ast {
     Argument(size_t index) noexcept: index(index) {}
   };
 
+  struct CleanArguments final: Node {
+    using Node::Node;
+  };
+
   struct Reference {
     enum {
       LOCAL_SCOPE,
