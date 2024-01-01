@@ -145,7 +145,7 @@ namespace zlt::mylisp::ast {
     auto &next = transParams(body, 0, src.params.begin(), src.params.end());
     trans(fs, src.body);
     next = std::move(src.body);
-    UNode a(new Function1(src.pos, std::move(src.defs), std::move(fs.ptrDefs), std::move(fs.closureDefs), std::move(body)));
+    UNode a(new Function1(src.pos, std::move(fs.ptrDefs), std::move(fs.closureDefs), std::move(body)));
     replace(dest, a);
     return 0;
   }

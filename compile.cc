@@ -145,13 +145,13 @@ namespace zlt::mylisp {
   template<class T>
   static consteval uint8_t setALiteralDir() {
     if constexpr (is_same_v<T, double>) {
-      return direction::SET_A_NUM;
+      return direction::SET_NUM;
     } else if constexpr (is_same_v<T, wchar_t>) {
-      return direction::SET_A_CHAR;
+      return direction::SET_CHAR;
     } else if constexpr (is_same_v<T, const wstring *>) {
-      return direction::SET_A_STR;
+      return direction::SET_STR;
     } else if constexpr (is_same_v<T, const string *>) {
-      return direction::SET_A_LATIN1;
+      return direction::SET_LATIN1;
     } else {
       // never
       return 0;
@@ -192,7 +192,7 @@ namespace zlt::mylisp {
   }
 
   Compile &operator <<(Compile &dest, const Callee &src) {
-    return dest << direction::SET_A_CALLEE;
+    return dest << direction::SET_CALLEE;
   }
 
   Compile &operator <<(Compile &dest, const Defer &src) {
@@ -215,7 +215,7 @@ namespace zlt::mylisp {
   }
 
   Compile &operator <<(Compile &dest, const Null &src) {
-    return dest << direction::SET_A_NULL;
+    return dest << direction::SET_NULL;
   }
 
   Compile &operator <<(Compile &dest, const Return &src) {
@@ -332,4 +332,30 @@ namespace zlt::mylisp {
     return dest << direction::SET_MEMB;
   }
 
+  Compile &operator <<(Compile &dest, const Argument &src) {
+    return dest << direction::SET_ARG << src.index;
+  }
+
+  Compile &operator <<(Compile &dest, const CleanArguments &src) {
+    return dest << direction::CLN_ARGS;
+  }
+
+  Compile &operator <<(Compile &dest, const Reference1 &src) {
+    switch (src.scope) {
+      case Reference::LOCAL_SCOPE: {
+        dest << direction::GET_LOCAL;
+        break;
+      }
+      case Reference::CLOSURE_SCOPE: {
+        dest << direction::GET_CLOSURE;
+        break;
+      }
+      default: {
+        dest << direction::GET_GLOBAL;
+      }
+    }
+    return dest << src.name;
+  }
+
+  Compile &operator <<(Compile &dest, const Function2 &src) {}
 }

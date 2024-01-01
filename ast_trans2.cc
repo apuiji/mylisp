@@ -156,7 +156,7 @@ namespace zlt::mylisp::ast {
     auto &next = makePointer(body, src.ptrDefs.begin(), src.ptrDefs.end());
     trans(src.ptrDefs, src.body);
     next = std::move(src.body);
-    UNode a(new Function2(src.pos, std::move(src.defs), std::move(body), std::move(inputClosure)));
+    UNode a(new Function2(src.pos, std::move(body), std::move(inputClosure)));
     replace(dest, a);
     return 0;
   }
