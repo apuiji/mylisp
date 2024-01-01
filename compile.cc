@@ -42,10 +42,14 @@ namespace zlt::mylisp {
   declCompile(Try);
   declCompile(Yield);
   // operations begin
+  template<uint64_t Op>
+  declCompile(Operation<1, Op>);
+  template<uint64_t Op>
+  declCompile(Operation<-1, Op>);
+  template<int N, uint64_t Op>
+  declCompile(Operation<N, Op>);
   declCompile(AssignOper);
-  declCompile(Operation<1>);
-  template<int N>
-  declCompile(Operation<N>);
+  declCompile(SetMemberOper);
   // operations end
   // ast_trans.hh definitions end
   // ast_trans1.hh definitions begin
@@ -83,11 +87,43 @@ namespace zlt::mylisp {
     ifType(Throw);
     ifType(Try);
     ifType(Yield);
+    // operations begin
+    // arithmetical operations begin
+    ifType(ArithAddOper);
+    ifType(ArithSubOper);
+    ifType(ArithMulOper);
+    ifType(ArithDivOper);
+    ifType(ArithModOper);
+    ifType(ArithPowOper);
+    // arithmetical operations end
+    // logical operations begin
+    ifType(LogicAndOper);
+    ifType(LogicOrOper);
+    ifType(LogicNotOper);
+    ifType(LogicXorOper);
+    // logical operations end
+    // bitwise operations begin
+    ifType(BitwsAndOper);
+    ifType(BitwsOrOper);
+    ifType(BitwsNotOper);
+    ifType(BitwsXorOper);
+    ifType(LshOper);
+    ifType(RshOper);
+    ifType(UshOper);
+    // bitwise operations end
+    // compare operations begin
+    ifType(CmpEqOper);
+    ifType(CmpLtOper);
+    ifType(CmpGtOper);
+    ifType(CmpLteqOper);
+    ifType(CmpGteqOper);
+    ifType(CompareOper);
+    // compare operations end
     ifType(AssignOper);
-    ifType(Operation<1>);
-    ifType(Operation<2>);
-    ifType(Operation<3>);
-    ifType(Operation<-1>);
+    ifType(GetMemberOper);
+    ifType(LengthOper);
+    ifType(SetMemberOper);
+    // operations end
     // ast_trans.hh definitions end
     // ast_trans1.hh definitions begin
     ifType(Argument);
@@ -178,6 +214,10 @@ namespace zlt::mylisp {
     return dest;
   }
 
+  Compile &operator <<(Compile &dest, const Null &src) {
+    return dest << direction::SET_A_NULL;
+  }
+
   Compile &operator <<(Compile &dest, const Return &src) {
     return dest << src.value << direction::RETURN;
   }
@@ -196,5 +236,100 @@ namespace zlt::mylisp {
     return dest << direction::YIELD << src.then;
   }
 
+  template<uint64_t Op>
+  static consteval uint8_t operat0r() {
+    if constexpr (Op == token::symbol("!")) {
+      return direction::NOT;
+    } else if constexpr (Op == token::symbol("%")) {
+      return direction::MOD;
+    } else if constexpr (Op == token::symbol("&&")) {
+      return direction::AND;
+    } else if constexpr (Op == token::symbol("&")) {
+      return direction::BIT_AND;
+    } else if constexpr (Op == token::symbol("**")) {
+      return direction::POW;
+    } else if constexpr (Op == token::symbol("*")) {
+      return direction::MUL;
+    } else if constexpr (Op == token::symbol("+")) {
+      return direction::ADD;
+    } else if constexpr (Op == token::symbol("-")) {
+      return direction::SUB;
+    } else if constexpr (Op == token::symbol(".")) {
+      return direction::GET_MEMB;
+    } else if constexpr (Op == token::symbol("/")) {
+      return direction::DIV;
+    } else if constexpr (Op == token::symbol("<<")) {
+      return direction::LSH;
+    } else if constexpr (Op == token::symbol("<=>")) {
+      return direction::CMP;
+    } else if constexpr (Op == token::symbol("<=")) {
+      return direction::LTEQ;
+    } else if constexpr (Op == token::symbol("<")) {
+      return direction::LT;
+    } else if constexpr (Op == token::symbol("==")) {
+      return direction::EQ;
+    } else if constexpr (Op == token::symbol(">=")) {
+      return direction::GTEQ;
+    } else if constexpr (Op == token::symbol(">>>")) {
+      return direction::USH;
+    } else if constexpr (Op == token::symbol(">>")) {
+      return direction::RSH;
+    } else if constexpr (Op == token::symbol(">")) {
+      return direction::GT;
+    } else if constexpr (Op == token::symbol("^^")) {
+      return direction::XOR;
+    } else if constexpr (Op == token::symbol("^")) {
+      return direction::BIT_XOR;
+    } else if constexpr (Op == token::symbol("||")) {
+      return direction::OR;
+    } else if constexpr (Op == token::symbol("|")) {
+      return direction::BIT_OR;
+    } else if constexpr (Op == token::symbol("~")) {
+      return direction::BIT_NOT;
+    } else {
+      // never
+      return 0;
+    }
+  }
+
+  template<uint64_t Op>
+  Compile &operator <<(Compile &dest, const Operation1<1, Op> &src) {
+    return dest << src.item << operat0r<Op>();
+  }
+
+  template<uint64_t Op>
+  Compile &operator <<(Compile &dest, const Operation1<-1, Op> &src) {
+    return dest << src.items << operat0r<Op>() << src.items.size();
+  }
+
+  template<int N, uint64_t Op>
+  Compile &operator <<(Compile &dest, const Operation1<N, Op> &src) {
+    compile(dest, src.items.begin(), src.items.end());
+    return dest << operat0r<Op>();
+  }
+
+  Compile &operator <<(Compile &dest, const AssignOper &src) {
+    dest << src.items[1];
+    auto &ref = static_cast<const Reference1 &>(*src.items[0]);
+    switch (ref.scope) {
+      case Reference::LOCAL_SCOPE: {
+        dest << direction::SET_LOCAL;
+        break;
+      }
+      case Reference::CLOSURE_SCOPE: {
+        dest << direction::SET_CLOSURE;
+        break;
+      }
+      default: {
+        dest << direction::SET_GLOBAL;
+      }
+    }
+    return dest << ref.name;
+  }
+
+  Compile &operator <<(Compile &dest, const SetMemberOper &src) {
+    compile(dest, src.items.begin(), src.items.end());
+    return dest << direction::SET_MEMB;
+  }
 
 }
