@@ -441,9 +441,62 @@ namespace zlt::mylisp::ast {
 
   template<>
   int transSymbol<token::symbol(">=")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans5<Operation1<token::symbol(">=")>>(dest, defs, pos, src);
+    return trans5<Operation1<2, token::symbol(">=")>>(dest, defs, pos, src);
   }
 
   template<>
-  int transSymbol<token::symbol(">>>")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {}
+  int transSymbol<token::symbol(">>>")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans2a<Operation1<-1, token::symbol(">>>")>>(dest, defs, pos, src, NAN, 0);
+  }
+
+  template<>
+  int transSymbol<token::symbol(">>")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans2a<Operation1<-1, token::symbol(">>")>>(dest, defs, pos, src, NAN, 0);
+  }
+
+  template<>
+  int transSymbol<token::symbol(">")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans5<Operation1<2, token::symbol(">")>>(dest, defs, pos, src);
+  }
+
+  static int fnParams(vector<const wstring *> &dest, Defs &defs, const UNode &src);
+
+  template<>
+  int transSymbol<token::symbol("@")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    auto ls = dynamic_cast<const List *>(src.get());
+    if (!ls) {
+      throw TransBad(pos, "required function parameter list");
+    }
+    vector<const wstring *> params;
+    Defs defs1;
+    fnParams(params, defs1, ls->first);
+    UNode body;
+    if (src->next) {
+      trans(body, defs1, src->next);
+    } else {
+      body.reset(new Null);
+    }
+    dest.reset(new Function(pos, std::move(defs1), std::move(params), std::move(body)));
+    return 0;
+  }
+
+  template<>
+  int transSymbol<token::symbol("^^")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans3<Operation1<-1, token::symbol("^^")>>(dest, defs, pos, src);
+  }
+
+  template<>
+  int transSymbol<token::symbol("^")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans2a<Operation1<-1, token::symbol("^")>>(dest, defs, pos, src, 0);
+  }
+
+  template<>
+  int transSymbol<token::symbol("||")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans3<Operation1<-1, token::symbol("||")>>(dest, defs, pos, src);
+  }
+
+  template<>
+  int transSymbol<token::symbol("|")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans2a<Operation1<-1, token::symbol("|")>>(dest, defs, pos, src, 0);
+  }
 }
