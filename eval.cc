@@ -139,15 +139,32 @@ namespace zlt::mylisp {
   // bitwise directions end
 
   // compare directions begin
-  int evalEQ(const char *it, const char *end) {
+  template<class F>
+  static inline int compare(const char *it, const char *end, F &&f) {
     auto &top = itCoroutine->stack.top;
-    top[-1] = top[-1] == top[0];
+    top[-1] = f(top[-1], top[0]);
     --top;
     return eval(it, end);
   }
 
+  int evalEQ(const char *it, const char *end) {
+    return compare(it, end, equal_to<Value>());
+  }
+
   int evalLT(const char *it, const char *end) {
-    ;
+    return compare(it, end, less<Value>());
+  }
+
+  int evalGT(const char *it, const char *end) {
+    return compare(it, end, greater<Value>());
+  }
+
+  int evalLTEQ(const char *it, const char *end) {
+    return compare(it, end, less_equal<Value>());
+  }
+
+  int evalGTEQ(const char *it, const char *end) {
+    return compare(it, end, greater_equal<Value>());
   }
   // compare directions end
 }

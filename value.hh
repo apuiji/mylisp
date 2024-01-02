@@ -67,4 +67,24 @@ namespace zlt::mylisp {
   }
 
   bool compare(int &dest, const Value &a, const Value &b) noexcept;
+
+  static inline bool operator <(const Value &a, const Value &b) noexcept {
+    int diff;
+    return compare(diff, a, b) && diff < 0;
+  }
+
+  static inline bool operator >(const Value &a, const Value &b) noexcept {
+    int diff;
+    return compare(diff, a, b) && diff > 0;
+  }
+
+  static inline bool operator <=(const Value &a, const Value &b) noexcept {
+    int diff;
+    return compare(diff, a, b) && diff <= 0;
+  }
+
+  static inline bool operator >=(const Value &a, const Value &b) noexcept {
+    int diff;
+    return compare(diff, a, b) && diff >= 0;
+  }
 }
