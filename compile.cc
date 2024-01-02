@@ -380,7 +380,11 @@ namespace zlt::mylisp {
     string body;
     compile(body, src.body);
     auto itBody = rte::fnBodies.insert(std::move(body)).first;
-    return dest << direction::MAKE_FN << &*itBody << src.inputClosure;
+    dest << direction::MAKE_FN << &*itBody;
+    if (src.inputClosure) {
+      dest << direction::PUSH << src.inputClosure << direction::POP;
+    }
+    return dest;
   }
 
   Compile &operator <<(Compile &dest, const GetPointerOper &src) {

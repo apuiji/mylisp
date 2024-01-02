@@ -2,6 +2,7 @@
 
 namespace zlt::mylisp::direction {
   enum: uint8_t {
+    NOP = 0,
     ADD,
     AND,
     BIT_AND,

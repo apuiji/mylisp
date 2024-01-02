@@ -1,5 +1,22 @@
-HHS := ../myccutils/xyz ast ast_include ast_lexer ast_optimize ast_parse ast_preproc ast_token ast_trans ast_trans1 ast_trans2 compile direction macro rte
-OBJS := ast_include ast_lexer ast_optimize ast_parse ast_preproc ast_trans ast_trans1 ast_trans2 compile
+HHS := \
+	../myccutils/xyz \
+	ast \
+	ast_include \
+	ast_lexer \
+	ast_optimize \
+	ast_parse \
+	ast_preproc \
+	ast_token \
+	ast_trans \
+	ast_trans1 \
+	ast_trans2 \
+	compile \
+	direction \
+	eval \
+	macro \
+	rte \
+	value
+OBJS := ast_include ast_lexer ast_optimize ast_parse ast_preproc ast_trans ast_trans1 ast_trans2 compile eval value
 
 mylisp: $(addsuffix .o, ${OBJS})
 	echo 123
