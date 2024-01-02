@@ -21,8 +21,7 @@ namespace zlt::mylisp::ast {
       return 0;
     }
     {
-      auto a = std::move(src);
-      src = std::move(a->next);
+      auto a = shift(src);
       trans1(dest, defs, a);
     }
     return trans(dest->next, defs, src);
@@ -173,8 +172,7 @@ namespace zlt::mylisp::ast {
       return 0;
     }
     {
-      auto a = std::move(src);
-      src = std::move(a->next);
+      auto a = shift(src);
       dest.push_back({});
       trans1(dest.back(), defs, a);
     }
@@ -256,8 +254,16 @@ namespace zlt::mylisp::ast {
     return trans2<Throw>(dest, defs, pos, src);
   }
 
+  static UNode &endOf(UNode &src) noexcept {
+    return src ? endOf(src->next) : src;
+  }
+
   int transKWD_try(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans2<Try>(dest, defs, pos, src);
+    UNode body;
+    trans(body, defs, src);
+    endOf(body).reset(new Throw(nullptr, UNode(new Null)));
+    dest.reset(new Try(pos, std::move(body)));
+    return 0;
   }
 
   int transKWD_yield(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
@@ -266,11 +272,11 @@ namespace zlt::mylisp::ast {
 
   template<>
   int transSymbol<token::symbol("!")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans2<Operation1<1, token::symbol("!")>>(dest, defs, pos, src);
+    return trans2<LogicNotOper>(dest, defs, pos, src);
   }
 
   template<class T>
-  static inline int trans2a(UNode &dest, Defs &defs, const Pos *pos, UNode &src, double d = NAN, double d1 = d) {
+  static inline int trans2a(UNode &dest, Defs &defs, const Pos *pos, UNode &src, double d, double d1) {
     UNodes a;
     trans(a, defs, src);
     switch (a.size()) {
@@ -287,9 +293,14 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
+  template<class T>
+  static inline int trans2a(UNode &dest, Defs &defs, const Pos *pos, UNode &src, double d = NAN) {
+    return trans2a<T>(dest, defs, pos, src, d, d);
+  }
+
   template<>
   int transSymbol<token::symbol("%")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans2a<Operation1<-1, token::symbol("%")>>(dest, defs, pos, src);
+    return trans2a<ArithModOper>(dest, defs, pos, src);
   }
 
   template<class T>
@@ -302,27 +313,27 @@ namespace zlt::mylisp::ast {
 
   template<>
   int transSymbol<token::symbol("&&")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans3<Operation1<-1, token::symbol("&&")>>(dest, defs, pos, src);
+    return trans3<LogicAndOper>(dest, defs, pos, src);
   }
 
   template<>
   int transSymbol<token::symbol("&")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans2a<Operation1<-1, token::symbol("&")>>(dest, defs, pos, src, 0);
+    return trans2a<BitwsAndOper>(dest, defs, pos, src, 0);
   }
 
   template<>
   int transSymbol<token::symbol("**")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans2a<Operation1<-1, token::symbol("**")>>(dest, defs, pos, src, NAN, 1);
+    return trans2a<ArithPowOper>(dest, defs, pos, src, NAN, 1);
   }
 
   template<>
   int transSymbol<token::symbol("*")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans2a<Operation1<-1, token::symbol("*")>>(dest, defs, pos, src, NAN, 1);
+    return trans2a<ArithMulOper>(dest, defs, pos, src, NAN, 1);
   }
 
   template<>
   int transSymbol<token::symbol("+")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans2a<Operation1<-1, token::symbol("+")>>(dest, defs, pos, src, 0);
+    return trans2a<ArithAddOper>(dest, defs, pos, src, 0);
   }
 
   template<>
@@ -342,7 +353,7 @@ namespace zlt::mylisp::ast {
       items.push_back(std::move(items[0]));
       items[0].reset(new NumberAtom(nullptr, 0));
     }
-    dest.reset(new Operation1<-1, token::symbol("-")>(pos, std::move(items)));
+    dest.reset(new ArithSubOper(pos, std::move(items)));
     return 0;
   }
 
@@ -360,21 +371,22 @@ namespace zlt::mylisp::ast {
       }
     }
     dest.reset(new T(pos, std::move(a)));
+    return 0;
   }
 
   template<>
   int transSymbol<token::symbol(".")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans4<Operation1<-1, token::symbol(".")>>(dest, defs, pos, src);
+    return trans4<GetMemberOper>(dest, defs, pos, src);
   }
 
   template<>
   int transSymbol<token::symbol("/")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans2a<Operation1<-1, token::symbol("/")>>(dest, defs, pos, src, NAN, 1);
+    return trans2a<ArithDivOper>(dest, defs, pos, src, NAN, 1);
   }
 
   template<>
   int transSymbol<token::symbol("<<")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans2a<Operation1<-1, token::symbol("<<")>>(dest, defs, pos, src, NAN, 0);
+    return trans2a<LshOper>(dest, defs, pos, src, NAN, 0);
   }
 
   template<class T>
@@ -395,18 +407,23 @@ namespace zlt::mylisp::ast {
   }
 
   template<>
+  int transSymbol<token::symbol("<=>")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans5<CompareOper>(dest, defs, pos, src);
+  }
+
+  template<>
   int transSymbol<token::symbol("<=")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans5<Operation1<2, token::symbol("<=")>>(dest, defs, pos, src);
+    return trans5<CmpLteqOper>(dest, defs, pos, src);
   }
 
   template<>
   int transSymbol<token::symbol("<")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans5<Operation1<2, token::symbol("<")>>(dest, defs, pos, src);
+    return trans5<CmpLtOper>(dest, defs, pos, src);
   }
 
   template<>
   int transSymbol<token::symbol("==")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans5<Operation1<2, token::symbol("==")>>(dest, defs, pos, src);
+    return trans5<CmpEqOper>(dest, defs, pos, src);
   }
 
   template<>
@@ -421,11 +438,11 @@ namespace zlt::mylisp::ast {
     if (src) {
       trans1(a, defs, src);
     } else {
-      throw Trans(pos, "nothing assign");
+      throw TransBad(pos, "nothing assign");
     }
     if (dynamic_cast<const IDAtom *>(a.get())) {
-      dest.reset(new Operation1<2, token::symbol("=")>(pos, { std::move(a), std::move(b) }));
-    } else if (auto c = dynamic_cast<Operation1<-1, token::symbol("=")> *>(a.get()); c) {
+      dest.reset(new AssignOper(pos, { std::move(a), std::move(b) }));
+    } else if (auto c = dynamic_cast<GetMemberOper *>(a.get()); c) {
       if (c->items.size() == 2) {
         dest.reset(new SetMemberOper(pos, { std::move(c->items[0]), std::move(c->items[1]), std::move(b) }));
       } else {
@@ -441,22 +458,22 @@ namespace zlt::mylisp::ast {
 
   template<>
   int transSymbol<token::symbol(">=")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans5<Operation1<2, token::symbol(">=")>>(dest, defs, pos, src);
+    return trans5<CmpGteqOper>(dest, defs, pos, src);
   }
 
   template<>
   int transSymbol<token::symbol(">>>")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans2a<Operation1<-1, token::symbol(">>>")>>(dest, defs, pos, src, NAN, 0);
+    return trans2a<UshOper>(dest, defs, pos, src, 0);
   }
 
   template<>
   int transSymbol<token::symbol(">>")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans2a<Operation1<-1, token::symbol(">>")>>(dest, defs, pos, src, NAN, 0);
+    return trans2a<RshOper>(dest, defs, pos, src, 0);
   }
 
   template<>
   int transSymbol<token::symbol(">")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans5<Operation1<2, token::symbol(">")>>(dest, defs, pos, src);
+    return trans5<CmpGtOper>(dest, defs, pos, src);
   }
 
   static int fnParams(vector<const wstring *> &dest, Defs &defs, const UNode &src);
@@ -467,36 +484,54 @@ namespace zlt::mylisp::ast {
     if (!ls) {
       throw TransBad(pos, "required function parameter list");
     }
-    vector<const wstring *> params;
     Defs defs1;
-    fnParams(params, defs1, ls->first);
+    vector<const wstring *> params;
+    fnParams(params, defs1, src);
     UNode body;
-    if (src->next) {
-      trans(body, defs1, src->next);
-    } else {
-      body.reset(new Null);
-    }
+    trans(body, defs1, src->next);
+    endOf(body).reset(new Return(nullptr, UNode(new Null)));
     dest.reset(new Function(pos, std::move(defs1), std::move(params), std::move(body)));
     return 0;
   }
 
+  int fnParams(vector<const wstring *> &dest, Defs &defs, const UNode &src) {
+    if (!src) [[unlikely]] {
+      return 0;
+    }
+    if (auto id = dynamic_cast<const IDAtom *>(src.get()); id) {
+      dest.push_back(id->name);
+      defs.insert(id->name);
+      return fnParams(dest, defs, src->next);
+    }
+    if (auto ls = dynamic_cast<const List *>(src.get()); ls && !ls->first) {
+      dest.push_back(nullptr);
+      return fnParams(dest, defs, src->next);
+    }
+    throw TransBad(src->pos, "illegal function parameter");
+  }
+
   template<>
   int transSymbol<token::symbol("^^")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans3<Operation1<-1, token::symbol("^^")>>(dest, defs, pos, src);
+    return trans4<LogicXorOper>(dest, defs, pos, src);
   }
 
   template<>
   int transSymbol<token::symbol("^")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans2a<Operation1<-1, token::symbol("^")>>(dest, defs, pos, src, 0);
+    return trans2a<BitwsXorOper>(dest, defs, pos, src, 0);
   }
 
   template<>
   int transSymbol<token::symbol("||")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans3<Operation1<-1, token::symbol("||")>>(dest, defs, pos, src);
+    return trans3<LogicOrOper>(dest, defs, pos, src);
   }
 
   template<>
   int transSymbol<token::symbol("|")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
-    return trans2a<Operation1<-1, token::symbol("|")>>(dest, defs, pos, src, 0);
+    return trans2a<BitwsOrOper>(dest, defs, pos, src, 0);
+  }
+
+  template<>
+  int transSymbol<token::symbol("~")>(UNode &dest, Defs &defs, const Pos *pos, UNode &src) {
+    return trans2<BitwsNotOper>(dest, defs, pos, src);
   }
 }

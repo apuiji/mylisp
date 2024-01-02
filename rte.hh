@@ -7,6 +7,7 @@
 /// runtime environment
 namespace zlt::mylisp::rte {
   extern std::set<std::filesystem::path> files;
+  extern std::set<std::string> fnBodies;
   extern std::set<std::string> latin1s;
   extern std::map<const std::wstring *, Macro> macros;
   extern std::set<ast::Pos> positions;

@@ -1,7 +1,9 @@
 #pragma once
 
 #include<array>
+#include<set>
 #include"ast_include.hh"
+#include"ast_token.hh"
 
 namespace zlt::mylisp::ast {
   int trans(UNode &dest, UNode &src);
@@ -98,6 +100,41 @@ namespace zlt::mylisp::ast {
   struct Operation1 final: Operation<N> {
     using Operation<N>::Operation;
   };
+
+  // arithmetical operations begin
+  using ArithAddOper = Operation1<-1, token::symbol("+")>;
+  using ArithSubOper = Operation1<-1, token::symbol("-")>;
+  using ArithMulOper = Operation1<-1, token::symbol("*")>;
+  using ArithDivOper = Operation1<-1, token::symbol("/")>;
+  using ArithModOper = Operation1<-1, token::symbol("%")>;
+  using ArithPowOper = Operation1<-1, token::symbol("**")>;
+  // arithmetical operations end
+  // logical operations begin
+  using LogicAndOper = Operation1<-1, token::symbol("&&")>;
+  using LogicOrOper = Operation1<-1, token::symbol("||")>;
+  using LogicNotOper = Operation1<1, token::symbol("!")>;
+  using LogicXorOper = Operation1<-1, token::symbol("^^")>;
+  // logical operations end
+  // bitwise operations begin
+  using BitwsAndOper = Operation1<-1, token::symbol("&")>;
+  using BitwsOrOper = Operation1<-1, token::symbol("|")>;
+  using BitwsNotOper = Operation1<1, token::symbol("~")>;
+  using BitwsXorOper = Operation1<-1, token::symbol("^")>;
+  using LshOper = Operation1<-1, token::symbol("<<")>;
+  using RshOper = Operation1<-1, token::symbol(">>")>;
+  using UshOper = Operation1<-1, token::symbol(">>>")>;
+  // bitwise operations end
+  // compare operations begin
+  using CmpEqOper = Operation1<2, token::symbol("==")>;
+  using CmpLtOper = Operation1<2, token::symbol("<")>;
+  using CmpGtOper = Operation1<2, token::symbol(">")>;
+  using CmpLteqOper = Operation1<2, token::symbol("<=")>;
+  using CmpGteqOper = Operation1<2, token::symbol(">=")>;
+  using CompareOper = Operation1<2, token::symbol("<=>")>;
+  // compare operations end
+  using AssignOper = Operation1<2, token::symbol("=")>;
+  using GetMemberOper = Operation1<-1, token::symbol(".")>;
+  using LengthOper = Operation1<1, token::KWD_length>;
 
   struct SetMemberOper final: Operation<3> {
     using Operation<3>::Operation;

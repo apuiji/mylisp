@@ -19,4 +19,20 @@ namespace zlt::mylisp::ast {
     Node(const Pos *pos = nullptr) noexcept: pos(pos) {}
     virtual ~Node() = default;
   };
+
+  static inline int replace(UNode &dest, UNode &src) noexcept {
+    src->next = std::move(dest->next);
+    dest = std::move(src);
+    return 0;
+  }
+
+  static inline int replace(UNode &dest, UNode &&src) noexcept {
+    return replace(dest, src);
+  }
+
+  static inline UNode shift(UNode &src) noexcept {
+    auto a = std::move(src);
+    src = std::move(a->next);
+    return std::move(a);
+  }
 }
