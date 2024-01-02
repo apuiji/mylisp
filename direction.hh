@@ -4,7 +4,6 @@ namespace zlt::mylisp::direction {
   enum: uint8_t {
     NOP = 0,
     ADD,
-    AND,
     BIT_AND,
     BIT_NOT,
     BIT_OR,
@@ -33,7 +32,6 @@ namespace zlt::mylisp::direction {
     MOD,
     MUL,
     NOT,
-    OR,
     POW,
     PUSH,
     PUSH_DEFER,

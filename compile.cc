@@ -59,11 +59,15 @@ namespace zlt::mylisp {
   template<uint64_t Op>
   declCompile(Operation1<1 COMMA Op>);
   template<uint64_t Op>
+  declCompile(Operation1<2 COMMA Op>);
+  template<uint64_t Op>
+  declCompile(Operation1<3 COMMA Op>);
+  template<uint64_t Op>
   declCompile(Operation1<-1 COMMA Op>);
-  template<int N, uint64_t Op>
-  declCompile(Operation1<N COMMA Op>);
   #undef COMMA
   declCompile(AssignOper);
+  declCompile(LogicAndOper);
+  declCompile(LogicOrOper);
   declCompile(SetMemberOper);
   // operations end
   // ast_trans.hh definitions end
@@ -257,8 +261,6 @@ namespace zlt::mylisp {
       return direction::NOT;
     } else if constexpr (Op == token::symbol("%")) {
       return direction::MOD;
-    } else if constexpr (Op == token::symbol("&&")) {
-      return direction::AND;
     } else if constexpr (Op == token::symbol("&")) {
       return direction::BIT_AND;
     } else if constexpr (Op == token::symbol("**")) {
@@ -295,8 +297,6 @@ namespace zlt::mylisp {
       return direction::XOR;
     } else if constexpr (Op == token::symbol("^")) {
       return direction::BIT_XOR;
-    } else if constexpr (Op == token::symbol("||")) {
-      return direction::OR;
     } else if constexpr (Op == token::symbol("|")) {
       return direction::BIT_OR;
     } else if constexpr (Op == token::symbol("~")) {
@@ -313,14 +313,18 @@ namespace zlt::mylisp {
   }
 
   template<uint64_t Op>
-  Compile &operator <<(Compile &dest, const Operation1<-1, Op> &src) {
-    return dest << src.items << operat0r<Op>() << src.items.size();
+  Compile &operator <<(Compile &dest, const Operation1<2, Op> &src) {
+    return dest << src.items[0] << direction::PUSH << src.items[1] << operat0r<Op>();
   }
 
-  template<int N, uint64_t Op>
-  Compile &operator <<(Compile &dest, const Operation1<N, Op> &src) {
-    compile(dest, src.items.begin(), src.items.end());
-    return dest << operat0r<Op>();
+  template<uint64_t Op>
+  Compile &operator <<(Compile &dest, const Operation1<3, Op> &src) {
+    return dest << src.items[0] << direction::PUSH << src.items[1] << direction::PUSH << src.items[2] << operat0r<Op>();
+  }
+
+  template<uint64_t Op>
+  Compile &operator <<(Compile &dest, const Operation1<-1, Op> &src) {
+    return dest << src.items << operat0r<Op>() << src.items.size();
   }
 
   Compile &operator <<(Compile &dest, const AssignOper &src) {
@@ -340,6 +344,46 @@ namespace zlt::mylisp {
       }
     }
     return dest << ref.name;
+  }
+
+  static Compile &logicAnd(Compile &dest, UNodes::const_iterator it, UNodes::const_iterator end) {
+    if (it == end) [[unlikely]] {
+      return dest;
+    }
+    dest << *it;
+    string then;
+    {
+      stringstream ss;
+      Compile comp(ss);
+      logicAnd(comp, it + 1, end);
+      then = ss.str();
+    }
+    if (then.size()) {
+      dest << direction::JIF << (1 + sizeof(size_t)) << direction::JMP << then.size() << then;
+    }
+    return dest;
+  }
+
+  Compile &operator <<(Compile &dest, const LogicAndOper &src) {
+    return logicAnd(dest, src.items.begin(), src.items.end());
+  }
+
+  static Compile &logicOr(Compile &dest, UNodes::const_iterator it, UNodes::const_iterator end) {
+    if (it == end) [[unlikely]] {
+      return dest;
+    }
+    dest << *it;
+    string elze;
+    {
+      stringstream ss;
+      Compile comp(ss);
+      logicOr(comp, it + 1, end);
+      elze = ss.str();
+    }
+    if (elze.size()) {
+      dest << direction::JIF << elze.size() << elze;
+    }
+    return dest;
   }
 
   Compile &operator <<(Compile &dest, const SetMemberOper &src) {
