@@ -1,4 +1,5 @@
 #include<algorithm>
+#include<cmath>
 #include"ast_optimize.hh"
 #include"myccutils/xyz.hh"
 

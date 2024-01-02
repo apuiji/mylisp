@@ -2,18 +2,20 @@
 #include"compile.hh"
 #include"direction.hh"
 #include"rte.hh"
+#include"myccutils/xyz.hh"
 
 using namespace std;
 
 namespace zlt::mylisp {
+  using namespace ast;
+
   struct Compile {
     ostream &ostr;
     Compile(ostream &ostr) noexcept: ostr(ostr) {}
   };
 
-  template<class T>
-  static inline Compile &operator <<(Compile &dest, T &&t) {
-    dest.ostr << t;
+  static inline Compile &operator <<(Compile &dest, const string &s) {
+    dest.ostr << s;
     return dest;
   }
 
@@ -53,12 +55,14 @@ namespace zlt::mylisp {
   declCompile(Try);
   declCompile(Yield);
   // operations begin
+  #define COMMA ,
   template<uint64_t Op>
-  declCompile(Operation<1, Op>);
+  declCompile(Operation1<1 COMMA Op>);
   template<uint64_t Op>
-  declCompile(Operation<-1, Op>);
+  declCompile(Operation1<-1 COMMA Op>);
   template<int N, uint64_t Op>
-  declCompile(Operation<N, Op>);
+  declCompile(Operation1<N COMMA Op>);
+  #undef COMMA
   declCompile(AssignOper);
   declCompile(SetMemberOper);
   // operations end
@@ -375,7 +379,7 @@ namespace zlt::mylisp {
   Compile &operator <<(Compile &dest, const Function2 &src) {
     string body;
     compile(body, src.body);
-    auto itBody = fnBodies.insert(std::move(body));
+    auto itBody = rte::fnBodies.insert(std::move(body)).first;
     return dest << direction::MAKE_FN << &*itBody << src.inputClosure;
   }
 
