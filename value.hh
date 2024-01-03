@@ -56,17 +56,29 @@ namespace zlt::mylisp {
     operator I() const noexcept {
       return (I) operator double();
     }
-    operator std::string_view() const noexcept;
-    operator std::wstring_view() const noexcept;
-    operator NativeFunction *() const noexcept;
     operator bool() const noexcept;
     operator Object *() const noexcept;
     template<std::derived_from<Object> T>
     operator T *() const noexcept {
-      return dynamic_cast<T *>(operator Object *());
+      return static_cast<T *>(operator Object *());
     }
     // cast operations end
   };
+
+  bool dynamicast(std::string_view &dest, const Value &src) noexcept;
+  bool dynamicast(std::wstring_view &dest, const Value &src) noexcept;
+  bool dynamicast(NativeFunction *&dest, const Value &src) noexcept;
+  bool dynamicast(Object *&dest, const Value &src) noexcept;
+
+  template<std::derived_from<Object> T>
+  static inline bool dynamicast(T *&dest, const Value &src) noexcept {
+    Object *o;
+    if (!dynamicast(o, src)) {
+      return false;
+    }
+    dest = dynamic_cast<T *>(o);
+    return dest;
+  }
 
   static inline bool operator !(const Value &v) noexcept {
     return !(bool) v;
