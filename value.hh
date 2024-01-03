@@ -50,10 +50,22 @@ namespace zlt::mylisp {
       return operator =(static_cast<Object *>(o));
     }
     // assignment operations end
+    // cast operations begin
     operator double() const noexcept;
     template<std::integral I>
-    operator I() const noexcept;
+    operator I() const noexcept {
+      return (I) operator double();
+    }
+    operator std::string_view() const noexcept;
+    operator std::wstring_view() const noexcept;
+    operator NativeFunction *() const noexcept;
     operator bool() const noexcept;
+    operator Object *() const noexcept;
+    template<std::derived_from<Object> T>
+    operator T *() const noexcept {
+      return dynamic_cast<T *>(operator Object *());
+    }
+    // cast operations end
   };
 
   static inline bool operator !(const Value &v) noexcept {

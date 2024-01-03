@@ -335,10 +335,6 @@ namespace zlt::mylisp {
         dest << direction::SET_LOCAL;
         break;
       }
-      case Reference::CLOSURE_SCOPE: {
-        dest << direction::SET_CLOSURE;
-        break;
-      }
       default: {
         dest << direction::SET_GLOBAL;
       }
@@ -392,7 +388,7 @@ namespace zlt::mylisp {
   }
 
   Compile &operator <<(Compile &dest, const Argument &src) {
-    return dest << direction::SET_ARG << src.index;
+    return dest << direction::GET_ARG << src.index;
   }
 
   Compile &operator <<(Compile &dest, const CleanArguments &src) {
