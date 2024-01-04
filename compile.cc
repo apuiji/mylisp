@@ -49,7 +49,7 @@ namespace zlt::mylisp {
   declCompile(Defer);
   declCompile(Forward);
   declCompile(If);
-  declCompile(Null);
+  declCompile(ast::Null);
   declCompile(Return);
   declCompile(Throw);
   declCompile(Try);
@@ -101,7 +101,7 @@ namespace zlt::mylisp {
     ifType(Defer);
     ifType(Forward);
     ifType(If);
-    ifType(Null);
+    ifType(ast::Null);
     ifType(Return);
     ifType(Throw);
     ifType(Try);
@@ -233,7 +233,7 @@ namespace zlt::mylisp {
     return dest;
   }
 
-  Compile &operator <<(Compile &dest, const Null &src) {
+  Compile &operator <<(Compile &dest, const ast::Null &src) {
     return dest << direction::SET_NULL;
   }
 
@@ -380,6 +380,10 @@ namespace zlt::mylisp {
       dest << direction::JIF << elze.size() << elze;
     }
     return dest;
+  }
+
+  Compile &operator <<(Compile &dest, const LogicOrOper &src) {
+    return logicOr(dest, src.items.begin(), src.items.end());
   }
 
   Compile &operator <<(Compile &dest, const SetMemberOper &src) {

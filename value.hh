@@ -63,6 +63,8 @@ namespace zlt::mylisp {
       return static_cast<T *>(operator Object *());
     }
     // cast operations end
+    Value &operator [](const Value &key) noexcept;
+    const Value &operator [](const Value &key) const noexcept;
   };
 
   bool dynamicast(std::string_view &dest, const Value &src) noexcept;

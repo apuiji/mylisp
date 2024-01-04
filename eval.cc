@@ -3,6 +3,7 @@
 #include"direction.hh"
 #include"eval.hh"
 #include"gc.hh"
+#include"myccutils/xyz.hh"
 #include"object.hh"
 #include"rte.hh"
 #include"value.hh"
@@ -141,7 +142,7 @@ namespace zlt::mylisp {
   static int push() {
     auto &top = itCoroutine->valuekTop;
     if (top + 1 == itCoroutine->valuek->end()) {
-      throw Bad("out of stack");
+      throw EvalBad("out of stack");
     }
     ++top;
     return 0;
@@ -238,7 +239,7 @@ namespace zlt::mylisp {
   }
 
   int evalBIT_NOT(const char *it, const char *end) {
-    *itCoroutine->valuek.top = ~(int) *itCoroutine->valuek.top;
+    itCoroutine->value = ~(int) itCoroutine->value;
     return eval(it, end);
   }
 
@@ -303,9 +304,17 @@ namespace zlt::mylisp {
 
   int evalCALL(const char *it, const char *end) {
     size_t argc = *(const size_t *) it;
-    call(it + sizeof(size_t), end, argc);
+    call(argc);
     return eval(it + sizeof(size_t), end);
   }
+
+  struct Forward {
+    size_t argc;
+    Forward(size_t argc) noexcept: argc(argc) {}
+  };
+
+  struct Return {};
+  struct Throw {};
 
   static int popDefers(size_t prevDeferkSize) noexcept;
 
@@ -350,7 +359,7 @@ namespace zlt::mylisp {
     }
     itCoroutine->value = false;
     top = callee;
-    return eval(next, end);
+    return 0;
   }
 
   static int popDefers1(size_t n) noexcept;
@@ -410,7 +419,7 @@ namespace zlt::mylisp {
 
   int evalGET_GLOBAL(const char *it, const char *end) {
     auto name = *(const wstring **) it;
-    itCoroutine->value = globalDefs[name];
+    itCoroutine->value = rte::globalDefs[name];
     return eval(it + sizeof(void *), end);
   }
 
@@ -424,7 +433,7 @@ namespace zlt::mylisp {
 
   int evalGET_MEMB(const char *it, const char *end) {
     size_t n = *(const size_t *) it;
-    auto &top = itCoroutine->valuek.top;
+    auto &top = itCoroutine->valuekTop;
     itCoroutine->value = top[-n];
     getMemb(itCoroutine->value, top - n + 1, top);
     top -= n;
@@ -512,7 +521,7 @@ namespace zlt::mylisp {
 
   int evalSET_GLOBAL(const char *it, const char *end) {
     auto name = *(const wstring **) it;
-    globalDefs[name] = itCoroutine->value;
+    rte::globalDefs[name] = itCoroutine->value;
     return eval(it + sizeof(void *), end);
   }
 
@@ -529,7 +538,7 @@ namespace zlt::mylisp {
   }
 
   int evalSET_MEMB(const char *it, const char *end) {
-    auto &top = itCoroutine->valuek.top;
+    auto &top = itCoroutine->valuekTop;
     top[-2][top[-1]] = itCoroutine->value;
     top -= 2;
     return eval(it, end);

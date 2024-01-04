@@ -26,14 +26,14 @@ namespace zlt::mylisp {
   };
 
   struct Coroutine {
-    using Sink = boost::coroutines2::coroutine<int>::push_type;
+    using Sink = boost::coroutines2::coroutine<void>::push_type;
     Value value;
-    std::unique_ptr<Value> valuek;
+    std::unique_ptr<ValueStack> valuek;
     Value *valuekBottom;
     Value *valuekTop;
     std::list<std::map<const std::wstring *, Value>> localDefsk;
     std::list<Value> deferk;
     Sink &sink;
-    Coroutine(std::unique_ptr<Value> &&valuek, Sink &sink) noexcept: valuek(std::move(valuek)), sink(sink) {}
+    Coroutine(std::unique_ptr<ValueStack> &&valuek, Sink &sink) noexcept: valuek(std::move(valuek)), sink(sink) {}
   };
 }

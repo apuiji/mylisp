@@ -2,6 +2,7 @@
 
 #include<deque>
 #include<map>
+#include<set>
 #include"value.hh"
 
 namespace zlt::mylisp {
@@ -39,15 +40,25 @@ namespace zlt::mylisp {
 
   struct SetObj final: Object {
     struct Comparator {
-      bool operator ()(const Value &a, const Value &b) noexcept {
+      bool operator ()(const Value &a, const Value &b) const noexcept {
         int diff;
         return !compare(diff, a, b) || diff < 0;
       }
     };
-    std::set<Value, Comparator>;
+    std::set<Value, Comparator> set;
   };
 
   struct MapObj final: Object {
     std::map<Value, Value, SetObj::Comparator> map;
+  };
+
+  struct PointerObj final: Object {
+    Value *value;
+    Value &operator *() noexcept {
+      return *value;
+    }
+    const Value &operator *() const noexcept {
+      return *value;
+    }
   };
 }
