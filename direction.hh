@@ -34,8 +34,6 @@ namespace zlt::mylisp::direction {
     MUL,
     NOT,
     POP,
-    POP_DEFER,
-    POP_FORWARD,
     POW,
     PUSH,
     PUSH_DEFER,

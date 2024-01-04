@@ -1,5 +1,6 @@
 #pragma once
 
+#include<boost/coroutine2/all.hpp>
 #include<list>
 #include<map>
 #include<memory>
@@ -24,52 +25,15 @@ namespace zlt::mylisp {
     }
   };
 
-  struct Frame {
-    const char *next;
-    const char *end;
-    Frame(const char *next, const char *end) noexcept: next(next), end(end) {}
-  };
-
-  struct CallFrame: Frame {
-    Value *prevValuekBottom;
-    size_t prevDeferkSize;
-    CallFrame(const char *next, const char *end, Value *prevValuekBottom, size_t prevDeferkSize) noexcept:
-    Frame(next, end), prevValuekBottom(prevValuekBottom), prevDeferkSize(prevDeferkSize) {}
-  };
-
-  struct DeferFrame {
-    size_t deferc;
-    DeferFrame(size_t deferc) noexcept;
-  };
-
-  struct ForwardFrame {
-    size_t argc;
-    ForwardFrame(size_t argc) noexcept;
-  };
-
-  struct TryFrame: Frame {
-    size_t prevDeferkSize;
-    TryFrame(const char *next, const char *end, size_t prevDeferkSize) noexcept:
-    Frame(next, end), prevDeferkSize(prevDeferkSize) {}
-  };
-
-  struct VarFrame: std::variant<CallFrame, DeferFrame, ForwardFrame, TryFrame> {
-    template<class T>
-    operator T *() noexcept {
-      return (T *) this;
-    }
-    Frame *operator ->() noexcept {
-      return (Frame *) this;
-    }
-  };
-
   struct Coroutine {
+    using Sink = boost::coroutines2::coroutine<int>::push_type;
     Value value;
     std::unique_ptr<Value> valuek;
     Value *valuekBottom;
     Value *valuekTop;
     std::list<std::map<const std::wstring *, Value>> localDefsk;
     std::list<Value> deferk;
-    std::list<VarFrame> framek;
+    Sink &sink;
+    Coroutine(std::unique_ptr<Value> &&valuek, Sink &sink) noexcept: valuek(std::move(valuek)), sink(sink) {}
   };
 }

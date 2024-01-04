@@ -299,33 +299,85 @@ namespace zlt::mylisp {
   }
   // compare directions end
 
-  static int call(const char *next, const char *end, size_t argc);
+  static int call(size_t argc);
 
   int evalCALL(const char *it, const char *end) {
     size_t argc = *(const size_t *) it;
-    return call(it + sizeof(size_t), end, argc);
+    call(it + sizeof(size_t), end, argc);
+    return eval(it + sizeof(size_t), end);
   }
 
-  int call(const char *next, const char *end, size_t argc) {
+  static int popDefers(size_t prevDeferkSize) noexcept;
+
+  int call(size_t argc) {
     auto &top = itCoroutine->valuekTop;
     auto itArg = top - argc;
     auto callee = itArg - 1;
     if (NativeFunction *nf; dynamicast(nf, *callee)) {
       itCoroutine->value = nf(itArg, top);
       top = callee;
-      return eval(next, end);
+      return 0;
     }
     if (FunctionObj *fo; dynamicast(fo, *callee)) {
-      itCoroutine->framek.back()->next = next;
-      auto body = fo->body.data();
-      auto bodyEnd = fo->body.data() + fo->body.size();
-      itCoroutine->framek.push_back(CallFrame(body, bodyEnd, itCoroutine->prevValuekBottom, itCoroutine->deferk.size()));
+      auto prevValuekBottom = itCoroutine->valuekBottom;
+      size_t prevDeferkSize = itCoroutine->deferk.size();
+      itCoroutine->valuekBottom = itArg;
       itCoroutine->localDefsk.push_back({});
-      return eval(body, bodyEnd);
+      try {
+        eval(fo->body.data(), fo->body.data() + fo->body.size());
+      } catch (Forward fwd) {
+        copy(top - fwd.argc - 1, top, callee);
+        itCoroutine->valuekBottom = prevValuekBottom;
+        top = callee + 1 + fwd.argc;
+        itCoroutine->localDefsk.pop_back();
+        popDefers(prevDeferkSize);
+        return call(fwd.argc);
+      } catch (Return) {
+        itCoroutine->valuekBottom = prevValuekBottom;
+        top = callee;
+        itCoroutine->localDefsk.pop_back();
+        popDefers(prevDeferkSize);
+        return 0;
+      } catch (Throw t) {
+        itCoroutine->valuekBottom = prevValuekBottom;
+        top = callee;
+        itCoroutine->localDefsk.pop_back();
+        popDefers(prevDeferkSize);
+        throw t;
+      }
+      // never
+      return 0;
     }
     itCoroutine->value = false;
     top = callee;
     return eval(next, end);
+  }
+
+  static int popDefers1(size_t n) noexcept;
+
+  int popDefers(size_t prevDeferkSize) noexcept {
+    size_t n = itCoroutine->deferk.size() - prevDeferkSize;
+    if (n) {
+      push();
+      popDefers1(n);
+      itCoroutine->value = itCoroutine->valuekTop[-1];
+      pop();
+    }
+    return 0;
+  }
+
+  int popDefers1(size_t n) noexcept {
+    if (!n) [[unlikely]] {
+      return 0;
+    }
+    itCoroutine->value = itCoroutine->deferk.back();
+    itCoroutine->deferk.pop_back();
+    push();
+    try {
+      call(0);
+    } catch (...) {
+    }
+    return popDefers1(n - 1);
   }
 
   int evalCLN_ARGS(const char *it, const char *end) {
@@ -333,96 +385,38 @@ namespace zlt::mylisp {
     return eval(it, end);
   }
 
-  using ItFrame = vector<VarFrame>::reverse_iterator;
-
-  template<class T>
-  static int findFrame(T *&dest, ItFrame it, ItFrame end) noexcept {
-    if (it == end) {
-      return end;
-    }
-    dest = get_if<T *>(&*it);
-    return dest ? 0 : findFrame(dest, ++it, end);
-  }
-
-  static int popDefer(size_t n) noexcept;
-
   int evalFORWARD(const char *it, const char *end) {
     size_t argc = *(const size_t *) it;
-    CallFrame *cf;
-    findFrame(cf, itCoroutine->framek.rbegin(), itCoroutine->framek.rend());
-    auto &top = itCoroutine->valuekTop;
-    copy(top - argc - 1, top, itCoroutine->valuekBottom - 1);
-    auto next = cf->next;
-    auto end1 = cf->end;
-    itCoroutine->valuekTop = itCoroutine->valuekBottom + argc;
-    itCoroutine->valuekBottom = cf->prevValuekBottom;
-    size_t prevDeferkSize = itCoroutine->prevDeferkSize;
-    itCoroutine->localDefsk.pop_back();
-    itCoroutine->framek.pop_back();
-    if (size_t n = itCoroutine->deferk.size() - prevDeferkSize; n) {
-      push();
-      itCoroutine->framek.back().next = next;
-      return popDefer(next, end1, n);
-    } else {
-      return call(next, end1, argc);
-    }
-  }
-
-  int popCallFrame(const CallFrame &cf, Value *valuekTop) noexcept {
-    itCoroutine->localDefsk.pop_back();
-    itCoroutine->valuek.bottom = prevValuekBottom;
-    itCoroutine->valuek.top = valuekTop;
-    if (size_t n = itCoroutine->deferk.size() - prevDeferkSize; n) {
-      push();
-      popDefer(n);
-      pop();
-    }
-    return 0;
-  }
-
-  int popDefer(size_t n) noexcept {
-    if (!n) [[unlikely]] {
-      return 0;
-    }
-    auto &top = itCoroutine->valuek.top;
-    *top = itCoroutine->deferk.back();
-    itCoroutine->deferk.pop_back();
-    push();
-    try {
-      call(0);
-    } catch (Throw) { 
-    }
-    return popDefer(n - 1);
+    throw Forward(argc);
   }
 
   int evalGET_ARG(const char *it, const char *end) {
     size_t i = *(const size_t *) it;
-    auto &top = itCoroutine->valuek.top;
-    auto arg = itCoroutine->valuek.bottom + i;
-    if (arg < top) {
-      *top = *arg;
+    auto arg = itCoroutine->valuekBottom + i;
+    if (arg < itCoroutine->valuekTop) {
+      itCoroutine->value = *arg;
     } else {
-      *top = false;
+      itCoroutine->value = false;
     }
     return eval(it + sizeof(size_t), end);
   }
 
   int evalGET_CLOSURE(const char *it, const char *end) {
     auto name = *(const wstring **) it;
-    auto fo = (FunctionObj *) *itCoroutine->valuek.bottom;
-    *itCoroutine->valuek.top = fo->closures[name];
+    auto fo = (FunctionObj *) *itCoroutine->valuekBottom;
+    itCoroutine->value = fo->closures[name];
     return eval(it + sizeof(void *), end);
   }
 
   int evalGET_GLOBAL(const char *it, const char *end) {
     auto name = *(const wstring **) it;
-    *itCoroutine->valuek.top = globalDefs[name];
+    itCoroutine->value = globalDefs[name];
     return eval(it + sizeof(void *), end);
   }
 
   int evalGET_LOCAL(const char *it, const char *end) {
     auto name = *(const wstring **) it;
-    *itCoroutine->valuek.top = itCoroutine->localDefsk.back()[name];
+    itCoroutine->value = itCoroutine->localDefsk.back()[name];
     return eval(it + sizeof(void *), end);
   }
 
@@ -431,7 +425,8 @@ namespace zlt::mylisp {
   int evalGET_MEMB(const char *it, const char *end) {
     size_t n = *(const size_t *) it;
     auto &top = itCoroutine->valuek.top;
-    getMemb(top - n, top - n + 1, top);
+    itCoroutine->value = top[-n];
+    getMemb(itCoroutine->value, top - n + 1, top);
     top -= n;
     return eval(it + sizeof(size_t), end);
   }
@@ -445,21 +440,20 @@ namespace zlt::mylisp {
   }
 
   int evalGET_PTR(const char *it, const char *end) {
-    *itCoroutine->valuek.top = **(PointerObj *) *itCoroutine->valuek.top;
+    itCoroutine->value = **(PointerObj *) itCoroutine->value;
     return eval(it, end);
   }
 
   int evalINPUT_CLOSURE(const char *it, const char *end) {
     auto name = *(const wstring **) it;
-    auto &top = itCoroutine->valuek.top;
-    auto fo = (FunctionObj *) top[-1];
-    fo->closures[name] = *top;
+    auto fo = (FunctionObj *) itCoroutine->valuekTop[-1];
+    fo->closures[name] = itCoroutine->value;
     return eval(it + sizeof(void *), end);
   }
 
   int evalJIF(const char *it, const char *end) {
     size_t n = *(const size_t *) it;
-    if (*itCoroutine->valuek.top) {
+    if (itCoroutine->value) {
       return eval(it + sizeof(size_t) + n, end);
     } else {
       return eval(it + sizeof(size_t), end);
@@ -474,14 +468,14 @@ namespace zlt::mylisp {
   int evalMAKE_FN(const char *it, const char *end) {
     auto body = *(const string **) it;
     auto fo = new FunctionObj(*body);
-    *itCoroutine->valuek.top = fo;
+    itCoroutine->value = fo;
     gc::neobj(fo);
     return eval(it + sizeof(void *), end);
   }
 
   int evalMAKE_PTR(const char *it, const char *end) {
     auto po = new PointerObj;
-    *itCoroutine->valuek.top = po;
+    itCoroutine->value = po;
     gc::neobj(po);
     return eval(it, end);
   }
@@ -497,73 +491,71 @@ namespace zlt::mylisp {
   }
 
   int evalPUSH_DEFER(const char *it, const char *end) {
-    itCoroutine->deferk.push_back(*itCoroutine->valuek.top);
+    itCoroutine->deferk.push_back(itCoroutine->value);
     return eval(it, end);
   }
 
   int evalRETURN(const char *it, const char *end) {
-    throw Return;
+    throw Return();
   }
 
   int evalSET_CALLEE(const char *it, const char *end) {
-    *itCoroutine->valuek.top = itCoroutine->valuek.bottom[-1];
+    itCoroutine->value = itCoroutine->valuekBottom[-1];
     return eval(it, end);
   }
 
   int evalSET_CHAR(const char *it, const char *end) {
     wchar_t c = *(const wchar_t *) it;
-    *itCoroutine->valuek.top = c;
+    itCoroutine->value = c;
     return eval(it + sizeof(wchar_t), end);
   }
 
   int evalSET_GLOBAL(const char *it, const char *end) {
     auto name = *(const wstring **) it;
-    globalDefs[name] = *itCoroutine->valuek.top;
+    globalDefs[name] = itCoroutine->value;
     return eval(it + sizeof(void *), end);
   }
 
   int evalSET_LATIN1(const char *it, const char *end) {
     auto s = *(const string **) it;
-    *itCoroutine->valuek.top = s;
+    itCoroutine->value = s;
     return eval(it + sizeof(void *), end);
   }
 
   int evalSET_LOCAL(const char *it, const char *end) {
     auto name = *(const wstring **) it;
-    itCoroutine->localDefsk.back()[name] = *itCoroutine->valuek.top;
+    itCoroutine->localDefsk.back()[name] = itCoroutine->value;
     return eval(it + sizeof(void *), end);
   }
 
   int evalSET_MEMB(const char *it, const char *end) {
     auto &top = itCoroutine->valuek.top;
-    top[-2][top[-1]] = top[0];
-    top[-2] = *top;
+    top[-2][top[-1]] = itCoroutine->value;
     top -= 2;
     return eval(it, end);
   }
 
   int evalSET_NULL(const char *it, const char *end) {
-    *itCoroutine->valuek.top = false;
+    itCoroutine->value = false;
     return eval(it, end);
   }
 
   int evalSET_NUM(const char *it, const char *end) {
     double d = *(const double *) it;
-    *itCoroutine->valuek.top = d;
+    itCoroutine->value = d;
     return eval(it + sizeof(double), end);
   }
 
   int evalSET_PTR(const char *it, const char *end) {
-    auto &top = itCoroutine->valuek.top;
-    auto po = (PointerObj *) top[-1];
-    **po = *top;
-    top[-1] = *top;
+    auto po = (PointerObj *) itCoroutine->valuekTop[-1];
+    **po = itCoroutine->value;
+    pop();
     return eval(it, end);
   }
 
   int evalSET_STR(const char *it, const char *end) {
     auto s = *(const wstring **) it;
-    *itCoroutine->valuek.top = s;
+    itCoroutine->value = s;
     return eval(it + sizeof(void *), end);
   }
 
@@ -573,19 +565,17 @@ namespace zlt::mylisp {
 
   int evalTRY(const char *it, const char *end) {
     size_t n = *(const size_t *) it;
-    auto &top = itCoroutine->valuek.top;
-    auto prevTop = top;
+    auto prevTop = itCoroutine->valuekTop;
     try {
       eval(it + sizeof(size_t), end);
     } catch (Throw) {
-      *prevTop = *top;
     }
-    top = prevTop;
+    itCoroutine->valuekTop = prevTop;
     return eval(it + sizeof(size_t) + n, end);
   }
 
   int evalYIELD(const char *it, const char *end) {
-    (*itCoroutine->sink)();
+    itCoroutine->sink();
     return eval(it, end);
   }
 }
