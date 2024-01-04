@@ -136,6 +136,22 @@ namespace zlt::mylisp {
     }
   }
 
+  using rte::itCoroutine;
+
+  static int push() {
+    auto &top = itCoroutine->valuekTop;
+    if (top + 1 == itCoroutine->valuek->end()) {
+      throw Bad("out of stack");
+    }
+    ++top;
+    return 0;
+  }
+
+  static inline int pop() noexcept {
+    --itCoroutine->valuekTop;
+    return 0;
+  }
+
   // arithmetical directions begin
   template<class F>
   static double arithmetical1(double d, const Value *it, const Value *end, F &f) noexcept {
@@ -145,9 +161,9 @@ namespace zlt::mylisp {
   template<class F>
   static inline int arithmetical(const char *it, const char *end, F &&f) {
     size_t n = *(const size_t *) it;
-    auto &top = itCoroutine->valuek.top;
+    auto &top = itCoroutine->valuekTop;
     auto v = top - n;
-    *v = arithmetical1((double) *v, v + 1, top, f);
+    itCoroutine->value = arithmetical1((double) *v, v + 1, top, f);
     top = v;
     return eval(it + sizeof(size_t), end);
   }
@@ -179,7 +195,7 @@ namespace zlt::mylisp {
 
   // logical directions begin
   int evalNOT(const char *it, const char *end) {
-    *itCoroutine->valuek.top = !*itCoroutine->valuek.top;
+    itCoroutine->value = !itCoroutine->value;
     return eval(it, end);
   }
 
@@ -189,9 +205,9 @@ namespace zlt::mylisp {
 
   int evalXOR(const char *it, const char *end) {
     size_t n = *(const size_t *) it;
-    auto &top = itCoroutine->valuek.top;
+    auto &top = itCoroutine->valuekTop;
     auto v = top - n;
-    *v = x0r(false, v, top);
+    itCoroutine->value = x0r(false, v, top);
     top = v;
     return eval(it + sizeof(size_t), end);
   }
@@ -206,9 +222,9 @@ namespace zlt::mylisp {
   template<class F>
   static inline int bitwise(const char *it, const char *end, F &&f) {
     size_t n = *(const size_t *) it;
-    auto &top = itCoroutine->valuek.top;
+    auto &top = itCoroutine->valuekTop;
     auto v = top - n;
-    *v = bitwise1((int) *v, v + 1, top, f);
+    itCoroutine->value = bitwise1((int) *v, v + 1, top, f);
     top = v;
     return eval(it + sizeof(size_t), end);
   }
@@ -246,9 +262,8 @@ namespace zlt::mylisp {
   // compare directions begin
   template<class F>
   static inline int compare(const char *it, const char *end, F &&f) {
-    auto &top = itCoroutine->valuek.top;
-    top[-1] = f(top[-1], top[0]);
-    --top;
+    itCoroutine->value = f(itCoroutine->valuekTop[-1], itCoroutine->value);
+    pop();
     return eval(it, end);
   }
 
@@ -284,70 +299,74 @@ namespace zlt::mylisp {
   }
   // compare directions end
 
-  static int call(size_t argc);
+  static int call(const char *next, const char *end, size_t argc);
 
   int evalCALL(const char *it, const char *end) {
-    size_t n = *(const size_t *) it;
-    call(n);
-    return eval(it + sizeof(size_t), end);
+    size_t argc = *(const size_t *) it;
+    return call(it + sizeof(size_t), end, argc);
   }
 
-  struct CallFrame {
-    Value *prevValuekBottom;
-    size_t prevDeferkSize;
-  };
-
-  static inline int pushCallFrame(CallFrame &dest, Value *valuekBottom) {
-    dest.prevValuekBottom = itCoroutine->valuek.bottom;
-    dest.prevDeferkSize = itCoroutine->deferk.size();
-    itCoroutine->valuek.bottom = valuekBottom;
-    itCoroutine->localDefsk.push_back({});
-    return 0;
-  }
-
-  static int popCallFrame(const CallFrame &cf, Value *valuekTop) noexcept;
-
-  static int call(size_t argc) {
-    auto &top = itCoroutine->valuek.top;
+  int call(const char *next, const char *end, size_t argc) {
+    auto &top = itCoroutine->valuekTop;
     auto itArg = top - argc;
     auto callee = itArg - 1;
     if (NativeFunction *nf; dynamicast(nf, *callee)) {
-      *callee = nf(itArg, top);
+      itCoroutine->value = nf(itArg, top);
       top = callee;
-      return 0;
+      return eval(next, end);
     }
     if (FunctionObj *fo; dynamicast(fo, *callee)) {
-      CallFrame cf;
-      pushCallFrame(cf, itArg);
-      try {
-        *callee = eval(fo->body.data(), fo->body.data() + fo->body.size());
-      } catch (Forward fwd) {
-        copy(top - fwd.argc - 1, top, callee);
-        popCallFrame(cf, callee + 1 + fwd.argc);
-        return call(fwd.argc);
-      } catch (Return) {
-        *callee = *top;
-        popCallFrame(cf, callee);
-        return 0;
-      } catch (Throw t) {
-        *callee = *top;
-        popCallFrame(cf, callee);
-        throw t;
-      }
+      itCoroutine->framek.back()->next = next;
+      auto body = fo->body.data();
+      auto bodyEnd = fo->body.data() + fo->body.size();
+      itCoroutine->framek.push_back(CallFrame(body, bodyEnd, itCoroutine->prevValuekBottom, itCoroutine->deferk.size()));
+      itCoroutine->localDefsk.push_back({});
+      return eval(body, bodyEnd);
     }
-    *callee = false;
+    itCoroutine->value = false;
     top = callee;
-    return 0;
+    return eval(next, end);
   }
 
-  static int push();
+  int evalCLN_ARGS(const char *it, const char *end) {
+    itCoroutine->valuekTop = itCoroutine->valuekBottom;
+    return eval(it, end);
+  }
 
-  static inline int pop() noexcept {
-    --itCoroutine->valuek.top;
-    return 0;
+  using ItFrame = vector<VarFrame>::reverse_iterator;
+
+  template<class T>
+  static int findFrame(T *&dest, ItFrame it, ItFrame end) noexcept {
+    if (it == end) {
+      return end;
+    }
+    dest = get_if<T *>(&*it);
+    return dest ? 0 : findFrame(dest, ++it, end);
   }
 
   static int popDefer(size_t n) noexcept;
+
+  int evalFORWARD(const char *it, const char *end) {
+    size_t argc = *(const size_t *) it;
+    CallFrame *cf;
+    findFrame(cf, itCoroutine->framek.rbegin(), itCoroutine->framek.rend());
+    auto &top = itCoroutine->valuekTop;
+    copy(top - argc - 1, top, itCoroutine->valuekBottom - 1);
+    auto next = cf->next;
+    auto end1 = cf->end;
+    itCoroutine->valuekTop = itCoroutine->valuekBottom + argc;
+    itCoroutine->valuekBottom = cf->prevValuekBottom;
+    size_t prevDeferkSize = itCoroutine->prevDeferkSize;
+    itCoroutine->localDefsk.pop_back();
+    itCoroutine->framek.pop_back();
+    if (size_t n = itCoroutine->deferk.size() - prevDeferkSize; n) {
+      push();
+      itCoroutine->framek.back().next = next;
+      return popDefer(next, end1, n);
+    } else {
+      return call(next, end1, argc);
+    }
+  }
 
   int popCallFrame(const CallFrame &cf, Value *valuekTop) noexcept {
     itCoroutine->localDefsk.pop_back();
@@ -358,15 +377,6 @@ namespace zlt::mylisp {
       popDefer(n);
       pop();
     }
-    return 0;
-  }
-
-  int push() {
-    auto &top = itCoroutine->valuek.top;
-    if (top + 1 == itCoroutine->valuek.end) {
-      throw Bad();
-    }
-    ++top;
     return 0;
   }
 
@@ -383,16 +393,6 @@ namespace zlt::mylisp {
     } catch (Throw) { 
     }
     return popDefer(n - 1);
-  }
-
-  int evalCLN_ARGS(const char *it, const char *end) {
-    itCoroutine->valuek.top = itCoroutine->valuek.bottom;
-    return eval(it, end);
-  }
-
-  int evalFORWARD(const char *it, const char *end) {
-    size_t n = *(const size_t *) it;
-    throw Forward(n);
   }
 
   int evalGET_ARG(const char *it, const char *end) {
