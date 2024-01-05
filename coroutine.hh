@@ -33,7 +33,11 @@ namespace zlt::mylisp {
     Value *valuekTop;
     std::list<std::map<const std::wstring *, Value>> localDefsk;
     std::list<Value> deferk;
+    bool alive;
     Sink &sink;
     Coroutine(std::unique_ptr<ValueStack> &&valuek, Sink &sink) noexcept: valuek(std::move(valuek)), sink(sink) {}
   };
+
+  using Coroutines = std::list<Coroutine>;
+  using ItCoroutine = Coroutines::iterator;
 }

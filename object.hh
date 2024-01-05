@@ -15,7 +15,9 @@ namespace zlt::mylisp {
     Object *prev;
     Object *next;
     int color;
-    virtual ~Object() = default;
+    virtual int graySubjs() noexcept {
+      return 0;
+    }
   };
 
   template<class C>
@@ -32,10 +34,12 @@ namespace zlt::mylisp {
     std::map<const std::wstring *, Value> closures;
     const std::string &body;
     FunctionObj(const std::string &body) noexcept: body(body) {}
+    int graySubjs() noexcept override;
   };
 
   struct ListObj final: Object {
     std::deque<Value> list;
+    int graySubjs() noexcept override;
   };
 
   struct SetObj final: Object {
@@ -46,10 +50,12 @@ namespace zlt::mylisp {
       }
     };
     std::set<Value, Comparator> set;
+    int graySubjs() noexcept override;
   };
 
   struct MapObj final: Object {
     std::map<Value, Value, SetObj::Comparator> map;
+    int graySubjs() noexcept override;
   };
 
   struct PointerObj final: Object {
@@ -60,5 +66,6 @@ namespace zlt::mylisp {
     const Value &operator *() const noexcept {
       return *value;
     }
+    int graySubjs() noexcept override;
   };
 }

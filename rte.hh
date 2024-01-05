@@ -6,11 +6,11 @@
 
 /// runtime environment
 namespace zlt::mylisp::rte {
-  extern std::list<Coroutine> coroutines;
+  extern Coroutines coroutines;
   extern std::set<std::filesystem::path> files;
   extern std::set<std::string> fnBodies;
   extern std::map<const std::wstring *, Value> globalDefs;
-  extern std::list<Coroutine>::iterator itCoroutine;
+  extern ItCoroutine itCoroutine;
   extern std::set<std::string> latin1s;
   extern std::map<const std::wstring *, Macro> macros;
   extern std::set<ast::Pos> positions;

@@ -19,7 +19,7 @@ HHS := \
 	object \
 	rte \
 	value
-OBJS := ast_include ast_lexer ast_optimize ast_parse ast_preproc ast_trans ast_trans1 ast_trans2 compile eval value
+OBJS := ast_include ast_lexer ast_optimize ast_parse ast_preproc ast_trans ast_trans1 ast_trans2 compile eval gc value
 
 mylisp: $(addsuffix .o, ${OBJS})
 	echo 123
