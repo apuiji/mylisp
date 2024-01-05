@@ -1,4 +1,4 @@
-HHS := \
+HHS = \
 	../myccutils/xyz \
 	ast \
 	ast_include \
@@ -19,10 +19,26 @@ HHS := \
 	object \
 	rte \
 	value
-OBJS := ast_include ast_lexer ast_optimize ast_parse ast_preproc ast_trans ast_trans1 ast_trans2 compile eval gc value
+OBJS = \
+	ast_include \
+	ast_lexer \
+	ast_optimize \
+	ast_parse \
+	ast_preproc \
+	ast_trans \
+	ast_trans1 \
+	ast_trans2 \
+	compile \
+	eval \
+	gc \
+	main \
+	rte \
+	object \
+	value
+LIBS =
 
 mylisp: $(addsuffix .o, ${OBJS})
-	echo 123
+	clang++ -o $@ $^ $(addprefix -l, ${LIBS})
 
 %.o: %.cc $(addsuffix .hh, ${HHS})
 	clang++ -o $@ $< -I .. -std=c++2b -O2 -c
