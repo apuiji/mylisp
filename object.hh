@@ -30,6 +30,15 @@ namespace zlt::mylisp {
   using StringObj = BasicStringObj<wchar_t>;
   using Latin1Obj = BasicStringObj<char>;
 
+  template<class C>
+  struct BasicStringViewObj final: Object {
+    std::basic_string_view<C> value;
+    BasicStringViewObj(std::basic_string_view<C> value) noexcept: value(value) {}
+  };
+
+  using StringViewObj = BasicStringViewObj<wchar_t>;
+  using Latin1ViewObj = BasicStringViewObj<char>;
+
   struct FunctionObj final: Object {
     std::map<const std::wstring *, Value> closures;
     const std::string &body;
@@ -44,10 +53,7 @@ namespace zlt::mylisp {
 
   struct SetObj final: Object {
     struct Comparator {
-      bool operator ()(const Value &a, const Value &b) const noexcept {
-        int diff;
-        return !compare(diff, a, b) || diff < 0;
-      }
+      bool operator ()(const Value &a, const Value &b) const noexcept;
     };
     std::set<Value, Comparator> set;
     int graySubjs() noexcept override;

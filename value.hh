@@ -13,6 +13,9 @@ namespace zlt::mylisp {
   using Null = std::monostate;
 
   struct Value: std::variant<Null, double, wchar_t, const std::wstring *, const std::string *, Object *, NativeFunction *> {
+    enum {
+      NULL_INDEX, NUM_INDEX, CHAR_INDEX, STR_INDEX, LATIN1_INDEX, OBJ_INDEX, NAT_FN_INDEX
+    };
     // constructors begin
     using variant::variant;
     Value(std::integral auto i) noexcept: variant((double) i) {}
@@ -67,6 +70,7 @@ namespace zlt::mylisp {
     const Value &operator [](const Value &key) const noexcept;
   };
 
+  bool dynamicast(double &dest, const Value &src) noexcept;
   bool dynamicast(std::string_view &dest, const Value &src) noexcept;
   bool dynamicast(std::wstring_view &dest, const Value &src) noexcept;
   bool dynamicast(NativeFunction *&dest, const Value &src) noexcept;

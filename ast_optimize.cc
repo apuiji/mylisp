@@ -1,4 +1,3 @@
-#include<algorithm>
 #include<cmath>
 #include"ast_optimize.hh"
 #include"myccutils/xyz.hh"
@@ -551,7 +550,9 @@ namespace zlt::mylisp::ast {
 
   template<int N>
   int optimize(UNode &dest, Operation<N> &src) {
-    for_each(src.items.begin(), src.items.end(), ofr<int, UNode &>(optimize));
+    for (auto &item : src.items) {
+      optimize(item);
+    }
     return optimize(dest->next);
   }
   // operations end

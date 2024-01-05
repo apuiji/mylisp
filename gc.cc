@@ -58,7 +58,9 @@ namespace zlt::mylisp::gc {
   }
 
   static int grayLocalDefs(map<const wstring *, Value> &defs) noexcept {
-    for_each(defs.begin(), defs.end(), [] (auto &p) { grayIt(p.second); });
+    for (auto &p : defs) {
+      grayIt(p.second);
+    }
     return 0;
   }
 
@@ -79,8 +81,9 @@ namespace zlt::mylisp::gc {
   static int take(Object *&set, Object *o) noexcept;
   static int put(Object *&dest, Object *o) noexcept;
 
-  int grayIt(Object *o) noexcept {
-    if (o->color == Object::WHITE_COLOR) {
+  int grayIt(Value &v) noexcept {
+    auto o = (Object *) v;
+    if (o && o->color == Object::WHITE_COLOR) {
       take(whites, o);
       o->color = Object::GRAY_COLOR;
       put(grays, o);
@@ -133,6 +136,14 @@ namespace zlt::mylisp::gc {
   int neobj(Object *o) noexcept {
     o->color = Object::BLACK_COLOR;
     put(blacks, o);
+    return 0;
+  }
+
+  int iwb(Value &v, Value &w) noexcept {
+    auto o = (Object *) v;
+    if (o && o->color == Object::BLACK_COLOR) {
+      grayIt(w);
+    }
     return 0;
   }
 }
