@@ -77,11 +77,11 @@ namespace zlt::mylisp {
     bool compare(int &dest, const Value &v) const noexcept override;
   };
 
-  Value &operator *(PointerObj &p) noexcept {
+  static inline Value &operator *(PointerObj &p) noexcept {
     return p.value;
   }
 
-  const Value &operator *(const PointerObj &p) noexcept {
+  static inline const Value &operator *(const PointerObj &p) noexcept {
     return p.value;
   }
 }

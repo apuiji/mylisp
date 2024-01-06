@@ -7,27 +7,23 @@ using namespace std;
 
 namespace zlt::mylisp::ast {
   struct Scope {
-    virtual int def(const wstring *name) = 0;
+    enum {
+      GLOBAL_SCOPE_CLASS,
+      FUNCTION_SCOPE_CLASS
+    };
+    int clazz;
+    Scope(int clazz) noexcept: clazz(clazz) {}
   };
 
-  struct GlobalScope final: Scope {
-    int def(const wstring *name) {
-      return 0;
-    }
-  };
-
-  struct FunctionScope final: Scope {
+  struct FunctionScope: Scope {
     set<const wstring *> defs;
-    int def(const wstring *name) {
-      defs.insert(name);
-      return 0;
-    }
+    FunctionScope() noexcept: Scope(FUNCTION_SCOPE_CLASS) {}
   };
 
   static int trans(UNode &dest, Scope &scope, UNode &src);
 
   int trans(UNode &dest, UNode &src) {
-    return trans(dest, rtol(GlobalScope()), src);
+    return trans(dest, rtol(Scope(Scope::GLOBAL_SCOPE_CLASS)), src);
   }
 
   static int trans1(UNode &dest, Scope &scope, UNode &src);
@@ -53,7 +49,7 @@ namespace zlt::mylisp::ast {
     if (auto t = dynamic_cast<const TokenAtom *>(src.get()); t) {
       switch (t->token) {
         case token::KWD_callee: {
-          if (Dynamicastable<FunctionScope> {}(scope)) {
+          if (scope.clazz == Scope::FUNCTION_SCOPE_CLASS) {
             dest.reset(new Callee(src->pos));
           } else {
             dest.reset(new Null(src->pos));
@@ -208,7 +204,9 @@ namespace zlt::mylisp::ast {
     if (!id) {
       throw TransBad(pos, "required definition name");
     }
-    scope.def(id->name);
+    if (scope.clazz == Scope::FUNCTION_SCOPE_CLASS) {
+      static_cast<FunctionScope &>(scope).defs.insert(id->name);
+    }
     remove(src->next);
     dest = std::move(src);
     return 0;
@@ -227,7 +225,7 @@ namespace zlt::mylisp::ast {
   }
 
   static inline int noGlobal(const Scope &scope, const Pos *pos) {
-    if (Dynamicastable<GlobalScope> {}(scope)) {
+    if (scope.clazz == Scope::GLOBAL_SCOPE_CLASS) {
       throw TransBad(pos, "should not in global scope");
     }
     return 0;
@@ -534,7 +532,7 @@ namespace zlt::mylisp::ast {
     }
     if (auto id = dynamic_cast<const IDAtom *>(src.get()); id) {
       dest.push_back(id->name);
-      scope.def(id->name);
+      static_cast<FunctionScope &>(scope).defs.insert(id->name);
       return fnParams(dest, scope, src->next);
     }
     if (auto ls = dynamic_cast<const List *>(src.get()); ls && !ls->first) {

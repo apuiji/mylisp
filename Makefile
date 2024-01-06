@@ -35,7 +35,7 @@ OBJS = \
 	object \
 	rte \
 	value
-LIBS =
+LIBS = boost_coroutine
 
 mylisp: $(addsuffix .o, ${OBJS})
 	clang++ -o $@ $^ $(addprefix -l, ${LIBS})

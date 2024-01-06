@@ -5,48 +5,54 @@ using namespace std;
 
 namespace zlt::mylisp::ast {
   struct Scope {
-    virtual ~Scope() = default;
-    virtual Reference find(const wstring *name, bool cross) = 0;
+    enum {
+      GLOBAL_SCOPE_CLASS,
+      FUNCTION_SCOPE_CLASS
+    };
+    int clazz;
+    Scope(int clazz) noexcept: clazz(clazz) {}
   };
 
-  struct GlobalScope final: Scope {
-    Reference find(const wstring *name, bool cross) override;
-  };
-
-  struct FunctionScope final: Scope {
+  struct FunctionScope: Scope {
     Scope &parent;
     const set<const wstring *> &defs;
     set<const wstring *> ptrDefs;
     map<const wstring *, Reference> closureDefs;
-    FunctionScope(Scope &parent, const set<const wstring *> &defs) noexcept: parent(parent), defs(defs) {}
-    Reference find(const wstring *name, bool cross) override;
+    FunctionScope(Scope &parent, const set<const wstring *> &defs) noexcept:
+    Scope(FUNCTION_SCOPE_CLASS), parent(parent), defs(defs) {}
   };
 
   static int trans(Scope &scope, UNode &src);
 
   int trans1(UNode &src) {
-    return trans(rtol(GlobalScope()), src);
+    return trans(rtol(Scope(Scope::GLOBAL_SCOPE_CLASS)), src);
   }
 
-  Reference GlobalScope::find(const wstring *name, bool cross) {
-    return Reference(Reference::GLOBAL_SCOPE, name);
+  static Reference findDef(FunctionScope &scope, const wstring *name, bool cross);
+
+  static Reference findDef(Scope &scope, const wstring *name, bool cross) {
+    if (scope.clazz == Scope::GLOBAL_SCOPE_CLASS) {
+      return Reference(Reference::GLOBAL_SCOPE, name);
+    } else {
+      return findDef(static_cast<FunctionScope &>(scope), name, cross);
+    }
   }
 
-  Reference FunctionScope::find(const wstring *name, bool cross) {
-    if (defs.find(name) != defs.end()) {
+  Reference findDef(FunctionScope &scope, const wstring *name, bool cross) {
+    if (scope.defs.find(name) != scope.defs.end()) {
       if (cross) {
-        ptrDefs.insert(name);
+        scope.ptrDefs.insert(name);
       }
       return Reference(Reference::LOCAL_SCOPE, name);
     }
-    if (closureDefs.find(name) != closureDefs.end()) {
+    if (scope.closureDefs.find(name) != scope.closureDefs.end()) {
       return Reference(Reference::CLOSURE_SCOPE, name);
     }
-    auto ref = parent.find(name, true);
+    auto ref = findDef(scope.parent, name, true);
     if (ref.scope == Reference::GLOBAL_SCOPE) {
       return ref;
     }
-    closureDefs[name] = ref;
+    scope.closureDefs[name] = ref;
     return Reference(Reference::CLOSURE_SCOPE, name);
   }
 
@@ -104,7 +110,7 @@ namespace zlt::mylisp::ast {
   }
 
   int trans(UNode &dest, Scope &scope, IDAtom &src) {
-    UNode a(new Reference1(src.pos, scope.find(src.name, false)));
+    UNode a(new Reference1(src.pos, findDef(scope, src.name, false)));
     replace(dest, a);
     return 0;
   }
