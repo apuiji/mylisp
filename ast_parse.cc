@@ -68,10 +68,6 @@ namespace zlt::mylisp::ast {
         dest.reset(new NumberAtom(makePos1(file, begin, end, start0), lexer.numval));
         return operator ()(dest->next, next, end0);
       }
-      case token::CHAR: {
-        dest.reset(new CharAtom(makePos1(file, begin, end, start0), lexer.charval));
-        return operator ()(dest->next, next, end0);
-      }
       case token::STRING: {
         auto &value = *rte::latin1s.insert(std::move(lexer.strval)).first;
         dest.reset(new Latin1Atom(makePos1(file, begin, end, start0), &value));

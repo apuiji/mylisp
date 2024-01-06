@@ -82,7 +82,8 @@ namespace zlt::mylisp::gc {
   static int put(Object *&dest, Object *o) noexcept;
 
   int grayIt(Value &v) noexcept {
-    auto o = (Object *) v;
+    Object *o;
+    dynamicast(o, v);
     if (o && o->color == Object::WHITE_COLOR) {
       take(whites, o);
       o->color = Object::GRAY_COLOR;
@@ -140,7 +141,8 @@ namespace zlt::mylisp::gc {
   }
 
   int iwb(Value &v, Value &w) noexcept {
-    auto o = (Object *) v;
+    Object *o;
+    dynamicast(o, v);
     if (o && o->color == Object::BLACK_COLOR) {
       grayIt(w);
     }

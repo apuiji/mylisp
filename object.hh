@@ -18,6 +18,9 @@ namespace zlt::mylisp {
     virtual int graySubjs() noexcept {
       return 0;
     }
+    virtual bool compare(int &dest, const Value &v) const noexcept {
+      return false;
+    }
   };
 
   template<class C>
@@ -25,6 +28,7 @@ namespace zlt::mylisp {
     std::basic_string<C> value;
     BasicStringObj(const std::basic_string<C> &value) noexcept: value(value) {}
     BasicStringObj(std::basic_string<C> &&value) noexcept: value(std::move(value)) {}
+    bool compare(int &dest, const Value &v) const noexcept override;
   };
 
   using StringObj = BasicStringObj<wchar_t>;
@@ -32,8 +36,11 @@ namespace zlt::mylisp {
 
   template<class C>
   struct BasicStringViewObj final: Object {
-    std::basic_string_view<C> value;
-    BasicStringViewObj(std::basic_string_view<C> value) noexcept: value(value) {}
+    Value string;
+    std::basic_string_view<C> view;
+    BasicStringViewObj(const Value &string, std::basic_string_view<C> view) noexcept: string(string), view(view) {}
+    int graySubjs() noexcept override;
+    bool compare(int &dest, const Value &v) const noexcept override;
   };
 
   using StringViewObj = BasicStringViewObj<wchar_t>;
@@ -65,13 +72,16 @@ namespace zlt::mylisp {
   };
 
   struct PointerObj final: Object {
-    Value *value;
-    Value &operator *() noexcept {
-      return *value;
-    }
-    const Value &operator *() const noexcept {
-      return *value;
-    }
+    Value value;
     int graySubjs() noexcept override;
+    bool compare(int &dest, const Value &v) const noexcept override;
   };
+
+  Value &operator *(PointerObj &p) noexcept {
+    return p.value;
+  }
+
+  const Value &operator *(const PointerObj &p) noexcept {
+    return p.value;
+  }
 }

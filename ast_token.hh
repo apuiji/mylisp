@@ -6,7 +6,6 @@
 namespace zlt::mylisp::ast::token {
   enum: uint64_t {
     NUMBER = 1,
-    CHAR,
     STRING,
     WSTRING,
     ID,

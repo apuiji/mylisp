@@ -51,12 +51,7 @@ namespace zlt::mylisp::ast {
         throw LexerBad(it, "unterminated string");
       }
       strval = ss.str();
-      if (strval.size() == 1) {
-        charval = strval[0];
-        return { token::CHAR, it, it1 + 1 };
-      } else {
-        return { token::STRING, it, it1 + 1 };
-      }
+      return { token::STRING, it, it1 + 1 };
     }
     if (*it == '"' || *it == '\'') {
       wstringstream ss;
@@ -65,12 +60,7 @@ namespace zlt::mylisp::ast {
         throw LexerBad(it, "unterminated string");
       }
       wstrval = ss.str();
-      if (wstrval.size() == 1) {
-        charval = wstrval[0];
-        return { token::CHAR, it, it1 + 1 };
-      } else {
-        return { token::WSTRING, it, it1 + 1 };
-      }
+      return { token::WSTRING, it, it1 + 1 };
     }
     size_t n = count_if(it, end, isRawChar);
     if (!n) {

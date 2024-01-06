@@ -289,11 +289,11 @@ namespace zlt::mylisp {
   }
 
   int evalCMP(const char *it, const char *end) {
-    auto f = [] (const Value &a, const Value &b) -> Value {
+    auto f = [] (const Value &a, const Value &b) -> double {
       if (int diff; compare(diff, a, b)) {
         return diff;
       } else {
-        return Null();
+        return NAN;
       }
     };
     return compare(it, end, f);
@@ -412,7 +412,8 @@ namespace zlt::mylisp {
 
   int evalGET_CLOSURE(const char *it, const char *end) {
     auto name = *(const wstring **) it;
-    auto fo = (FunctionObj *) *itCoroutine->valuekBottom;
+    FunctionObj *fo;
+    staticast(fo, *itCoroutine->valuekBottom);
     itCoroutine->value = fo->closures[name];
     return eval(it + sizeof(void *), end);
   }
@@ -449,13 +450,16 @@ namespace zlt::mylisp {
   }
 
   int evalGET_PTR(const char *it, const char *end) {
-    itCoroutine->value = **(PointerObj *) itCoroutine->value;
+    PointerObj *po;
+    staticast(po, itCoroutine->value);
+    itCoroutine->value = **po;
     return eval(it, end);
   }
 
   int evalINPUT_CLOSURE(const char *it, const char *end) {
     auto name = *(const wstring **) it;
-    auto fo = (FunctionObj *) itCoroutine->valuekTop[-1];
+    FunctionObj *fo;
+    staticast(fo, itCoroutine->valuekTop[-1]);
     fo->closures[name] = itCoroutine->value;
     return eval(it + sizeof(void *), end);
   }
@@ -556,7 +560,8 @@ namespace zlt::mylisp {
   }
 
   int evalSET_PTR(const char *it, const char *end) {
-    auto po = (PointerObj *) itCoroutine->valuekTop[-1];
+    PointerObj *po;
+    staticast(po, itCoroutine->valuekTop[-1]);
     **po = itCoroutine->value;
     pop();
     return eval(it, end);

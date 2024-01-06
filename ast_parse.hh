@@ -18,7 +18,6 @@ namespace zlt::mylisp::ast {
   };
 
   using NumberAtom = LiteralAtom<double>;
-  using CharAtom = LiteralAtom<wchar_t>;
   using StringAtom = LiteralAtom<const std::wstring *>;
   using Latin1Atom = LiteralAtom<const std::string *>;
 

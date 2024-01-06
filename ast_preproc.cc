@@ -250,10 +250,6 @@ namespace zlt::mylisp::ast {
   }
 
   bool getPath(filesystem::path &dest, const UNode &src) {
-    if (auto a = dynamic_cast<const CharAtom *>(src.get()); a) {
-      dest = filesystem::path(wstring_view(&a->value, 1));
-      return true;
-    }
     if (auto a = dynamic_cast<const StringAtom *>(src.get()); a) {
       dest = filesystem::path(*a->value);
       return true;

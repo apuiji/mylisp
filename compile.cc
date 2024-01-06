@@ -92,7 +92,6 @@ namespace zlt::mylisp {
       return dest << *a; \
     }
     ifType(NumberAtom);
-    ifType(CharAtom);
     ifType(StringAtom);
     ifType(Latin1Atom);
     // ast_trans.hh definitions begin
