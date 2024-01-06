@@ -32,8 +32,8 @@ OBJS = \
 	eval \
 	gc \
 	main \
-	rte \
 	object \
+	rte \
 	value
 LIBS =
 
