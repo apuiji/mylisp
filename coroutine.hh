@@ -1,6 +1,5 @@
 #pragma once
 
-#include<boost/coroutine2/all.hpp>
 #include<list>
 #include<map>
 #include<memory>
@@ -25,17 +24,34 @@ namespace zlt::mylisp {
     }
   };
 
+  struct Frame {
+    enum {
+      CALL_FN_FRAME_CLASS,
+      CONTINUE_FORWARD_FRAME_CLASS,
+      CONTINUE_RETURN_FRAME_CLASS,
+      CONTINUE_THROW_FRAME_CLASS,
+      DEFER_FRAME_CLASS,
+      TRY_FRAME_CLASS
+    };
+    int clazz;
+    const char *next;
+    const char *end;
+    Value *valuekBottom;
+    Value *valuekTop;
+    Frame(int clazz, const char *next, const char *end, Value *valuekBottom, Value *valuekTop) noexcept:
+    clazz(clazz), next(next), end(end), valuekBottom(valuekBottom), valuekTop(valuekTop) {}
+  };
+
   struct Coroutine {
-    using Sink = boost::coroutines2::coroutine<void>::push_type;
     Value value;
     std::unique_ptr<ValueStack> valuek;
     Value *valuekBottom;
     Value *valuekTop;
     std::list<std::map<const std::wstring *, Value>> localDefsk;
     std::list<Value> deferk;
+    std::list<Frame> framek;
     bool alive;
-    Sink &sink;
-    Coroutine(std::unique_ptr<ValueStack> &&valuek, Sink &sink) noexcept: valuek(std::move(valuek)), sink(sink) {}
+    Coroutine(std::unique_ptr<ValueStack> &&valuek) noexcept: valuek(std::move(valuek)) {}
   };
 
   using Coroutines = std::list<Coroutine>;

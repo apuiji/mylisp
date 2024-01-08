@@ -22,6 +22,9 @@ namespace zlt::mylisp {
   declEval(CALL);
   declEval(CLN_ARGS);
   declEval(CMP);
+  declEval(CONTINUE_FORWARD);
+  declEval(CONTINUE_RETURN);
+  declEval(CONTINUE_THROW);
   declEval(DIV);
   declEval(EQ);
   declEval(FORWARD);
@@ -86,6 +89,9 @@ namespace zlt::mylisp {
       ifDir(CALL);
       ifDir(CLN_ARGS);
       ifDir(CMP);
+      ifDir(CONTINUE_FORWARD);
+      ifDir(CONTINUE_RETURN);
+      ifDir(CONTINUE_THROW);
       ifDir(DIV);
       ifDir(EQ);
       ifDir(FORWARD);
@@ -300,93 +306,142 @@ namespace zlt::mylisp {
   }
   // compare directions end
 
-  static int call(size_t argc);
+  static int call(const char *next, const char *end, size_t argc);
 
   int evalCALL(const char *it, const char *end) {
     size_t argc = *(const size_t *) it;
-    call(argc);
-    return eval(it + sizeof(size_t), end);
+    return call(it + sizeof(size_t), end, argc);
   }
 
-  struct Forward {
-    size_t argc;
-    Forward(size_t argc) noexcept: argc(argc) {}
-  };
-
-  struct Return {};
-  struct Throw {};
-
-  static int popDefers(size_t prevDeferkSize) noexcept;
-
-  int call(size_t argc) {
+  int call(const char *next, const char *end, size_t argc) {
     auto &top = itCoroutine->valuekTop;
     auto itArg = top - argc;
     auto callee = itArg - 1;
     if (NativeFunction *nf; dynamicast(nf, *callee)) {
       itCoroutine->value = nf(itArg, top);
       top = callee;
-      return 0;
+      return eval(next, end);
     }
     if (FunctionObj *fo; dynamicast(fo, *callee)) {
-      auto prevValuekBottom = itCoroutine->valuekBottom;
-      size_t prevDeferkSize = itCoroutine->deferk.size();
+      itCoroutine->framek.push_back(Frame(Frame::CALL_FN_FRAME_CLASS, next, end, itCoroutine->valuekBottom, callee));
       itCoroutine->valuekBottom = itArg;
       itCoroutine->localDefsk.push_back({});
-      try {
-        eval(fo->body.data(), fo->body.data() + fo->body.size());
-      } catch (Forward fwd) {
-        copy(top - fwd.argc - 1, top, callee);
-        itCoroutine->valuekBottom = prevValuekBottom;
-        top = callee + 1 + fwd.argc;
-        itCoroutine->localDefsk.pop_back();
-        popDefers(prevDeferkSize);
-        return call(fwd.argc);
-      } catch (Return) {
-        itCoroutine->valuekBottom = prevValuekBottom;
-        top = callee;
-        itCoroutine->localDefsk.pop_back();
-        popDefers(prevDeferkSize);
-        return 0;
-      } catch (Throw t) {
-        itCoroutine->valuekBottom = prevValuekBottom;
-        top = callee;
-        itCoroutine->localDefsk.pop_back();
-        popDefers(prevDeferkSize);
-        throw t;
-      }
-      // never
-      return 0;
+      return eval(fo->body.data(), fo->body.data() + fo->body.size());
     }
     itCoroutine->value = false;
     top = callee;
     return 0;
   }
 
-  static int popDefers1(size_t n) noexcept;
+  using ItFrame = list<Frame>::reverse_iterator;
 
-  int popDefers(size_t prevDeferkSize) noexcept {
-    size_t n = itCoroutine->deferk.size() - prevDeferkSize;
-    if (n) {
-      push();
-      popDefers1(n);
-      itCoroutine->value = itCoroutine->valuekTop[-1];
-      pop();
-    }
-    return 0;
+  struct Forward {};
+  struct Return {};
+  struct Throw {};
+
+  static int popFrame(ItFrame it, Forward fwd);
+  static int popFrame(ItFrame it, Return ret);
+  static int popFrame(ItFrame it, Throw thr);
+
+  template<class T>
+  static inline int evalCONTINUE_T(const char *it, const char *end, T t) {
+    auto itFrame = itCoroutine->framek.rbegin();
+    return popFrame(itCoroutine->framek.erase(itFrame), t);
   }
 
-  int popDefers1(size_t n) noexcept {
-    if (!n) [[unlikely]] {
-      return 0;
+  int evalCONTINUE_FORWARD(const char *it, const char *end) {
+    return evalCONTINUE_T(it, end, FORWARD());
+  }
+
+  int evalCONTINUE_RETURN(const char *it, const char *end) {
+    return evalCONTINUE_T(it, end, Return());
+  }
+
+  int evalCONTINUE_THROW(const char *it, const char *end) {
+    return evalCONTINUE_T(it, end, Throw());
+  }
+
+  int popFrame(ItFrame it, Forward fwd) {
+    switch (it->clazz) {
+      case Frame::CALL_FN_FRAME_CLASS: {
+        auto next = it->next;
+        auto end = it->end;
+        itCoroutine->framek.erase(it);
+        return call(next, end, itCoroutine->valuekTop - itCoroutine->valuekBottom - 1);
+      }
+      case Frame::DEFER_FRAME_CLASS: {
+        it->clazz = Frame::CONTINUE_FORWARD_FRAME_CLASS;
+        static constexpr const char dirs[] = { direction::CONTINUE_FORWARD };
+        it->next = dirs;
+        it->end = dirs + 1;
+        itCoroutine->value = itCoroutine->deferk.back();
+        itCoroutine->deferk.pop_back();
+        push();
+        return call(dirs, dirs + 1, 0);
+      }
+      case Frame::TRY_FRAME_CLASS: {
+        return popFrame(itCoroutine->framek.erase(it), fwd);
+      }
+      default: {
+        // never
+        return 0;
+      }
     }
-    itCoroutine->value = itCoroutine->deferk.back();
-    itCoroutine->deferk.pop_back();
-    push();
-    try {
-      call(0);
-    } catch (...) {
+  }
+
+  int popFrame(ItFrame it, Return ret) {
+    switch (it->clazz) {
+      case Frame::CALL_FN_FRAME_CLASS: {
+        auto next = it->next;
+        auto end = it->end;
+        itCoroutine->value = *--itCoroutine->valuekTop;
+        itCoroutine->framek.erase(it);
+        return eval(next, end);
+      }
+      case Frame::DEFER_FRAME_CLASS: {
+        it->clazz = Frame::CONTINUE_RETURN_FRAME_CLASS;
+        static constexpr const char dirs[] = { direction::CONTINUE_RETURN };
+        it->next = dirs;
+        it->end = dirs + 1;
+        itCoroutine->value = itCoroutine->deferk.back();
+        itCoroutine->deferk.pop_back();
+        push();
+        return call(dirs, dirs + 1, 0);
+      }
+      case Frame::TRY_FRAME_CLASS: {
+        return popFrame(itCoroutine->framek.erase(it), ret);
+      }
+      default: {
+        // never
+        return 0;
+      }
     }
-    return popDefers1(n - 1);
+  }
+
+  int popFrame(ItFrame it, Throw thr) {
+    switch (it->clazz) {
+      case Frame::CALL_FN_FRAME_CLASS: {
+        itCoroutine->localDefsk.pop_back();
+        return popFrame(itCoroutine->framek.erase(it), thr);
+      }
+      case Frame::DEFER_FRAME_CLASS: {
+        it->clazz = Frame::CONTINUE_THROW_FRAME_CLASS;
+        static constexpr const char dirs[] = { direction::CONTINUE_THROW };
+        it->next = dirs;
+        it->end = dirs + 1;
+        itCoroutine->value = itCoroutine->deferk.back();
+        itCoroutine->deferk.pop_back();
+        push();
+        return call(dirs, dirs + 1, 0);
+      }
+      default: {
+        auto next = it->next;
+        auto end = it->end;
+        itCoroutine->value = *--itCoroutine->valuekTop;
+        itCoroutine->framek.erase(it);
+        return eval(next, end);
+      }
+    }
   }
 
   int evalCLN_ARGS(const char *it, const char *end) {
@@ -394,9 +449,22 @@ namespace zlt::mylisp {
     return eval(it, end);
   }
 
+  template<int ...Classes>
+  static ItFrame findFrame(ItFrame it, index_sequence<Classes...> classes) noexcept {
+    if (((it->clazz == Classes) || ...)) {
+      return it;
+    }
+    return findFrame(++it, end, classes);
+  }
+
   int evalFORWARD(const char *it, const char *end) {
     size_t argc = *(const size_t *) it;
-    throw Forward(argc);
+    auto itFrame = findFrame(itCoroutine->framek.rbegin(), index_sequence<Frame::CALL_FN_FRAME_CLASS>());
+    copy(itCoroutine->valuekTop - argc - 1, itCoroutine->valuekTop, itFrame->valuekTop);
+    itCoroutine->valuekBottom = itFrame->valuekBottom;
+    itCoroutine->valuekTop = itFrame->valuekTop + 1 + argc;
+    itCoroutine->localDefsk.pop_back();
+    return popFrame(itCoroutine->framek.rbegin(), Forward());
   }
 
   int evalGET_ARG(const char *it, const char *end) {
@@ -505,11 +573,17 @@ namespace zlt::mylisp {
 
   int evalPUSH_DEFER(const char *it, const char *end) {
     itCoroutine->deferk.push_back(itCoroutine->value);
+    itCoroutine->framek.push_back(Frame(Frame::DEFER_FRAME_CLASS, nullptr, nullptr, nullptr, nullptr));
     return eval(it, end);
   }
 
   int evalRETURN(const char *it, const char *end) {
-    throw Return();
+    auto itFrame = findFrame(itCoroutine->framek.rbegin(), index_sequence<Frame::CALL_FN_FRAME_CLASS>());
+    itCoroutine->valuekBottom = itFrame->valuekBottom;
+    itCoroutine->valuekTop = itFrame->valuekTop + 1;
+    *itFrame->valuekTop = itCoroutine->value;
+    itCoroutine->localDefsk.pop_back();
+    return popFrame(itCoroutine->framek.rbegin(), Return());
   }
 
   int evalSET_CALLEE(const char *it, const char *end) {
@@ -574,21 +648,24 @@ namespace zlt::mylisp {
   }
 
   int evalTHROW(const char *it, const char *end) {
-    throw Throw();
+    using F = Frame;
+    using Hit = index_sequence<
+      F::CONTINUE_FORWARD_FRAME_CLASS, F::CONTINUE_RETURN_FRAME_CLASS, F::CONTINUE_THROW_FRAME_CLASS, F::TRY_FRAME_CLASS>;
+    auto itFrame = findFrame(itCoroutine->framek.rbegin(), Hit());
+    itCoroutine->valuekBottom = itFrame->valuekBottom;
+    itCoroutine->valuekTop = itFrame->valuekTop + 1;
+    *itFrame->valuekTop = itCoroutine->value;
+    return popFrame(itCoroutine->framek.rbegin(), Throw());
   }
 
   int evalTRY(const char *it, const char *end) {
     size_t n = *(const size_t *) it;
-    auto prevTop = itCoroutine->valuekTop;
-    try {
-      eval(it + sizeof(size_t), end);
-    } catch (Throw) {
-    }
-    itCoroutine->valuekTop = prevTop;
-    return eval(it + sizeof(size_t) + n, end);
+    itCoroutine->framek.push_back(Frame(Frame::TRY_FRAME_CLASS, it + sizeof(size_t) + n, end, itCoroutine->valuekBottom, itCoroutine->valuekTop));
+    return eval(it + sizeof(size_t), end);
   }
 
   int evalYIELD(const char *it, const char *end) {
+    // ???
     itCoroutine->sink();
     return eval(it, end);
   }
