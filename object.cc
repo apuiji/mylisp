@@ -13,6 +13,8 @@ namespace zlt::mylisp {
     return 0;
   }
 
+
+
   int ListObj::graySubjs() noexcept {
     for_each(list.begin(), list.end(), gc::grayIt);
     return 0;
@@ -25,14 +27,30 @@ namespace zlt::mylisp {
     return 0;
   }
 
+  static bool compare1(bool &dest, const Value &a, const Value &b) noexcept;
+
   bool SetObj::Comparator::operator ()(const Value &a, const Value &b) const noexcept {
+    bool bu;
+    if (compare1(bu, a, b)) {
+      return bu;
+    }
+    compare1(bu, b, a);
+    return !bu;
+  }
+
+  bool compare1(bool &dest, const Value &a, const Value &b) noexcept {
     switch (a.index()) {
       case Value::NULL_INDEX: {
         switch (b.index()) {
           case Value::NULL_INDEX: {
+            dest = false;
+            return true;
+          }
+          case Value::OBJ_INDEX: {
             return false;
           }
           default: {
+            dest = true;
             return true;
           }
         }
@@ -40,19 +58,26 @@ namespace zlt::mylisp {
       case Value::NUM_INDEX: {
         switch (b.index()) {
           case Value::NULL_INDEX: {
-            return false;
+            dest = false;
+            return true;
           }
           case Value::NUM_INDEX: {
             double d;
-            double d1;
             staticast(d, a);
+            double d1;
             staticast(d1, b);
             if (isnan(d)) {
-              return !isnan(d1);
+              dest = !isnan(d1)
+            } else {
+              dest = d < d1;
             }
-            return d < d1;
+            return true;
+          }
+          case Value::OBJ_INDEX: {
+            return false;
           }
           default: {
+            dest = true;
             return true;
           }
         }
@@ -62,16 +87,30 @@ namespace zlt::mylisp {
           case Value::NULL_INDEX:
             [[fallthrough]];
           case Value::NUM_INDEX: {
-            return false;
+            dest = false;
+            return true;
+          }
+          case Value::STR_INDEX: {
+            const wstring *s;
+            staticast(s, a);
+            const wstring *s1;
+            staticast(s1, b);
+            dest = *s < *s1;
+            return true;
+          }
+          case Value::OBJ_INDEX: {
+            wstring_view sv;
+            if (!dynamicast(sv, b)) {
+              return false;
+            }
+            const wstring *s;
+            staticast(s, a);
+            dest = *s < sv;
+            return true;
           }
           default: {
-            const wstring *s;
-            wstring_view s1;
-            staticast(s, a);
-            if (!dynamicast(s1, b)) {
-              return true;
-            }
-            return *s < s1;
+            dest = true;
+            return true;
           }
         }
       }
@@ -81,44 +120,55 @@ namespace zlt::mylisp {
           case Value::NUM_INDEX:
             [[fallthrough]];
           case Value::STR_INDEX: {
-            return false;
+            dest = false;
+            return true;
+          }
+          case Value::LATIN1_INDEX: {
+            const string *s;
+            staticast(s, a);
+            const string *s1;
+            staticast(s1, b);
+            dest = *s < *s1;
+            return true;
+          }
+          case Value::OBJ_INDEX: {
+            string_view sv;
+            if (!dynamicast(sv, b)) {
+              return false;
+            }
+            const string *s;
+            staticast(s, a);
+            dest = *s < sv;
+            return true;
           }
           default: {
-            const string *s;
-            string_view s1;
-            staticast(s, a);
-            if (!dynamicast(s1, b)) {
-              return true;
-            }
-            return *s < s1;
+            dest = true;
+            return true;
           }
         }
       }
-      case Value::OBJ_INDEX: {
-        Object *o;
-        staticast(o, a);
-        if (int diff; o->compare(diff, b) && diff < 0) {
-          return true;
+      case Value::NAT_FN_INDEX: {
+        switch (b.index()) {
+          case Value::NAT_FN_INDEX: {
+            NativeFunction *f;
+            staticast(f, a);
+            NativeFunction *g;
+            staticast(g, b);
+            dest = f < g;
+            return true;
+          }
+          case Value::OBJ_INDEX: {
+            return false;
+          }
+          default: {
+            dest = false;
+            return true;
+          }
         }
-        [[fallthrough]];
       }
       default: {
-        switch (b.index()) {
-          case Value::NULL_INDEX:
-          case Value::NUM_INDEX:
-          case Value::STR_INDEX:
-            [[unlikely]];
-          case Value::LATIN1_INDEX: {
-            return false;
-          }
-          default: {
-            void *p;
-            void *q;
-            staticast(p, a);
-            staticast(q, b);
-            return p < q;
-          }
-        }
+        Object *o;
+        staticast(o, a);
       }
     }
   }

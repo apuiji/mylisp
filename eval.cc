@@ -514,7 +514,7 @@ namespace zlt::mylisp {
     if (it == end) [[unlikely]] {
       return 0;
     }
-    dest = dest[*it];
+    dest = getMemb(dest, *it);
     return getMemb(dest, it + 1, end);
   }
 
@@ -618,7 +618,7 @@ namespace zlt::mylisp {
 
   int evalSET_MEMB(const char *it, const char *end) {
     auto &top = itCoroutine->valuekTop;
-    top[-2][top[-1]] = itCoroutine->value;
+    setMemb(top[-2], top[-1], itCoroutine->value);
     top -= 2;
     return eval(it, end);
   }
