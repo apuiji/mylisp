@@ -15,4 +15,6 @@ namespace zlt::mylisp::rte {
   extern std::map<const std::wstring *, Macro> macros;
   extern std::set<ast::Pos> positions;
   extern std::set<std::wstring> strings;
+
+  int yield();
 }

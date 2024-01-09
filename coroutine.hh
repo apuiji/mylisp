@@ -26,7 +26,7 @@ namespace zlt::mylisp {
 
   struct Frame {
     enum {
-      CALL_FN_FRAME_CLASS,
+      CALL_FN_FRAME_CLASS = 1,
       CONTINUE_FORWARD_FRAME_CLASS,
       CONTINUE_RETURN_FRAME_CLASS,
       CONTINUE_THROW_FRAME_CLASS,
@@ -34,12 +34,12 @@ namespace zlt::mylisp {
       TRY_FRAME_CLASS
     };
     int clazz;
-    const char *next;
-    const char *end;
-    Value *valuekBottom;
-    Value *valuekTop;
-    Frame(int clazz, const char *next, const char *end, Value *valuekBottom, Value *valuekTop) noexcept:
-    clazz(clazz), next(next), end(end), valuekBottom(valuekBottom), valuekTop(valuekTop) {}
+    const char *prevNext;
+    const char *prevEnd;
+    Value *prevValuekBottom;
+    Value *prevValuekTop;
+    Frame(int clazz, const char *prevNext, const char *prevEnd, Value *prevValuekBottom, Value *prevValuekTop) noexcept:
+    clazz(clazz), prevNext(prevNext), prevEnd(prevEnd), prevValuekBottom(prevValuekBottom), prevValuekTop(prevValuekTop) {}
   };
 
   struct Coroutine {

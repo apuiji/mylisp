@@ -23,8 +23,6 @@ namespace zlt::mylisp {
     // Value(bool b) noexcept {
     //   operator =(b);
     // }
-    // Value(std::true_type) noexcept: variant(1.) {}
-    // Value(std::false_type) noexcept {}
     // Value(std::derived_from<Object> auto *o) noexcept: variant(static_cast<Object *>(o)) {}
     // // constructors end
     // // assignment operations begin
@@ -38,14 +36,11 @@ namespace zlt::mylisp {
     //   return *this;
     // }
     Value &operator =(bool b) noexcept {
-      return b ? operator =(true) : operator =(false);
-    }
-    Value &operator =(std::true_type) noexcept {
-      variant::operator =(1.);
-      return *this;
-    }
-    Value &operator =(std::false_type) noexcept {
-      variant::operator =(Null());
+      if (b) {
+        variant::operator =(1.);
+      } else {
+        variant::operator =(Null());
+      }
       return *this;
     }
     // Value &operator =(Object *o) noexcept {
