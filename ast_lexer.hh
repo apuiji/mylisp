@@ -6,6 +6,7 @@
 namespace zlt::mylisp::ast {
   struct Lexer {
     double numval;
+    wchar_t charval;
     std::string strval;
     std::wstring wstrval;
     std::wstring_view raw;

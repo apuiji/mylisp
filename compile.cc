@@ -92,6 +92,7 @@ namespace zlt::mylisp {
       return dest << *a; \
     }
     ifType(NumberAtom);
+    ifType(CharAtom);
     ifType(StringAtom);
     ifType(Latin1Atom);
     // ast_trans.hh definitions begin
@@ -161,7 +162,7 @@ namespace zlt::mylisp {
   }
 
   template<class T>
-  static consteval uint8_t setALiteralDir() {
+  static consteval uint8_t setLiteralDir() {
     if constexpr (is_same_v<T, double>) {
       return direction::SET_NUM;
     } else if constexpr (is_same_v<T, wchar_t>) {
@@ -189,7 +190,7 @@ namespace zlt::mylisp {
 
   template<class T>
   Compile &operator <<(Compile &dest, const LiteralAtom<T> &src) {
-    return dest << setALiteralDir<T>() << src.value;
+    return dest << setLiteralDir<T>() << src.value;
   }
 
   template<class It>

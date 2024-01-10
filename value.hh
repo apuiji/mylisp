@@ -13,9 +13,9 @@ namespace zlt::mylisp {
   using NativeFunction = int (Value *it, Value *end);
   using Null = std::monostate;
 
-  struct Value: std::variant<Null, double, const std::wstring *, const std::string *, Object *, NativeFunction *> {
+  struct Value: std::variant<Null, double, wchar_t, const std::wstring *, const std::string *, Object *, NativeFunction *> {
     enum {
-      NULL_INDEX, NUM_INDEX, STR_INDEX, LATIN1_INDEX, OBJ_INDEX, NAT_FN_INDEX
+      NULL_INDEX, NUM_INDEX, CHAR_INDEX, STR_INDEX, LATIN1_INDEX, OBJ_INDEX, NAT_FN_INDEX
     };
     // constructors begin
     using variant::variant;
@@ -26,7 +26,7 @@ namespace zlt::mylisp {
     Value(std::derived_from<Object> auto *o) noexcept: variant(static_cast<Object *>(o)) {}
     // constructors end
     // assignment operations begin
-    template<AnyOf<Null, double, const std::wstring *, const std::string *, Object *, NativeFunction *> T>
+    template<AnyOf<Null, double, wchar_t, const std::wstring *, const std::string *, Object *, NativeFunction *> T>
     Value &operator =(T &&t) noexcept {
       variant::operator =(std::forward<T>(t));
       return *this;
@@ -48,6 +48,14 @@ namespace zlt::mylisp {
     }
     // assignment operations end
     // cast operations begin
+    operator double() const noexcept {
+      auto d = std::get_if<double>(this);
+      return d ? *d : NAN;
+    }
+    template<std::integral I>
+    operator I() const noexcept {
+      return (I) operator double();
+    }
     operator bool() const noexcept {
       return index() != NULL_INDEX;
     }
@@ -55,7 +63,7 @@ namespace zlt::mylisp {
   };
 
   // static cast operations begin
-  template<AnyOf<double, const std::wstring *, const std::string *, Object *, NativeFunction *, void *> T>
+  template<AnyOf<double, wchar_t, const std::wstring *, const std::string *, Object *, NativeFunction *, void *> T>
   static inline int staticast(T &dest, const Value &src) noexcept {
     dest = *(T *) &src;
     return 0;
@@ -69,31 +77,37 @@ namespace zlt::mylisp {
   // static cast operations end
 
   // dynamic cast operations begin
-  bool dynamicast(double &dest, const Value &src) noexcept;
+  template<AnyOf<double, wchar_t, Object *, NativeFunction *> T>
+  static inline bool dynamicast(T &dest, const Value &src) noexcept {
+    if (auto t = std::get_if<T>(&src); t) {
+      dest = *t;
+      return true;
+    } else {
+      return false;
+    }
+  }
 
   template<std::integral I>
   bool dynamicast(I &dest, const Value &src) noexcept {
-    double d;
-    if (!dynamicast(d, src)) {
+    if (double d; dynamicast(d, src)) {
+      dest = (I) d;
+      return true;
+    } else {
       return false;
     }
-    dest = (I) d;
-    return true;
   }
 
   bool dynamicast(std::string_view &dest, const Value &src) noexcept;
   bool dynamicast(std::wstring_view &dest, const Value &src) noexcept;
-  bool dynamicast(NativeFunction *&dest, const Value &src) noexcept;
-  bool dynamicast(Object *&dest, const Value &src) noexcept;
 
   template<std::derived_from<Object> T>
   static inline bool dynamicast(T *&dest, const Value &src) noexcept {
-    Object *o;
-    if (!dynamicast(o, src)) {
+    if (Object *o; dynamicast(o, src)) {
+      dest = dynamic_cast<T *>(o);
+      return dest;
+    } else {
       return false;
     }
-    dest = dynamic_cast<T *>(o);
-    return dest;
   }
   // dynamic cast operations end
 

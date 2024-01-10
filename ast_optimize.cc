@@ -8,7 +8,7 @@ namespace zlt::mylisp::ast {
   #define declOptimize(T) \
   static int optimize(UNode &dest, T &src)
 
-  template<AnyOf<NumberAtom, StringAtom, Latin1Atom, IDAtom, Callee, Null> T>
+  template<AnyOf<NumberAtom, CharAtom, StringAtom, Latin1Atom, IDAtom, Callee, Null> T>
   declOptimize(T);
   declOptimize(Call);
   declOptimize(Defer);
@@ -57,6 +57,7 @@ namespace zlt::mylisp::ast {
     }
     // ast_parse.hh definitions begin
     ifType(NumberAtom);
+    ifType(CharAtom);
     ifType(StringAtom);
     ifType(Latin1Atom);
     ifType(IDAtom);
@@ -112,7 +113,7 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
-  template<AnyOf<NumberAtom, StringAtom, Latin1Atom, IDAtom, Callee, Null> T>
+  template<AnyOf<NumberAtom, CharAtom, StringAtom, Latin1Atom, IDAtom, Callee, Null> T>
   int optimize(UNode &dest, T &src) {
     if (!dest->next) {
       return 0;
@@ -178,7 +179,7 @@ namespace zlt::mylisp::ast {
   }
 
   bool isBoolConst(bool &dest, const UNode &src) noexcept {
-    if (Dynamicastable<NumberAtom, StringAtom, Latin1Atom, Function> {}(*src)) {
+    if (Dynamicastable<NumberAtom, CharAtom, StringAtom, Latin1Atom, Function> {}(*src)) {
       dest = true;
       return true;
     }
@@ -280,7 +281,7 @@ namespace zlt::mylisp::ast {
       dest = a->value;
       return true;
     }
-    if (Dynamicastable<StringAtom, Latin1Atom, Callee, Function, Null> {}(*src)) {
+    if (Dynamicastable<CharAtom, StringAtom, Latin1Atom, Callee, Function, Null> {}(*src)) {
       dest = NAN;
       return true;
     }
@@ -527,6 +528,10 @@ namespace zlt::mylisp::ast {
 
   int optimize(UNode &dest, LengthOper &src) {
     optimize(src.item);
+    if (auto a = dynamic_cast<const CharAtom *>(src.item.get()); a) {
+      replace(dest, number(1));
+      return optimize(dest);
+    }
     if (auto a = dynamic_cast<const StringAtom *>(src.item.get()); a) {
       replace(dest, number(a->value->size()));
       return optimize(dest);
