@@ -1,6 +1,6 @@
 #pragma once
 
-#include"ast_trans2.hh"
+#include"ast.hh"
 
 namespace zlt::mylisp {
   int compile(std::string &dest, const ast::UNode &src);

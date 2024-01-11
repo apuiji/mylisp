@@ -16,5 +16,6 @@ namespace zlt::mylisp::rte {
   extern std::set<ast::Pos> positions;
   extern std::set<std::wstring> strings;
 
+  int init();
   int yield();
 }

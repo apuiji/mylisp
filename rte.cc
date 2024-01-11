@@ -15,6 +15,11 @@ namespace zlt::mylisp::rte {
   set<ast::Pos> positions;
   set<wstring> strings;
 
+  int init() {
+    itCoroutine = coroutines.end();
+    return 0;
+  }
+
   int yield() {
     ++itCoroutine;
     if (itCoroutine == coroutines.end()) {

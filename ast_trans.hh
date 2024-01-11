@@ -8,6 +8,10 @@
 namespace zlt::mylisp::ast {
   int trans(UNode &dest, UNode &src);
 
+  static inline int trans(UNode &dest, UNode &&src) {
+    return trans(dest, src);
+  }
+
   struct TransBad {
     const Pos *pos;
     std::string what;

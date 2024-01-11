@@ -1,4 +1,5 @@
 #include<sstream>
+#include"ast_trans2.hh"
 #include"compile.hh"
 #include"direction.hh"
 #include"rte.hh"

@@ -20,6 +20,7 @@ HHS = \
 	rte \
 	value
 OBJS = \
+	ast \
 	ast_include \
 	ast_lexer \
 	ast_optimize \
