@@ -8,12 +8,12 @@ using namespace std;
 namespace zlt::mylisp {
   int FunctionObj::graySubjs() noexcept {
     for (auto &p : closures) {
-      gc::grayIt(p.second);
+      gc::grayValue(p.second);
     }
     return 0;
   }
 
-  Value ListObj::getMemb(const Value &memb) const noexcept {
+  Value ListObj::objGetMemb(const Value &memb) const noexcept {
     int i;
     if (!dynamicast(i, memb)) {
       return Null();
@@ -24,7 +24,7 @@ namespace zlt::mylisp {
     return list[i];
   }
 
-  int ListObj::setMemb(const Value &memb, const Value &value) {
+  int ListObj::objSetMemb(const Value &memb, const Value &value) {
     int i;
     if (!dynamicast(i, memb)) {
       return 0;
@@ -37,96 +37,169 @@ namespace zlt::mylisp {
   }
 
   int ListObj::graySubjs() noexcept {
-    for_each(list.begin(), list.end(), gc::grayIt);
+    for_each(list.begin(), list.end(), gc::grayValue);
     return 0;
   }
 
-  bool SetObj::Comparator::operator ()(const Value &a, const Value &b) const noexcept {
-    switch (a.index()) {
+  template<class K>
+  static Value poolGetMemb(const map<K, Value> &m, const K &k) noexcept {
+    auto it = m.find(k);
+    if (it != m.end()) {
+      return it->second;
+    } else {
+      return Null();
+    }
+  }
+
+  Value MapObj::objGetMemb(const Value &memb) const noexcept {
+    switch (memb.index()) {
       case Value::NULL_INDEX: {
-        switch (b.index()) {
-          case Value::NULL_INDEX: {
-            return false;
-          }
-          default: {
-            return true;
-          }
+        if (nullPool.first) {
+          return nullPool.second;
+        } else {
+          return Null();
         }
       }
       case Value::NUM_INDEX: {
-        switch (b.index()) {
-          case Value::NULL_INDEX: {
-            return false;
+        double d;
+        staticast(d, memb);
+        if (isnan(d)) {
+          if (nanPool.first) {
+            return nanPool.second;
+          } else {
+            return Null();
           }
-          case Value::NUM_INDEX: {
-            double x;
-            staticast(x, a);
-            double y;
-            staticast(y, b);
-            if (isnan(x)) {
-              return !isnan(y);
-            }
-            return x < y;
-          }
-          default: {
-            return true;
-          }
+        } else {
+          return poolGetMemb(numPool, d);
         }
+      }
+      case Value::CHAR_INDEX: {
+        wchar_t c;
+        staticast(c, memb);
+        return poolGetMemb(charPool, c);
+      }
+      case Value::STR_INDEX: {
+        const wstring *s;
+        staticast(s, memb);
+        BasicStringViewKey<wchar_t> k(s, (wstring_view) *s);
+        return poolGetMemb(strPool, k);
+      }
+      case Value::LATIN1_INDEX: {
+        const string *s;
+        staticast(s, memb);
+        BasicStringViewKey<char> k(s, (string_view) *s);
+        return poolGetMemb(latin1Pool, k);
       }
       case Value::OBJ_INDEX: {
-        Object *x;
-        staticast(x, a);
-        if (int diff; x->compare(diff, b)) {
-          return diff < 0;
+        Object *o;
+        staticast(o, memb);
+        if (auto s = dynamic_cast<StringViewObj *>(o); s) {
+          BasicStringViewKey<wchar_t> k(o, (wstring_view) *s);
+          return poolGetMemb(strPool, k);
         }
-        if (b.index() < Value::OBJ_INDEX) {
-          return false;
+        if (auto s = dynamic_cast<Latin1ViewObj *>(o); s) {
+          BasicStringViewKey<char> k(o, (string_view) *s);
+          return poolGetMemb(latin1Pool, k);
         }
-        void *y;
-        staticast(y, b);
-        return x < y;
+        return poolGetMemb(objPool, o);
       }
       default: {
-        if (b.index() < Value::OBJ_INDEX) {
-          return false;
-        }
-        void *x;
-        staticast(x, a);
-        void *y;
-        staticast(y, b);
-        return x < y;
+        void *p;
+        staticast(p, memb);
+        return poolGetMemb(ptrPool, p);
       }
     }
   }
 
-  int SetObj::graySubjs() noexcept {
-    for_each(set.begin(), set.end(), gc::grayIt);
+  static Value &mapGetMemb4set(MapObj *m, const Value &memb);
+
+  int MapObj::objSetMemb(const Value &memb, const Value &value) {
+    mapGetMemb4set(this, memb) = value;
     return 0;
   }
 
-  Value setObjElem(const Value &src) {
-    switch (src.index()) {
+  Value &mapGetMemb4set(MapObj *m, const Value &memb) {
+    switch (memb.index()) {
+      case Value::NULL_INDEX: {
+        m->nullPool.first = true;
+        return m->nullPool.second;
+      }
+      case Value::NUM_INDEX: {
+        double d;
+        staticast(d, memb);
+        return isnan(d) ? m->nanPool.second : m->numPool[d];
+      }
       case Value::CHAR_INDEX: {
         wchar_t c;
-        staticast(c, src);
-        auto o = new StringViewObj(c);
-        gc::neobj(o);
-        return o;
+        staticast(c, memb);
+        return m->charPool[c];
+      }
+      case Value::STR_INDEX: {
+        const wstring *s;
+        staticast(s, memb);
+        MapObj::BasicStringViewKey<wchar_t> k(s, (wstring_view) *s);
+        return m->strPool[k];
+      }
+      case Value::LATIN1_INDEX: {
+        const string *s;
+        staticast(s, memb);
+        MapObj::BasicStringViewKey<char> k(s, (string_view) *s);
+        return m->latin1Pool[k];
+      }
+      case Value::OBJ_INDEX: {
+        Object *o;
+        staticast(o, memb);
+        if (auto s = dynamic_cast<StringViewObj *>(o); s) {
+          MapObj::BasicStringViewKey<wchar_t> k(o, (wstring_view) *s);
+          return m->strPool[k];
+        }
+        if (auto s = dynamic_cast<Latin1ViewObj *>(o); s) {
+          MapObj::BasicStringViewKey<char> k(o, (string_view) *s);
+          return m->latin1Pool[k];
+        }
+        return m->objPool[o];
       }
       default: {
-        if (wstring_view s; dynamicast(s, src)) {
-          auto o = new StringViewObj(src, s);
-          gc::neobj(o);
-          return o;
-        }
-        if (string_view s; dynamicast(s, src)) {
-          auto o = new Latin1ViewObj(src, s);
-          gc::neobj(o);
-          return o;
-        }
+        void *p;
+        staticast(p, memb);
+        return m->ptrPool[p];
       }
     }
   }
 
-  Value MapObj::
+  int MapObj::graySubjs() noexcept {
+    if (nullPool.first) {
+      gc::grayValue(nullPool.second);
+    }
+    if (nanPool.first) {
+      gc::grayValue(nanPool.second);
+    }
+    for (auto &p : numPool) {
+      gc::grayValue(p.second);
+    }
+    for (auto &p : charPool) {
+      gc::grayValue(p.second);
+    }
+    for (auto &p : strPool) {
+      gc::grayValue(p.first.string);
+      gc::grayValue(p.second);
+    }
+    for (auto &p : latin1Pool) {
+      gc::grayValue(p.first.string);
+      gc::grayValue(p.second);
+    }
+    for (auto &p : objPool) {
+      gc::grayObj(p.first);
+      gc::grayValue(p.second);
+    }
+    for (auto &p : ptrPool) {
+      gc::grayValue(p.second);
+    }
+    return 0;
+  }
+
+  int PointerObj::graySubjs() noexcept {
+    gc::grayValue(value);
+    return 0;
+  }
 }

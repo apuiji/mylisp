@@ -16,10 +16,10 @@ namespace zlt::mylisp {
     Object *next;
     int color;
     // cast operations begin
-    virtual bool dynamicast(std::wstring_view &dest) const noexcept {
+    virtual bool objDynamicast(std::wstring_view &dest) const noexcept {
       return false;
     }
-    virtual bool dynamicast(std::string_view &dest) const noexcept {
+    virtual bool objDynamicast(std::string_view &dest) const noexcept {
       return false;
     }
     // cast operations end
@@ -41,10 +41,10 @@ namespace zlt::mylisp {
     }
     // comparisons end
     // member operations begin
-    virtual Value getMemb(const Value &memb) const noexcept {
+    virtual Value objGetMemb(const Value &memb) const noexcept {
       return Null();
     }
-    virtual int setMemb(const Value &memb, const Value &value) {
+    virtual int objSetMemb(const Value &memb, const Value &value) {
       return 0;
     }
     // member operations end
@@ -120,7 +120,7 @@ namespace zlt::mylisp {
   struct BasicStringViewObj: virtual Object {
     // cast operations begin
     virtual operator std::basic_string_view<C>() const noexcept = 0;
-    bool dynamicast(std::basic_string_view<C> &dest) const noexcept override {
+    bool objDynamicast(std::basic_string_view<C> &dest) const noexcept override {
       dest = operator std::basic_string_view<C>();
       return true;
     }
@@ -141,7 +141,7 @@ namespace zlt::mylisp {
     }
     // comparisons end
     // member operations begin
-    Value getMemb(const Value &memb) const noexcept override;
+    Value objGetMemb(const Value &memb) const noexcept override;
     // member operations end
   };
 
@@ -163,9 +163,6 @@ namespace zlt::mylisp {
     Value string;
     std::basic_string_view<C> view;
     BasicStringViewObj1(const Value &string, std::basic_string_view<C> view) noexcept: string(string), view(view) {}
-    BasicStringViewObj1(wchar_t c) noexcept: string(c) {
-      view = std::basic_string_view<C>((wchar_t *) &string, 1);
-    }
     int graySubjs() noexcept override;
     operator std::basic_string_view<C>() const noexcept override {
       return view;
@@ -176,7 +173,7 @@ namespace zlt::mylisp {
   using Latin1ViewObj = BasicStringViewObj1<char>;
 
   template<class C>
-  Value BasicStringViewObj<C>::getMemb(const Value &memb) const noexcept {
+  Value BasicStringViewObj<C>::objGetMemb(const Value &memb) const noexcept {
     int i;
     if (!dynamicast(i, memb)) {
       return Null();
@@ -200,28 +197,33 @@ namespace zlt::mylisp {
   struct ListObj final: Object {
     std::deque<Value> list;
     // member operations begin
-    Value getMemb(const Value &memb) const noexcept override;
-    int setMemb(const Value &memb, const Value &value) override;
+    Value objGetMemb(const Value &memb) const noexcept override;
+    int objSetMemb(const Value &memb, const Value &value) override;
     // member operations end
     int graySubjs() noexcept override;
   };
 
-  struct SetObj final: Object {
-    /// null < NaN < double < StringViewObj < LatinViewObj < Object < pointer
-    struct Comparator {
-      bool operator ()(const Value &a, const Value &b) const noexcept;
-    };
-    std::set<Value, Comparator> set;
-    int graySubjs() noexcept override;
-  };
-
-  Value setObjElem(const Value &src);
-
   struct MapObj final: Object {
-    std::map<Value, Value, SetObj::Comparator> map;
+    template<class C>
+    struct BasicStringViewKey {
+      Value string;
+      std::basic_string_view<C> view;
+      BasicStringViewKey(const Value &string, std::basic_string_view<C> view) noexcept: string(string), view(view) {}
+      bool operator <(const BasicStringViewKey<C> &a) const noexcept {
+        return view < a.view;
+      }
+    };
+    std::pair<bool, Value> nullPool;
+    std::pair<bool, Value> nanPool;
+    std::map<double, Value> numPool;
+    std::map<wchar_t, Value> charPool;
+    std::map<BasicStringViewKey<wchar_t>, Value> strPool;
+    std::map<BasicStringViewKey<char>, Value> latin1Pool;
+    std::map<Object *, Value> objPool;
+    std::map<void *, Value> ptrPool;
     // member operations begin
-    Value getMemb(const Value &memb) const noexcept override;
-    int setMemb(const Value &memb, const Value &value) override;
+    Value objGetMemb(const Value &memb) const noexcept override;
+    int objSetMemb(const Value &memb, const Value &value) override;
     // member operations end
     int graySubjs() noexcept override;
   };

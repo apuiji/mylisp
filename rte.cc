@@ -1,3 +1,5 @@
+#include"eval.hh"
+#include"gc.hh"
 #include"rte.hh"
 
 using namespace std;
@@ -12,4 +14,18 @@ namespace zlt::mylisp::rte {
   map<const wstring *, Macro> macros;
   set<ast::Pos> positions;
   set<wstring> strings;
+
+  int yield() {
+    ++itCoroutine;
+    if (itCoroutine == coroutines.end()) {
+      gc::gc();
+      itCoroutine = coroutines.begin();
+      if (itCoroutine == coroutines.end()) {
+        return 0;
+      }
+    }
+    Frame f = itCoroutine->framek.back();
+    itCoroutine->framek.pop_back();
+    return eval(f.prevNext, f.prevEnd);
+  }
 }

@@ -29,6 +29,7 @@ namespace zlt::mylisp::gc {
         whiteBlacks(blacks);
         whites = exchange(blacks, nullptr);
         firstGrays(rte::coroutines.begin(), rte::coroutines.end());
+        step = NEXT_GRAYS_STEP;
         return 0;
       }
       case NEXT_GRAYS_STEP: {
@@ -59,7 +60,7 @@ namespace zlt::mylisp::gc {
 
   static int grayLocalDefs(map<const wstring *, Value> &defs) noexcept {
     for (auto &p : defs) {
-      grayIt(p.second);
+      grayValue(p.second);
     }
     return 0;
   }
@@ -71,23 +72,30 @@ namespace zlt::mylisp::gc {
     if (!it->alive) {
       return firstGrays(rte::coroutines.erase(it), end);
     }
-    grayIt(it->value);
-    for_each(it->valuek->begin(), it->valuekTop, grayIt);
+    grayValue(it->value);
+    for_each(it->valuek->begin(), it->valuekTop, grayValue);
     for_each(it->localDefsk.begin(), it->localDefsk.end(), grayLocalDefs);
-    for_each(it->deferk.begin(), it->deferk.end(), grayIt);
+    for_each(it->deferk.begin(), it->deferk.end(), grayValue);
     return firstGrays(++it, end);
   }
 
   static int take(Object *&set, Object *o) noexcept;
   static int put(Object *&dest, Object *o) noexcept;
 
-  int grayIt(Value &v) noexcept {
-    Object *o;
-    dynamicast(o, v);
-    if (o && o->color == Object::WHITE_COLOR) {
+  int grayObj(Object *o) noexcept {
+    if (o->color == Object::WHITE_COLOR) {
       take(whites, o);
       o->color = Object::GRAY_COLOR;
       put(grays, o);
+    }
+    return 0;
+  }
+
+  int grayValue(const Value &v) noexcept {
+    Object *o;
+    dynamicast(o, v);
+    if (o) {
+      grayObj(o);
     }
     return 0;
   }
@@ -134,18 +142,18 @@ namespace zlt::mylisp::gc {
     return cleanWhites(next);
   }
 
-  int neobj(Object *o) noexcept {
-    o->color = Object::BLACK_COLOR;
-    put(blacks, o);
-    return 0;
-  }
-
   int iwb(Value &v, Value &w) noexcept {
     Object *o;
     dynamicast(o, v);
     if (o && o->color == Object::BLACK_COLOR) {
-      grayIt(w);
+      grayValue(w);
     }
+    return 0;
+  }
+
+  int neobj(Object *o) noexcept {
+    o->color = Object::BLACK_COLOR;
+    put(blacks, o);
     return 0;
   }
 }

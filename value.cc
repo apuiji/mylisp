@@ -17,7 +17,7 @@ namespace zlt::mylisp {
       case Value::OBJ_INDEX: {
         Object *o;
         staticast(o, src);
-        return o->dynamicast(dest);
+        return o->objDynamicast(dest);
       }
       default: {
         return false;
@@ -40,7 +40,7 @@ namespace zlt::mylisp {
       case Value::OBJ_INDEX: {
         Object *o;
         staticast(o, src);
-        return o->dynamicast(dest);
+        return o->objDynamicast(dest);
       }
       default: {
         return false;
@@ -183,7 +183,7 @@ namespace zlt::mylisp {
       case Value::OBJ_INDEX: {
         Object *o;
         staticast(o, v);
-        return o->getMemb(memb);
+        return o->objGetMemb(memb);
       }
       default: {
         return Null();
@@ -205,7 +205,7 @@ namespace zlt::mylisp {
 
   int setMemb(Value &v, const Value &memb, const Value &value) {
     if (Object *o; dynamicast(o, v)) {
-      return o->setMemb(memb, value);
+      return o->objSetMemb(memb, value);
     }
     return 0;
   }
