@@ -182,9 +182,7 @@ namespace zlt::mylisp {
     if (!(i >= 0 && i < sv.size())) {
       return Null();
     }
-    auto so = new BasicStringObj<C>(basic_string<C>(1, sv[i]));
-    gc::neobj(so);
-    return so;
+    return sv[i];
   }
 
   struct FunctionObj final: Object {

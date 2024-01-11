@@ -1,4 +1,5 @@
 #include"ast_optimize.hh"
+#include"ast_preproc.hh"
 #include"ast_trans2.hh"
 #include"myccutils/xyz.hh"
 

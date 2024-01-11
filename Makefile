@@ -15,6 +15,7 @@ HHS = \
 	direction \
 	eval \
 	gc \
+	io_object \
 	macro \
 	object \
 	rte \
@@ -30,8 +31,10 @@ OBJS = \
 	ast_trans1 \
 	ast_trans2 \
 	compile \
+	coroutine \
 	eval \
 	gc \
+	io_object \
 	main \
 	object \
 	rte \

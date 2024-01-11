@@ -1,5 +1,7 @@
+#include<iostream>
 #include"eval.hh"
 #include"gc.hh"
+#include"io_object.hh"
 #include"rte.hh"
 
 using namespace std;
@@ -16,7 +18,12 @@ namespace zlt::mylisp::rte {
   set<wstring> strings;
 
   int init() {
-    itCoroutine = coroutines.end();
+    {
+      auto &id = *strings.insert(L"stdout").first;
+      auto o = new WriterObj(wcout);
+      gc::neobj(o);
+      globalDefs[&id] = o;
+    }
     return 0;
   }
 

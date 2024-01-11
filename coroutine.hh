@@ -51,7 +51,7 @@ namespace zlt::mylisp {
     std::list<Value> deferk;
     std::list<Frame> framek;
     bool alive;
-    Coroutine(std::unique_ptr<ValueStack> &&valuek) noexcept: valuek(std::move(valuek)) {}
+    Coroutine(std::unique_ptr<ValueStack> &&valuek) noexcept;
   };
 
   using Coroutines = std::list<Coroutine>;
