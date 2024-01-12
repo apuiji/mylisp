@@ -2,7 +2,6 @@
 #include"ast_lexer.hh"
 #include"ast_parse.hh"
 #include"ast_token.hh"
-#include"myccutils/xyz.hh"
 #include"rte.hh"
 
 using namespace std;
@@ -82,7 +81,7 @@ namespace zlt::mylisp::ast {
       }
       case token::LPAREN: {
         UNode first;
-        It end1 = operator ()(first, rtol<UNode *>(), end0);
+        It end1 = operator ()(first, end0);
         auto [t2, start2, end2] = lexer(end1, end);
         if (t2 != token::RPAREN) {
           throw ParseBad(makePos(file, begin, end, start0), L"unterminated list");
@@ -95,5 +94,41 @@ namespace zlt::mylisp::ast {
         return operator ()(dest->next, end0);
       }
     }
+  }
+
+  int clone(UNode &dest, const UNode &src) {
+    if (auto a = dynamic_cast<const NumberAtom *>(src.get()); a) {
+      dest.reset(new NumberAtom(a->pos, a->raw, a->value));
+      return 0;
+    }
+    if (auto a = dynamic_cast<const CharAtom *>(src.get()); a) {
+      dest.reset(new CharAtom(a->pos, a->value));
+      return 0;
+    }
+    if (auto a = dynamic_cast<const StringAtom *>(src.get()); a) {
+      dest.reset(new StringAtom(a->pos, a->value));
+      return 0;
+    }
+    if (auto a = dynamic_cast<const IDAtom *>(src.get()); a) {
+      dest.reset(new IDAtom(a->pos, a->name));
+      return 0;
+    }
+    if (auto a = dynamic_cast<const TokenAtom *>(src.get()); a) {
+      dest.reset(new TokenAtom(a->pos, a->raw, a->token));
+      return 0;
+    }
+    auto ls = static_cast<const List *>(src.get());
+    UNode first;
+    clones(first, ls->first);
+    dest.reset(new List(ls->pos, std::move(first)));
+    return 0;
+  }
+
+  UNode &clones(UNode &dest, const UNode &src) {
+    if (!src) [[unlikely]] {
+      return dest;
+    }
+    clone(dest, src);
+    return clones(dest->next, src->next);
   }
 }

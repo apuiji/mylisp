@@ -45,4 +45,7 @@ namespace zlt::mylisp::ast {
     UNode first;
     List(const Pos *pos, UNode &&first = {}) noexcept: Node(pos), first(std::move(first)) {}
   };
+
+  int clone(UNode &dest, const UNode &src);
+  UNode &clones(UNode &dest, const UNode &src);
 }

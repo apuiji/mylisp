@@ -10,6 +10,7 @@ namespace zlt::mylisp::ast {
   struct PreprocBad {
     std::wstring what;
     std::vector<const Pos *> posk;
+    PreprocBad(std::wstring &&what) noexcept: what(std::move(what)) {}
     PreprocBad(std::wstring &&what, std::vector<const Pos *> &&posk) noexcept: what(std::move(what)), posk(std::move(posk)) {}
     PreprocBad(std::wstring &&what, const Pos *pos): what(std::move(what)) {
       posk.push_back(pos);

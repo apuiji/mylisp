@@ -1,6 +1,6 @@
 #include<filesystem>
 #include<iostream>
-#include"ast_include.hh"
+#include"ast_load.hh"
 #include"compile.hh"
 #include"eval.hh"
 #include"myccutils/xyz.hh"
@@ -22,8 +22,7 @@ int main(int argc, char **argv, char **envp) {
   rte::init();
   if (indexFile) {
     ast::UNode a;
-    ast::include(a, filesystem::path(indexFile));
-    ast::ast(a);
+    ast::ast(a, filesystem::path(indexFile));
     string s;
     compile(s, a);
     {
@@ -33,7 +32,7 @@ int main(int argc, char **argv, char **envp) {
     rte::itCoroutine = rte::coroutines.begin();
     return eval(s.data(), s.data() + s.size());
   } else {
-    // todo: repl
+    /// TODO: repl
     return 0;
   }
 }

@@ -3,7 +3,6 @@
 #include"ast_optimize.hh"
 #include"ast_preproc.hh"
 #include"ast_trans2.hh"
-#include"myccutils/xyz.hh"
 
 using namespace std;
 
@@ -13,29 +12,30 @@ namespace zlt::mylisp::ast {
   static UNode &load1(Loadeds &loadeds, filesystem::path &&file);
 
   int ast(UNode &dest, const filesystem::path &file) {
-    Loadeds loadeds;
-    auto a = 
-    preproc(src, remove(src));
-    trans(src, remove(src));
-    optimize(src);
-    trans1(src);
-    trans2(src);
+    {
+      Loadeds loadeds;
+      auto &a = load1(loadeds, filesystem::canonical(file));
+      UNode b;
+      preproc(b, loadeds, a);
+      trans(dest, b);
+    }
+    optimize(dest);
+    trans1(dest);
+    trans2(dest);
     return 0;
   }
 
-  UNode &load1() {
-    filesystem::path *file1;
+  UNode &load1(Loadeds &loadeds, filesystem::path &&file) {
+    const filesystem::path *file1;
     UNode a;
     try {
       file1 = load(a, std::move(file));
     } catch (LoadBad bad) {
-      throw PreprocBad(std::move(bad.what), pos);
+      throw PreprocBad(std::move(bad.what));
     } catch (ParseBad bad) {
       wstring postr;
       pos2str(postr, bad.pos);
-      throw PreprocBad(std::move(bad.what) + postr, pos);
-    } catch (PreprocBad bad) {
-      throw PreprocBad(std::move(bad), pos);
+      throw PreprocBad(std::move(bad.what) + postr);
     }
     return loadeds[file1] = std::move(a);
   }

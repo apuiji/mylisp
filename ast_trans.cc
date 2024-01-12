@@ -39,6 +39,10 @@ namespace zlt::mylisp::ast {
     return trans(dest->next, scope, src);
   }
 
+  static inline UNode number(double d, const Pos *pos = nullptr) {
+    return UNode(new Number(pos, d));
+  }
+
   using Trans = int (UNode &dest, Scope &scope, const Pos *pos, UNode &src);
 
   static Trans *isTrans(const UNode &src) noexcept;
@@ -46,6 +50,10 @@ namespace zlt::mylisp::ast {
   static int trans(UNodes &dest, Scope &scope, UNode &src);
 
   int trans1(UNode &dest, Scope &scope, UNode &src) {
+    if (auto num = dynamic_cast<const NumberAtom *>(src.get()); num) {
+      dest = number(num->value, num->pos);
+      return 0;
+    }
     if (auto t = dynamic_cast<const TokenAtom *>(src.get()); t) {
       switch (t->token) {
         case token::KWD_callee: {
@@ -313,11 +321,11 @@ namespace zlt::mylisp::ast {
     trans(a, scope, src);
     switch (a.size()) {
       case 0: {
-        a.emplace_back(new NumberAtom(nullptr, d));
+        a.push_back(number(d));
         [[fallthrough]];
       }
       case 1: {
-        a.emplace_back(new NumberAtom(nullptr, d1));
+        a.push_back(number(d1));
         [[fallthrough]];
       }
     }
@@ -378,12 +386,12 @@ namespace zlt::mylisp::ast {
     UNodes items;
     trans(items, scope, src);
     if (items.empty()) {
-      dest.reset(new NumberAtom(nullptr, 0));
+      dest = number(0);
       return 0;
     }
     if (items.size() == 1) {
       items.push_back(std::move(items[0]));
-      items[0].reset(new NumberAtom(nullptr, 0));
+      items[0] = number(0);
     }
     dest.reset(new ArithSubOper(pos, std::move(items)));
     return 0;

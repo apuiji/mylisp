@@ -8,7 +8,7 @@ namespace zlt::mylisp::ast {
   #define declOptimize(T) \
   static int optimize(UNode &dest, T &src)
 
-  template<AnyOf<NumberAtom, CharAtom, StringAtom, Latin1Atom, IDAtom, Callee, Null> T>
+  template<AnyOf<Number, CharAtom, StringAtom, IDAtom, Callee, Null> T>
   declOptimize(T);
   declOptimize(Call);
   declOptimize(Defer);
@@ -56,10 +56,9 @@ namespace zlt::mylisp::ast {
       return optimize(src, *a); \
     }
     // ast_parse.hh definitions begin
-    ifType(NumberAtom);
+    ifType(Number);
     ifType(CharAtom);
     ifType(StringAtom);
-    ifType(Latin1Atom);
     ifType(IDAtom);
     // ast_parse.hh definitions end
     ifType(Call);
@@ -113,7 +112,7 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
-  template<AnyOf<NumberAtom, CharAtom, StringAtom, Latin1Atom, IDAtom, Callee, Null> T>
+  template<AnyOf<Number, CharAtom, StringAtom, IDAtom, Callee, Null> T>
   int optimize(UNode &dest, T &src) {
     if (!dest->next) {
       return 0;
@@ -179,7 +178,7 @@ namespace zlt::mylisp::ast {
   }
 
   bool isBoolConst(bool &dest, const UNode &src) noexcept {
-    if (Dynamicastable<NumberAtom, CharAtom, StringAtom, Latin1Atom, Function> {}(*src)) {
+    if (Dynamicastable<Number, CharAtom, StringAtom, Function> {}(*src)) {
       dest = true;
       return true;
     }
@@ -258,7 +257,7 @@ namespace zlt::mylisp::ast {
   }
 
   static inline UNode number(double d) {
-    return UNode(new NumberAtom(nullptr, d));
+    return UNode(new Number(nullptr, d));
   }
 
   template<class F>
@@ -277,11 +276,11 @@ namespace zlt::mylisp::ast {
   }
 
   bool isNumConst(double &dest, const UNode &src) noexcept {
-    if (auto a = dynamic_cast<const NumberAtom *>(src.get()); a) {
+    if (auto a = dynamic_cast<const Number *>(src.get()); a) {
       dest = a->value;
       return true;
     }
-    if (Dynamicastable<CharAtom, StringAtom, Latin1Atom, Callee, Function, Null> {}(*src)) {
+    if (Dynamicastable<CharAtom, StringAtom, Callee, Function, Null> {}(*src)) {
       dest = NAN;
       return true;
     }
@@ -533,10 +532,6 @@ namespace zlt::mylisp::ast {
       return optimize(dest);
     }
     if (auto a = dynamic_cast<const StringAtom *>(src.item.get()); a) {
-      replace(dest, number(a->value->size()));
-      return optimize(dest);
-    }
-    if (auto a = dynamic_cast<const Latin1Atom *>(src.item.get()); a) {
       replace(dest, number(a->value->size()));
       return optimize(dest);
     }

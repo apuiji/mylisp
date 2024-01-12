@@ -53,7 +53,7 @@ namespace zlt::mylisp::ast {
         charval = strval[0];
         return { token::CHAR, it, it1 + 1 };
       }
-      return { token::WSTRING, it, it1 + 1 };
+      return { token::STRING, it, it1 + 1 };
     }
     size_t n = count_if(it, end, isRawChar);
     if (!n) {

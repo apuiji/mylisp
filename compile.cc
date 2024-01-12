@@ -42,8 +42,8 @@ namespace zlt::mylisp {
   #define declCompile(T) \
   static Compile &operator <<(Compile &dest, const T &src)
 
-  template<class T>
-  declCompile(LiteralAtom<T>);
+  declCompile(CharAtom);
+  declCompile(StringAtom);
   // ast_trans.hh definitions begin
   declCompile(Call);
   declCompile(Callee);
@@ -51,6 +51,7 @@ namespace zlt::mylisp {
   declCompile(Forward);
   declCompile(If);
   declCompile(ast::Null);
+  declCompile(Number);
   declCompile(Return);
   declCompile(Throw);
   declCompile(Try);
@@ -92,10 +93,8 @@ namespace zlt::mylisp {
     if (auto a = dynamic_cast<const T *>(src.get()); a) { \
       return dest << *a; \
     }
-    ifType(NumberAtom);
     ifType(CharAtom);
     ifType(StringAtom);
-    ifType(Latin1Atom);
     // ast_trans.hh definitions begin
     ifType(Call);
     ifType(Callee);
@@ -103,6 +102,7 @@ namespace zlt::mylisp {
     ifType(Forward);
     ifType(If);
     ifType(ast::Null);
+    ifType(Number);
     ifType(Return);
     ifType(Throw);
     ifType(Try);
@@ -163,22 +163,6 @@ namespace zlt::mylisp {
   }
 
   template<class T>
-  static consteval uint8_t setLiteralDir() {
-    if constexpr (is_same_v<T, double>) {
-      return direction::SET_NUM;
-    } else if constexpr (is_same_v<T, wchar_t>) {
-      return direction::SET_CHAR;
-    } else if constexpr (is_same_v<T, const wstring *>) {
-      return direction::SET_STR;
-    } else if constexpr (is_same_v<T, const string *>) {
-      return direction::SET_LATIN1;
-    } else {
-      // never
-      return 0;
-    }
-  }
-
-  template<class T>
   requires (is_scalar_v<T>)
   Compile &operator <<(Compile &dest, T t) {
     if constexpr (sizeof(T) == 1) {
@@ -189,9 +173,12 @@ namespace zlt::mylisp {
     return dest;
   }
 
-  template<class T>
-  Compile &operator <<(Compile &dest, const LiteralAtom<T> &src) {
-    return dest << setLiteralDir<T>() << src.value;
+  Compile &operator <<(Compile &dest, const CharAtom &src) {
+    return dest << direction::SET_CHAR << src.value;
+  }
+
+  Compile &operator <<(Compile &dest, const StringAtom &src) {
+    return dest << direction::SET_STR << src.value;
   }
 
   template<class It>
@@ -236,6 +223,10 @@ namespace zlt::mylisp {
 
   Compile &operator <<(Compile &dest, const ast::Null &src) {
     return dest << direction::SET_NULL;
+  }
+
+  Compile &operator <<(Compile &dest, const Number &src) {
+    return dest << direction::SET_NUM << src.value;
   }
 
   Compile &operator <<(Compile &dest, const Return &src) {

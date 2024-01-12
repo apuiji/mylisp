@@ -12,7 +12,6 @@ namespace zlt::mylisp::rte {
   set<string> fnBodies;
   map<const wstring *, Value> globalDefs;
   ItCoroutine itCoroutine;
-  set<string> latin1s;
   map<const wstring *, Macro> macros;
   set<ast::Pos> positions;
   set<wstring> strings;
