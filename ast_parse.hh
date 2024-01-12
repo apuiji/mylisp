@@ -7,8 +7,8 @@ namespace zlt::mylisp::ast {
 
   struct ParseBad {
     Pos pos;
-    std::string what;
-    ParseBad(const Pos &pos, std::string &&what) noexcept: pos(pos), what(std::move(what)) {}
+    std::wstring what;
+    ParseBad(const Pos &pos, std::wstring &&what) noexcept: pos(pos), what(std::move(what)) {}
   };
 
   template<class T>

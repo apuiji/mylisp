@@ -1,3 +1,4 @@
+#include<sstream>
 #include"ast_optimize.hh"
 #include"ast_preproc.hh"
 #include"ast_trans2.hh"
@@ -19,5 +20,14 @@ namespace zlt::mylisp::ast {
     auto a = std::move(src);
     src = std::move(a->next);
     return std::move(a);
+  }
+
+  int pos2str(wstring &dest, const Pos &pos) {
+    wstringstream ss;
+    ss << L"at " << pos.first->wstring();
+    ss.put(':');
+    ss << pos.second;
+    dest = ss.str();
+    return 0;
   }
 }

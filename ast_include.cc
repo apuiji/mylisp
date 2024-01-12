@@ -19,7 +19,7 @@ namespace zlt::mylisp::ast {
   int readAll(wstring &dest, const filesystem::path &file) {
     wifstream ifs(file);
     if (!ifs) {
-      throw IncludeBad(file, "invalid include file");
+      throw IncludeBad(file, L"invalid include file");
     }
     wstringstream ss;
     copy(istreambuf_iterator<wchar_t>(ifs), istreambuf_iterator<wchar_t>(), ostreambuf_iterator<wchar_t>(ss));

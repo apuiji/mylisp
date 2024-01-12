@@ -32,4 +32,6 @@ namespace zlt::mylisp::ast {
 
   int ast(UNode &src);
   UNode shift(UNode &src) noexcept;
+
+  int pos2str(std::wstring &dest, const Pos &src);
 }

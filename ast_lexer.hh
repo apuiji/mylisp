@@ -15,7 +15,7 @@ namespace zlt::mylisp::ast {
 
   struct LexerBad {
     const wchar_t *start;
-    std::string what;
-    LexerBad(const wchar_t *start, std::string &&what) noexcept: start(start), what(std::move(what)) {}
+    std::wstring what;
+    LexerBad(const wchar_t *start, std::wstring &&what) noexcept: start(start), what(std::move(what)) {}
   };
 }

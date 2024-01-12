@@ -57,7 +57,7 @@ namespace zlt::mylisp::ast {
           return 0;
         }
         default: {
-          throw TransBad(src->pos, "unexpected token");
+          throw TransBad(src->pos, L"unexpected token");
         }
       }
     }
@@ -202,7 +202,7 @@ namespace zlt::mylisp::ast {
   int transKWD_def(UNode &dest, Scope &scope, const Pos *pos, UNode &src) {
     auto id = dynamic_cast<const IDAtom *>(src.get());
     if (!id) {
-      throw TransBad(pos, "required definition name");
+      throw TransBad(pos, L"required definition name");
     }
     if (scope.clazz == Scope::FUNCTION_SCOPE_CLASS) {
       static_cast<FunctionScope &>(scope).defs.insert(id->name);
@@ -226,7 +226,7 @@ namespace zlt::mylisp::ast {
 
   static inline int noGlobal(const Scope &scope, const Pos *pos) {
     if (scope.clazz == Scope::GLOBAL_SCOPE_CLASS) {
-      throw TransBad(pos, "should not in global scope");
+      throw TransBad(pos, L"should not in global scope");
     }
     return 0;
   }
@@ -470,7 +470,7 @@ namespace zlt::mylisp::ast {
     if (src) {
       trans1(a, scope, src);
     } else {
-      throw TransBad(pos, "nothing assign");
+      throw TransBad(pos, L"nothing assign");
     }
     if (dynamic_cast<const IDAtom *>(a.get())) {
       dest.reset(new AssignOper(pos, { std::move(a), std::move(b) }));
@@ -483,7 +483,7 @@ namespace zlt::mylisp::ast {
         dest.reset(new SetMemberOper(pos, { std::move(a), std::move(d), std::move(b) }));
       }
     } else {
-      throw TransBad(pos, "illegal assign");
+      throw TransBad(pos, L"illegal assign");
     }
     return 0;
   }
@@ -514,7 +514,7 @@ namespace zlt::mylisp::ast {
   int transSymbol<token::symbol("@")>(UNode &dest, Scope &scope, const Pos *pos, UNode &src) {
     auto ls = dynamic_cast<const List *>(src.get());
     if (!ls) {
-      throw TransBad(pos, "required function parameter list");
+      throw TransBad(pos, L"required function parameter list");
     }
     FunctionScope fnScope;
     vector<const wstring *> params;
@@ -539,7 +539,7 @@ namespace zlt::mylisp::ast {
       dest.push_back(nullptr);
       return fnParams(dest, scope, src->next);
     }
-    throw TransBad(src->pos, "illegal function parameter");
+    throw TransBad(src->pos, L"illegal function parameter");
   }
 
   template<>

@@ -190,14 +190,14 @@ namespace zlt::mylisp::ast {
   UNode &preprocDir_def(UNode &dest, const Pos *pos, const UNode &src) {
     auto id = dynamic_cast<const IDAtom *>(src.get());
     if (!id) {
-      throw PreprocBad(pos, "required macro name");
+      throw PreprocBad(L"required macro name", pos);
     }
     if (rte::macros.find(id->name) != rte::macros.end()) {
-      throw PreprocBad(pos, "macro already defined");
+      throw PreprocBad(L"macro already defined", pos);
     }
     auto ls = dynamic_cast<const List *>(src->next.get());
     if (!ls) {
-      throw PreprocBad(pos, "required macro parameter list");
+      throw PreprocBad(L"required macro parameter list", pos);
     }
     Macro::Params params;
     makeMacroParams(params, ls->first);
@@ -215,7 +215,7 @@ namespace zlt::mylisp::ast {
     if (auto id = dynamic_cast<const IDAtom *>(src.get()); id) {
       dest.push_back(id->name);
       if (!wcsncmp(id->name->data(), L"...", 3) && src->next) {
-        throw PreprocBad(id->pos, "rest parameter must be last");
+        throw PreprocBad(L"rest parameter must be last", id->pos);
       }
       return makeMacroParams(dest, src->next);
     }
@@ -223,13 +223,13 @@ namespace zlt::mylisp::ast {
       dest.push_back(nullptr);
       return makeMacroParams(dest, src->next);
     }
-    throw PreprocBad(src->pos, "illegal macro parameter");
+    throw PreprocBad(L"illegal macro parameter", src->pos);
   }
 
   UNode &preprocDir_ifndef(UNode &dest, const Pos *pos, const UNode &src) {
     auto id = dynamic_cast<const IDAtom *>(src.get());
     if (!id) {
-      throw PreprocBad(pos, "required macro name");
+      throw PreprocBad(L"required macro name", pos);
     }
     if (rte::macros.find(id->name) != rte::macros.end()) {
       return dest;
@@ -242,10 +242,20 @@ namespace zlt::mylisp::ast {
   UNode &preprocDir_include(UNode &dest, const Pos *pos, const UNode &src) {
     filesystem::path path;
     if (!getPath(path, src)) {
-      throw PreprocBad(pos, "required include path");
+      throw PreprocBad(L"required include path", pos);
     }
     UNode a;
-    include(a, *pos->first / path);
+    try {
+      include(a, *pos->first / path);
+    } catch (ParseBad bad) {
+      wstring postr;
+      pos2str(postr, bad.pos);
+      throw PreprocBad(std::move(bad.what) + postr, pos);
+    } catch (IncludeBad bad) {
+      throw PreprocBad(std::move(bad.what), pos);
+    } catch (PreprocBad bad) {
+      throw PreprocBad(std::move(bad), pos);
+    }
     return preproc(dest, a);
   }
 
@@ -272,7 +282,7 @@ namespace zlt::mylisp::ast {
   UNode &preprocDir_undef(UNode &dest, const Pos *pos, const UNode &src) {
     auto id = dynamic_cast<const IDAtom *>(src.get());
     if (!id) {
-      throw PreprocBad(pos, "required macro name");
+      throw PreprocBad(L"required macro name", pos);
     }
     rte::macros.erase(id->name);
     return dest;

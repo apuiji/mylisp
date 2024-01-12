@@ -48,7 +48,7 @@ namespace zlt::mylisp::ast {
       int quot = it[5];
       It it1 = LexerStr(ss, quot)(it + 6, end);
       if (*it1 != quot) {
-        throw LexerBad(it, "unterminated string");
+        throw LexerBad(it, L"unterminated string");
       }
       strval = ss.str();
       return { token::STRING, it, it1 + 1 };
@@ -57,7 +57,7 @@ namespace zlt::mylisp::ast {
       wstringstream ss;
       It it1 = LexerStr(ss, *it)(it + 1, end);
       if (*it1 != *it) {
-        throw LexerBad(it, "unterminated string");
+        throw LexerBad(it, L"unterminated string");
       }
       wstrval = ss.str();
       if (wstrval.size() == 1) {
@@ -68,7 +68,7 @@ namespace zlt::mylisp::ast {
     }
     size_t n = count_if(it, end, isRawChar);
     if (!n) {
-      throw LexerBad(it, "unrecognized symbol");
+      throw LexerBad(it, L"unrecognized symbol");
     }
     raw = wstring_view(it, n);
     if (isNumber(numval, raw)) {

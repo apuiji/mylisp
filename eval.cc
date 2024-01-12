@@ -149,7 +149,7 @@ namespace zlt::mylisp {
   static int push() {
     auto &top = itCoroutine->valuekTop;
     if (top + 1 == itCoroutine->valuek->end()) {
-      throw EvalBad("out of stack");
+      throw EvalBad(L"out of stack");
     }
     ++top;
     return 0;

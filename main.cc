@@ -11,12 +11,14 @@ using namespace zlt;
 using namespace zlt::mylisp;
 
 static const char *indexFile;
+static const char **processArgsBegin;
+static const char **processArgsEnd;
 static size_t mainCoroutineValuekSize = 1 << 21;
 
-static int parseOptions(char **it, char **end);
+static int parseOptions(const char **it, const char **end);
 
 int main(int argc, char **argv, char **envp) {
-  parseOptions(argv + 1, argv + argc);
+  parseOptions(const_cast<const char **>(argv + 1), const_cast<const char **>(argv + argc));
   rte::init();
   if (indexFile) {
     ast::UNode a;
@@ -36,12 +38,14 @@ int main(int argc, char **argv, char **envp) {
   }
 }
 
-int parseOptions(char **it, char **end) {
+int parseOptions(const char **it, const char **end) {
   if (it == end) [[unlikely]] {
     return 0;
   }
   if (!indexFile) {
     indexFile = *it;
+    processArgsBegin = it + 1;
+    processArgsEnd = end;
     return 0;
   }
   return parseOptions(it + 1, end);

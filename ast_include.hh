@@ -7,7 +7,7 @@ namespace zlt::mylisp::ast {
 
   struct IncludeBad {
     std::filesystem::path file;
-    std::string what;
-    IncludeBad(const std::filesystem::path &file, std::string &&what) noexcept: file(file), what(std::move(what)) {}
+    std::wstring what;
+    IncludeBad(const std::filesystem::path &file, std::wstring &&what) noexcept: file(file), what(std::move(what)) {}
   };
 }

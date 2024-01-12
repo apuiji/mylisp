@@ -35,7 +35,7 @@ namespace zlt::mylisp::ast {
     }
     auto [t, start1, end1] = lexer(it, end);
     if (t != token::E0F) {
-      throw ParseBad(makePos(file, begin, end, start1), "unexpected token");
+      throw ParseBad(makePos(file, begin, end, start1), L"unexpected token");
     }
     return *next;
   }
@@ -92,7 +92,7 @@ namespace zlt::mylisp::ast {
         It end1 = operator ()(first, rtol<UNode *>(), end0);
         auto [t2, start2, end2] = lexer(end1, end);
         if (t2 != token::RPAREN) {
-          throw ParseBad(makePos(file, begin, end, start0), "unterminated list");
+          throw ParseBad(makePos(file, begin, end, start0), L"unterminated list");
         }
         dest.reset(new List(makePos1(file, begin, end, start0), std::move(first)));
         return operator ()(dest->next, next, end2);

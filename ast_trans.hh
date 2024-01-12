@@ -14,8 +14,8 @@ namespace zlt::mylisp::ast {
 
   struct TransBad {
     const Pos *pos;
-    std::string what;
-    TransBad(const Pos *pos, std::string &&what) noexcept: pos(pos), what(std::move(what)) {}
+    std::wstring what;
+    TransBad(const Pos *pos, std::wstring &&what) noexcept: pos(pos), what(std::move(what)) {}
   };
 
   struct Call final: Node {
