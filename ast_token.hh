@@ -8,7 +8,6 @@ namespace zlt::mylisp::ast::token {
     NUMBER = 1,
     CHAR,
     STRING,
-    WSTRING,
     ID,
     LPAREN,
     RPAREN,
@@ -25,10 +24,15 @@ namespace zlt::mylisp::ast::token {
     KWD_yield,
     // keywords end
     // preproc directions begin
-    DIR_def,
-    DIR_ifndef,
-    DIR_include,
-    DIR_undef,
+    PPD_def,
+    PPD_file,
+    PPD_idcat,
+    PPD_ifdef,
+    PPD_ifndef,
+    PPD_include,
+    PPD_line,
+    PPD_toString,
+    PPD_undef,
     // preproc directions end
     E0F
   };

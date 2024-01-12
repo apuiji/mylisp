@@ -14,11 +14,10 @@ using namespace std;
 namespace zlt::mylisp::ast {
   using It = const wchar_t *;
 
-  template<class C>
   struct LexerStr {
-    basic_stringstream<C> &dest;
+    wstringstream &dest;
     int quot;
-    LexerStr(basic_stringstream<C> &dest, int quot) noexcept: dest(dest), quot(quot) {}
+    LexerStr(wstringstream &dest, int quot) noexcept: dest(dest), quot(quot) {}
     It operator ()(It it, It end);
   };
 
@@ -43,25 +42,15 @@ namespace zlt::mylisp::ast {
     if (*it == ')') {
       return { token::RPAREN, it, it + 1 };
     }
-    if (!wcsncmp(it, L"latin\"", 6) || !wcsncmp(it, L"latin'", 6)) {
-      stringstream ss;
-      int quot = it[5];
-      It it1 = LexerStr(ss, quot)(it + 6, end);
-      if (*it1 != quot) {
-        throw LexerBad(it, L"unterminated string");
-      }
-      strval = ss.str();
-      return { token::STRING, it, it1 + 1 };
-    }
     if (*it == '"' || *it == '\'') {
       wstringstream ss;
       It it1 = LexerStr(ss, *it)(it + 1, end);
       if (*it1 != *it) {
         throw LexerBad(it, L"unterminated string");
       }
-      wstrval = ss.str();
-      if (wstrval.size() == 1) {
-        charval = wstrval[0];
+      strval = ss.str();
+      if (strval.size() == 1) {
+        charval = strval[0];
         return { token::CHAR, it, it1 + 1 };
       }
       return { token::WSTRING, it, it1 + 1 };
@@ -80,34 +69,14 @@ namespace zlt::mylisp::ast {
     return { token::ID, it, it + n };
   }
 
-  template<class C>
-  struct StrHit {
-    int quot;
-    StrHit(int quot) noexcept: quot(quot) {}
-    bool operator ()(C c) noexcept {
-      if (c == '\\' || c == quot) {
-        return true;
-      }
-      if constexpr (is_same_v<C, char>) {
-        if (!(c >= 0 && c <= 0xFF)) {
-          return true;
-        }
-      }
-      return false;
-    }
-  };
-
-  bool strHit(int quot, wchar_t c) noexcept;
-
   static bool esch(int &dest, size_t &len, It it, It end);
 
-  template<class C>
-  It LexerStr<C>::operator ()(It it, It end) {
+  It LexerStr::operator ()(It it, It end) {
     if (it == end) [[unlikely]] {
       return end;
     }
-    if (It it1 = find_if(it, end, StrHit<C>(quot)); it1 != it) {
-      dest << basic_string<C>(it, it1);
+    if (It it1 = find_if(it, end, [quot = this->quot] (auto c) { return c == '\\' || c == quot; }); it1 != it) {
+      dest << wstring(it, it1);
       return operator ()(it1, end);
     }
     if (*it == '\\') {
@@ -249,14 +218,25 @@ namespace zlt::mylisp::ast {
     ifKeyword(try);
     ifKeyword(yield);
     #undef ifKeyword
+    if (raw == L"#") {
+      dest = token::PPD_toString;
+      return true;
+    }
+    if (raw == L"##") {
+      dest = token::PPD_idcat;
+      return true;
+    }
     #define ifPreprocDir(dir) \
     if (raw == L"#" #dir) { \
-      dest = token::DIR_##dir; \
+      dest = token::PPD_##dir; \
       return true; \
     }
     ifPreprocDir(def);
+    ifPreprocDir(file);
+    ifPreprocDir(ifdef);
     ifPreprocDir(ifndef);
     ifPreprocDir(include);
+    ifPreprocDir(line);
     ifPreprocDir(undef);
     #undef ifPreprocDir
     #define ifSymbol(symb) \

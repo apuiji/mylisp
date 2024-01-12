@@ -30,7 +30,7 @@ namespace zlt::mylisp::ast {
     return replace(dest, src);
   }
 
-  int ast(UNode &src);
+  int ast(UNode &dest, const std::filesystem::path &file);
   UNode shift(UNode &src) noexcept;
 
   int pos2str(std::wstring &dest, const Pos &src);

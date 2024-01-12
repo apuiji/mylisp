@@ -1,8 +1,8 @@
 HHS = \
 	../myccutils/xyz \
 	ast \
-	ast_include \
 	ast_lexer \
+	ast_load \
 	ast_optimize \
 	ast_parse \
 	ast_preproc \
@@ -22,8 +22,8 @@ HHS = \
 	value
 OBJS = \
 	ast \
-	ast_include \
 	ast_lexer \
+	ast_load \
 	ast_optimize \
 	ast_parse \
 	ast_preproc \

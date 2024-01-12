@@ -2,7 +2,7 @@
 
 #include<array>
 #include<set>
-#include"ast_include.hh"
+#include"ast_parse.hh"
 #include"ast_token.hh"
 
 namespace zlt::mylisp::ast {
@@ -59,6 +59,11 @@ namespace zlt::mylisp::ast {
 
   struct Null final: Node {
     using Node::Node;
+  };
+
+  struct Number final: Node {
+    double value;
+    Number(const Pos *pos, double value) noexcept: Node(pos), value(value) {}
   };
 
   struct Return final: Node {

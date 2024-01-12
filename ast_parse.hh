@@ -3,7 +3,7 @@
 #include"ast.hh"
 
 namespace zlt::mylisp::ast {
-  UNode &parse(UNode &dest, const std::filesystem::path *file, const wchar_t *begin, const wchar_t *end);
+  int parse(UNode &dest, const std::filesystem::path *file, const wchar_t *begin, const wchar_t *end);
 
   struct ParseBad {
     Pos pos;
@@ -11,25 +11,34 @@ namespace zlt::mylisp::ast {
     ParseBad(const Pos &pos, std::wstring &&what) noexcept: pos(pos), what(std::move(what)) {}
   };
 
-  template<class T>
-  struct LiteralAtom final: Node {
-    T value;
-    LiteralAtom(const Pos *pos, T value) noexcept: Node(pos), value(value) {}
+  struct RawAtom: Node {
+    std::wstring_view raw;
+    RawAtom(const Pos *pos, std::wstring_view raw) noexcept: Node(pos), raw(raw) {}
   };
 
-  using NumberAtom = LiteralAtom<double>;
-  using CharAtom = LiteralAtom<wchar_t>;
-  using StringAtom = LiteralAtom<const std::wstring *>;
-  using Latin1Atom = LiteralAtom<const std::string *>;
+  struct NumberAtom final: RawAtom {
+    double value;
+    NumberAtom(const Pos *pos, std::wstring_view raw, double value) noexcept: RawAtom(pos, raw), value(value) {}
+  };
+
+  struct CharAtom final: Node {
+    wchar_t value;
+    CharAtom(const Pos *pos, wchar_t value) noexcept: Node(pos), value(value) {}
+  };
+
+  struct StringAtom final: Node {
+    const std::wstring *value;
+    StringAtom(const Pos *pos, const std::wstring *value) noexcept: Node(pos), value(value) {}
+  };
 
   struct IDAtom final: Node {
     const std::wstring *name;
     IDAtom(const Pos *pos, const std::wstring *name) noexcept: Node(pos), name(name) {}
   };
 
-  struct TokenAtom final: Node {
+  struct TokenAtom final: RawAtom {
     uint64_t token;
-    TokenAtom(const Pos *pos, uint64_t token) noexcept: Node(pos), token(token) {}
+    TokenAtom(const Pos *pos, std::wstring_view raw, uint64_t token) noexcept: RawAtom(pos, raw), token(token) {}
   };
 
   struct List final: Node {

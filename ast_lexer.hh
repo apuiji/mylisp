@@ -7,8 +7,7 @@ namespace zlt::mylisp::ast {
   struct Lexer {
     double numval;
     wchar_t charval;
-    std::string strval;
-    std::wstring wstrval;
+    std::wstring strval;
     std::wstring_view raw;
     std::tuple<uint64_t, const wchar_t *, const wchar_t *> operator ()(const wchar_t *it, const wchar_t *end);
   };

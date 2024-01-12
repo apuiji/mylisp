@@ -1,9 +1,11 @@
 #pragma once
 
-#include"ast_include.hh"
+#include<filesystem>
+#include<map>
+#include"ast_parse.hh"
 
 namespace zlt::mylisp::ast {
-  UNode &preproc(UNode &dest, const UNode &src);
+  UNode &preproc(UNode &dest, std::map<const std::filesystem::path *, UNode> &loadeds, const UNode &src);
 
   struct PreprocBad {
     std::wstring what;
