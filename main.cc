@@ -17,8 +17,18 @@ static size_t mainCoroutineValuekSize = 1 << 21;
 
 static int parseOptions(const char **it, const char **end);
 
+struct ParseOptionBad {
+  wstring what;
+  ParseOptionBad(wstring &&what) noexcept: what(std::move(what)) {}
+};
+
 int main(int argc, char **argv, char **envp) {
-  parseOptions(const_cast<const char **>(argv + 1), const_cast<const char **>(argv + argc));
+  try {
+    parseOptions(const_cast<const char **>(argv + 1), const_cast<const char **>(argv + argc));
+  } catch (ParseOptionBad bad) {
+    wcerr << bad.what;
+    return 0;
+  }
   rte::init();
   if (indexFile) {
     ast::UNode a;
@@ -41,11 +51,8 @@ int parseOptions(const char **it, const char **end) {
   if (it == end) [[unlikely]] {
     return 0;
   }
-  if (!indexFile) {
-    indexFile = *it;
-    processArgsBegin = it + 1;
-    processArgsEnd = end;
-    return 0;
-  }
-  return parseOptions(it + 1, end);
+  indexFile = *it;
+  processArgsBegin = it + 1;
+  processArgsEnd = end;
+  return 0;
 }
