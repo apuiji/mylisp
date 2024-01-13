@@ -1,13 +1,13 @@
 #pragma once
 
-#include"ast_parse.hh"
+#include"ast.hh"
 
 namespace zlt::mylisp::ast {
-  const std::filesystem::path *load(UNode &dest, std::filesystem::path &&file);
+  /// @param file canonicalized
+  Ast::ItLoaded load(Ast &ast, std::filesystem::path &&file);
 
   struct LoadBad {
-    std::filesystem::path file;
     std::wstring what;
-    LoadBad(const std::filesystem::path &file, std::wstring &&what) noexcept: file(file), what(std::move(what)) {}
+    LoadBad(std::wstring &&what) noexcept: what(std::move(what)) {}
   };
 }

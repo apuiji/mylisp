@@ -12,36 +12,35 @@ namespace zlt::mylisp::ast {
   struct Parse {
     // source begin
     const filesystem::path *file;
-    It begin;
-    It end;
+    const wchar_t *start;
+    const wchar_t *end;
     // source end
+    Ast &ast;
     Lexer &lexer;
-    Parse(const filesystem::path *file, It begin, It end, Lexer &lexer) noexcept:
-    file(file), begin(begin), end(end), lexer(lexer) {}
+    Parse(const filesystem::path *file, It start, It end, Ast &ast, Lexer &lexer) noexcept:
+    file(file), start(start), end(end), ast(ast), lexer(lexer) {}
     It operator ()(UNode &dest, It it);
   };
 
-  Pos makePos(const filesystem::path *file, It begin, It end, It it) noexcept;
+  static int getPosLi(int li, It line, It end, It it) noexcept;
 
-  int parse(UNode &dest, const filesystem::path *file, It begin, It end) {
+  static inline Pos makePos(const filesystem::path *file, It start, It end, It it) noexcept {
+    return Pos(file, getPosLi(0, start, end, it));
+  }
+
+  int parse(UNode &dest, Ast &ast, const filesystem::path *file, It start, It end) {
     Lexer lexer;
     It it;
     try {
-      it = Parse(file, begin, end, lexer)(dest, begin);
+      it = Parse(file, start, end, ast, lexer)(dest, start);
     } catch (LexerBad bad) {
-      throw ParseBad(makePos(file, begin, end, bad.start), std::move(bad.what));
+      throw ParseBad(makePos(file, start, end, bad.start), std::move(bad.what));
     }
     auto [t, start1, end1] = lexer(it, end);
     if (t != token::E0F) {
-      throw ParseBad(makePos(file, begin, end, start1), L"unexpected token");
+      throw ParseBad(makePos(file, start, end, start1), L"unexpected token");
     }
     return 0;
-  }
-
-  static int getPosLi(int li, It line, It end, It it) noexcept;
-
-  Pos makePos(const filesystem::path *file, It begin, It end, It it) noexcept {
-    return Pos(file, getPosLi(0, begin, end, it));
   }
 
   int getPosLi(int li, It line, It end, It it) noexcept {
@@ -49,8 +48,8 @@ namespace zlt::mylisp::ast {
     return eol > it ? li : getPosLi(li + 1, eol + 1, end, it);
   }
 
-  const Pos *makePos1(const filesystem::path *file, It begin, It end, It it) noexcept {
-    return &*rte::positions.insert(makePos(file, begin, end, it)).first;
+  const Pos *makePos1(Ast &ast, const filesystem::path *file, It start, It end, It it) noexcept {
+    return &*ast.positions.insert(makePos(file, start, end, it)).first;
   }
 
   It Parse::operator ()(UNode &dest, It it) {
@@ -62,21 +61,21 @@ namespace zlt::mylisp::ast {
         return start0;
       }
       case token::NUMBER: {
-        dest.reset(new NumberAtom(makePos1(file, begin, end, start0), lexer.raw, lexer.numval));
+        dest.reset(new NumberAtom(makePos1(ast, file, start, end, start0), lexer.raw, lexer.numval));
         return operator ()(dest->next, end0);
       }
       case token::CHAR: {
-        dest.reset(new CharAtom(makePos1(file, begin, end, start0), lexer.charval));
+        dest.reset(new CharAtom(makePos1(ast, file, start, end, start0), lexer.charval));
         return operator ()(dest->next, end0);
       }
       case token::STRING: {
         auto &value = *rte::strings.insert(std::move(lexer.strval)).first;
-        dest.reset(new StringAtom(makePos1(file, begin, end, start0), &value));
+        dest.reset(new StringAtom(makePos1(ast, file, start, end, start0), &value));
         return operator ()(dest->next, end0);
       }
       case token::ID: {
         auto &name = *rte::strings.insert((wstring) lexer.raw).first;
-        dest.reset(new IDAtom(makePos1(file, begin, end, start0), &name));
+        dest.reset(new IDAtom(makePos1(ast, file, start, end, start0), &name));
         return operator ()(dest->next, end0);
       }
       case token::LPAREN: {
@@ -84,13 +83,13 @@ namespace zlt::mylisp::ast {
         It end1 = operator ()(first, end0);
         auto [t2, start2, end2] = lexer(end1, end);
         if (t2 != token::RPAREN) {
-          throw ParseBad(makePos(file, begin, end, start0), L"unterminated list");
+          throw ParseBad(makePos(file, start, end, start0), L"unterminated list");
         }
-        dest.reset(new List(makePos1(file, begin, end, start0), std::move(first)));
+        dest.reset(new List(makePos1(ast, file, start, end, start0), std::move(first)));
         return operator ()(dest->next, end2);
       }
       default: {
-        dest.reset(new TokenAtom(makePos1(file, begin, end, start0), lexer.raw, t0));
+        dest.reset(new TokenAtom(makePos1(ast, file, start, end, start0), lexer.raw, t0));
         return operator ()(dest->next, end0);
       }
     }

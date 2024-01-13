@@ -7,37 +7,13 @@
 using namespace std;
 
 namespace zlt::mylisp::ast {
-  using Loadeds = map<const filesystem::path *, UNode>;
-
-  static UNode &load1(Loadeds &loadeds, filesystem::path &&file);
-
-  int ast(UNode &dest, const filesystem::path &file) {
-    {
-      Loadeds loadeds;
-      auto &a = load1(loadeds, filesystem::canonical(file));
-      UNode b;
-      preproc(b, loadeds, a);
-      trans(dest, b);
-    }
-    optimize(dest);
-    trans1(dest);
-    trans2(dest);
+  int pos2str(wstring &dest, const Pos &pos) {
+    wstringstream ss;
+    ss << L"at " << pos.first->wstring();
+    ss.put(':');
+    ss << pos.second;
+    dest = ss.str();
     return 0;
-  }
-
-  UNode &load1(Loadeds &loadeds, filesystem::path &&file) {
-    const filesystem::path *file1;
-    UNode a;
-    try {
-      file1 = load(a, std::move(file));
-    } catch (LoadBad bad) {
-      throw PreprocBad(std::move(bad.what));
-    } catch (ParseBad bad) {
-      wstring postr;
-      pos2str(postr, bad.pos);
-      throw PreprocBad(std::move(bad.what) + postr);
-    }
-    return loadeds[file1] = std::move(a);
   }
 
   UNode shift(UNode &src) noexcept {
@@ -46,12 +22,31 @@ namespace zlt::mylisp::ast {
     return std::move(a);
   }
 
-  int pos2str(wstring &dest, const Pos &pos) {
-    wstringstream ss;
-    ss << L"at " << pos.first->wstring();
-    ss.put(':');
-    ss << pos.second;
-    dest = ss.str();
+  int Ast::operator ()(UNode &dest, const filesystem::path &file) {
+    Ast::ItLoaded it;
+    try {
+      it = load(*this, filesystem::canonical(file));
+    } catch (LoadBad bad) {
+      throw AstBad(std::move(bad.what));
+    } catch (ParseBad bad) {
+      wstring postr;
+      pos2str(postr, bad.pos);
+      throw AstBad(bad.what + postr);
+    } catch (PreprocBad bad) {
+      wstringstream ss;
+      poss2str(ss, bad.posk.rbegin(), bad.posk.rend());
+      throw AstBad(bad.what + ss.str());
+    }
+    {
+      UNode a;
+      preproc(a, *this, it->second);
+      trans(dest, a);
+    }
+    sources.clear();
+    loadeds.clear();
+    optimize(dest);
+    trans1(dest);
+    trans2(dest);
     return 0;
   }
 }

@@ -16,7 +16,6 @@ HHS = \
 	eval \
 	gc \
 	io_object \
-	macro \
 	object \
 	rte \
 	value
@@ -39,7 +38,7 @@ OBJS = \
 	object \
 	rte \
 	value
-LIBS = stdc++fs
+# LIBS = stdc++fs
 
 mylisp: $(addsuffix .o, ${OBJS})
 	clang++ -o $@ $^ $(addprefix -l, ${LIBS})

@@ -3,7 +3,7 @@
 #include"ast.hh"
 
 namespace zlt::mylisp::ast {
-  int parse(UNode &dest, const std::filesystem::path *file, const wchar_t *begin, const wchar_t *end);
+  int parse(UNode &dest, Ast &ast, const std::filesystem::path *file, const wchar_t *start, const wchar_t *end);
 
   struct ParseBad {
     Pos pos;

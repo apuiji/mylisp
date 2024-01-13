@@ -22,7 +22,7 @@ int main(int argc, char **argv, char **envp) {
   rte::init();
   if (indexFile) {
     ast::UNode a;
-    ast::ast(a, filesystem::path(indexFile));
+    ast::Ast {}(a, filesystem::path(indexFile));
     string s;
     compile(s, a);
     {

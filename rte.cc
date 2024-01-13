@@ -8,12 +8,9 @@ using namespace std;
 
 namespace zlt::mylisp::rte {
   Coroutines coroutines;
-  set<filesystem::path> files;
   set<string> fnBodies;
   map<const wstring *, Value> globalDefs;
   ItCoroutine itCoroutine;
-  map<const wstring *, Macro> macros;
-  set<ast::Pos> positions;
   set<wstring> strings;
 
   int init() {

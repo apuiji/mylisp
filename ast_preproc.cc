@@ -10,31 +10,29 @@
 using namespace std;
 
 namespace zlt::mylisp::ast {
-  using Loadeds = map<const filesystem::path *, UNode>;
+  static UNode &preprocList(UNode &dest, Ast &ast, const Pos *pos, const UNode &first);
 
-  static UNode &preprocList(UNode &dest, Loadeds &loadeds, const Pos *pos, const UNode &first);
-
-  UNode &preproc(UNode &dest, Loadeds &loadeds, const UNode &src) {
+  UNode &preproc(UNode &dest, Ast &ast, const UNode &src) {
     if (!src) [[unlikely]] {
       return dest;
     }
     if (auto ls = dynamic_cast<const List*>(src.get()); ls) {
       if (ls->first) {
-        auto &next = preprocList(dest, loadeds, ls->pos, ls->first);
-        return preproc(next, loadeds, src->next);
+        auto &next = preprocList(dest, ast, ls->pos, ls->first);
+        return preproc(next, ast, src->next);
       } else {
         dest.reset(new List(ls->pos));
-        return preproc(dest->next, loadeds, src->next);
+        return preproc(dest->next, ast, src->next);
       }
     }
     clone(dest, src);
-    return preproc(dest->next, loadeds, src->next);
+    return preproc(dest->next, ast, src->next);
   }
 
-  using PreprocDir = UNode &(UNode &dest, Loadeds &loadeds, const Pos *pos, const UNode &src);
+  using PreprocDir = UNode &(UNode &dest, Ast &ast, const Pos *pos, const UNode &src);
 
   static PreprocDir *isPreprocDir(const UNode &src) noexcept;
-  static const Macro *findMacro(const UNode &src) noexcept;
+  static const Macro *findMacro(const Ast &ast, const UNode &src) noexcept;
 
   struct MacroExpand {
     map<const wstring *, const UNode *> map;
@@ -43,21 +41,21 @@ namespace zlt::mylisp::ast {
 
   static int makeMacroExpand(MacroExpand &dest, Macro::ItParam itParam, Macro::ItParam endParam, const UNode &src);
 
-  UNode &preprocList(UNode &dest, Loadeds &loadeds, const Pos *pos, const UNode &first) {
+  UNode &preprocList(UNode &dest, Ast &ast, const Pos *pos, const UNode &first) {
     if (auto dir = isPreprocDir(first); dir) {
-      return dir(dest, loadeds, pos, first->next);
+      return dir(dest, ast, pos, first->next);
     }
-    if (auto m = findMacro(first); m) {
+    if (auto m = findMacro(ast, first); m) {
       UNode a;
       {
         MacroExpand me;
         makeMacroExpand(me, m->params.begin(), m->params.end(), first->next);
         me(a, m->body);
       }
-      return preproc(dest, loadeds, a);
+      return preproc(dest, ast, a);
     }
     UNode first1;
-    preproc(first1, loadeds, first);
+    preproc(first1, ast, first);
     dest.reset(new List(pos, std::move(first1)));
     return dest->next;
   }
@@ -90,13 +88,13 @@ namespace zlt::mylisp::ast {
     }
   }
 
-  const Macro *findMacro(const UNode &src) noexcept {
+  const Macro *findMacro(const Ast &ast, const UNode &src) noexcept {
     auto id = dynamic_cast<const IDAtom *>(src.get());
     if (!id) {
       return nullptr;
     }
-    auto it = rte::macros.find(id->name);
-    if (it == rte::macros.end()) {
+    auto it = ast.macros.find(id->name);
+    if (it == ast.macros.end()) {
       return nullptr;
     }
     return &it->second;
@@ -159,12 +157,12 @@ namespace zlt::mylisp::ast {
 
   static int makeMacroParams(Macro::Params &dest, const UNode &src);
 
-  UNode &ppd_def(UNode &dest, Loadeds &loadeds, const Pos *pos, const UNode &src) {
+  UNode &ppd_def(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
     auto id = dynamic_cast<const IDAtom *>(src.get());
     if (!id) {
       throw PreprocBad(L"required macro name", pos);
     }
-    if (rte::macros.find(id->name) != rte::macros.end()) {
+    if (ast.macros.find(id->name) != ast.macros.end()) {
       throw PreprocBad(L"macro already defined", pos);
     }
     auto ls = dynamic_cast<const List *>(src->next.get());
@@ -176,7 +174,7 @@ namespace zlt::mylisp::ast {
     params.shrink_to_fit();
     UNode body;
     clones(body, src->next->next);
-    rte::macros[id->name] = Macro(std::move(params), std::move(body));
+    ast.macros[id->name] = Macro(std::move(params), std::move(body));
     return dest;
   }
 
@@ -198,7 +196,7 @@ namespace zlt::mylisp::ast {
     throw PreprocBad(L"illegal macro parameter", src->pos);
   }
 
-  UNode &ppd_file(UNode &dest, Loadeds &loadeds, const Pos *pos, const UNode &src) {
+  UNode &ppd_file(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
     auto &file = *rte::strings.insert(pos->first->wstring()).first;
     dest.reset(new StringAtom(pos, &file));
     return dest->next;
@@ -206,7 +204,7 @@ namespace zlt::mylisp::ast {
 
   static int idcat(wstringstream &dest, const UNode &src);
 
-  UNode &ppd_idcat(UNode &dest, Loadeds &loadeds, const Pos *pos, const UNode &src) {
+  UNode &ppd_idcat(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
     wstringstream ss;
     idcat(ss, src);
     auto &name = *rte::strings.insert(ss.str()).first;
@@ -229,46 +227,45 @@ namespace zlt::mylisp::ast {
     throw PreprocBad(L"illegal identifier concat token", src->pos);
   }
 
-  static bool ifdef(const Pos *pos, const UNode &src);
+  static bool ifdef(const Ast &ast, const Pos *pos, const UNode &src);
 
-  UNode &ppd_ifdef(UNode &dest, Loadeds &loadeds, const Pos *pos, const UNode &src) {
-    return ifdef(pos, src) ? preproc(dest, loadeds, src->next) : dest;
+  UNode &ppd_ifdef(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
+    return ifdef(ast, pos, src) ? preproc(dest, ast, src->next) : dest;
   }
 
-  UNode &ppd_ifndef(UNode &dest, Loadeds &loadeds, const Pos *pos, const UNode &src) {
-    return ifdef(pos, src) ? dest : preproc(dest, loadeds, src->next);
+  UNode &ppd_ifndef(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
+    return ifdef(ast, pos, src) ? dest : preproc(dest, ast, src->next);
   }
 
-  bool ifdef(const Pos *pos, const UNode &src) {
+  bool ifdef(const Ast &ast, const Pos *pos, const UNode &src) {
     auto id = dynamic_cast<const IDAtom *>(src.get());
     if (!id) {
       throw PreprocBad(L"required macro name", pos);
     }
-    return rte::macros.find(id->name) != rte::macros.end();
+    return ast.macros.find(id->name) != ast.macros.end();
   }
 
-  static UNode &include(Loadeds &loadeds, const Pos *pos, const UNode &src);
+  static const UNode &include(Ast &ast, const Pos *pos, const UNode &src);
 
-  UNode &ppd_include(UNode &dest, Loadeds &loadeds, const Pos *pos, const UNode &src) {
-    auto &a = include(loadeds, pos, src);
-    return preproc(dest, loadeds, a);
+  UNode &ppd_include(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
+    auto &a = include(ast, pos, src);
+    return preproc(dest, ast, a);
   }
 
   static bool getFile(filesystem::path &dest, const Pos *pos, const UNode &src);
 
-  UNode &include(Loadeds &loadeds, const Pos *pos, const UNode &src) {
+  const UNode &include(Ast &ast, const Pos *pos, const UNode &src) {
     filesystem::path file;
     if (!getFile(file, pos, src)) {
       throw PreprocBad(L"required include path", pos);
     }
-    auto it = find_if(loadeds.begin(), loadeds.end(), [&file] (auto &p) { return *p.first == file; });
-    if (it != loadeds.end()) {
+    auto it = find_if(ast.loadeds.begin(), ast.loadeds.end(), [&file] (auto &p) { return *p.first == file; });
+    if (it != ast.loadeds.end()) {
       return it->second;
     }
-    const filesystem::path *file1;
-    UNode a;
+    Ast::ItLoaded itLoaded;
     try {
-      file1 = load(a, std::move(file));
+      itLoaded = load(ast, std::move(file));
     } catch (LoadBad bad) {
       throw PreprocBad(std::move(bad.what), pos);
     } catch (ParseBad bad) {
@@ -278,7 +275,7 @@ namespace zlt::mylisp::ast {
     } catch (PreprocBad bad) {
       throw PreprocBad(std::move(bad), pos);
     }
-    return loadeds[file1] = std::move(a);
+    return itLoaded->second;
   }
 
   static bool getPath(filesystem::path &dest, const UNode &src);
@@ -308,7 +305,7 @@ namespace zlt::mylisp::ast {
     return false;
   }
 
-  UNode &ppd_line(UNode &dest, Loadeds &loadeds, const Pos *pos, const UNode &src) {
+  UNode &ppd_line(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
     static const wchar_t *raw = L"#line";
     dest.reset(new NumberAtom(pos, wstring_view(raw, 5), pos->second));
     return dest->next;
@@ -316,7 +313,7 @@ namespace zlt::mylisp::ast {
 
   static int toString(wchar_t &dest, const wstring *&dest1, wstring_view &dest2, const UNode &src) noexcept;
 
-  UNode &ppd_toString(UNode &dest, Loadeds &loadeds, const Pos *pos, const UNode &src) {
+  UNode &ppd_toString(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
     wchar_t c;
     const wstring *s;
     wstring_view sv;
@@ -366,12 +363,12 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
-  UNode &ppd_undef(UNode &dest, Loadeds &loadeds, const Pos *pos, const UNode &src) {
+  UNode &ppd_undef(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
     auto id = dynamic_cast<const IDAtom *>(src.get());
     if (!id) {
       throw PreprocBad(L"required macro name", pos);
     }
-    rte::macros.erase(id->name);
+    ast.macros.erase(id->name);
     return dest;
   }
 }
