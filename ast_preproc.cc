@@ -252,12 +252,18 @@ namespace zlt::mylisp::ast {
     return preproc(dest, ast, a);
   }
 
-  static bool getFile(filesystem::path &dest, const Pos *pos, const UNode &src);
+  static bool getFile(filesystem::path &dest, const UNode &src);
 
   const UNode &include(Ast &ast, const Pos *pos, const UNode &src) {
     filesystem::path file;
     if (!getFile(file, pos, src)) {
       throw PreprocBad(L"required include path", pos);
+    }
+    file = *pos->first / file;
+    try {
+      file = filesystem::canonical(file);
+    } catch (filesystem::filesystem_error) {
+      throw PreprocBad(L"cannot open file: " + file);
     }
     auto it = find_if(ast.loadeds.begin(), ast.loadeds.end(), [&file] (auto &p) { return *p.first == file; });
     if (it != ast.loadeds.end()) {
@@ -278,18 +284,7 @@ namespace zlt::mylisp::ast {
     return itLoaded->second;
   }
 
-  static bool getPath(filesystem::path &dest, const UNode &src);
-
-  bool getFile(filesystem::path &dest, const Pos *pos, const UNode &src) {
-    if (getPath(dest, src)) {
-      dest = filesystem::canonical(*pos->first / dest);
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  bool getPath(filesystem::path &dest, const UNode &src) {
+  bool getFile(filesystem::path &dest, const UNode &src) {
     if (auto a = dynamic_cast<const CharAtom *>(src.get()); a) {
       dest = filesystem::path(wstring(1, a->value));
       return true;

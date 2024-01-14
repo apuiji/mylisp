@@ -26,9 +26,8 @@ namespace zlt::mylisp::ast {
     Ast::ItLoaded it;
     try {
       it = load(*this, filesystem::canonical(file));
-    } catch (filesystem::filesystem_error fe) {
-      string_view what(fe.what());
-      throw AstBad(wstring(what.begin(), what.end()));
+    } catch (filesystem::filesystem_error) {
+      throw AstBad(L"cannot open file: " + file.wstring());
     } catch (LoadBad bad) {
       throw AstBad(std::move(bad.what));
     } catch (ParseBad bad) {

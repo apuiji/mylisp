@@ -24,7 +24,7 @@ namespace zlt::mylisp::ast {
     try {
       ifs = wifstream(file);
     } catch (...) {
-      throw LoadBad(L"invalid include file " + file.wstring());
+      throw LoadBad(L"cannot open file: " + file.wstring());
     }
     wstringstream ss;
     copy(istreambuf_iterator<wchar_t>(ifs), istreambuf_iterator<wchar_t>(), ostreambuf_iterator<wchar_t>(ss));
