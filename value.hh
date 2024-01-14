@@ -43,9 +43,10 @@ namespace zlt::mylisp {
       }
       return *this;
     }
-    Value &operator =(std::derived_from<Object> auto *o) noexcept {
-      return operator =(static_cast<Object *>(o));
-    }
+    // template<std::derived_from<Object> T>
+    // Value &operator =(T *o) noexcept {
+    //   return variant::operator =(static_cast<Object *>(o));
+    // }
     // assignment operations end
     // cast operations begin
     operator double() const noexcept {

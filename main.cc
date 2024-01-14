@@ -32,7 +32,12 @@ int main(int argc, char **argv, char **envp) {
   rte::init();
   if (indexFile) {
     ast::UNode a;
-    ast::Ast {}(a, filesystem::path(indexFile));
+    try {
+      ast::Ast {}(a, filesystem::path(indexFile));
+    } catch (ast::AstBad bad) {
+      wcerr << bad.what;
+      return 0;
+    }
     string s;
     compile(s, a);
     {
