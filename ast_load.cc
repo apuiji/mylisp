@@ -20,8 +20,10 @@ namespace zlt::mylisp::ast {
   }
 
   int readAll(wstring &dest, const filesystem::path &file) {
-    wifstream ifs(file);
-    if (!ifs) {
+    wifstream ifs;
+    try {
+      ifs = wifstream(file);
+    } catch (...) {
       throw LoadBad(L"invalid include file " + file.wstring());
     }
     wstringstream ss;
