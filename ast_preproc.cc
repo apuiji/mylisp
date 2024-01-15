@@ -256,14 +256,14 @@ namespace zlt::mylisp::ast {
 
   const UNode &include(Ast &ast, const Pos *pos, const UNode &src) {
     filesystem::path file;
-    if (!getFile(file, pos, src)) {
+    if (!getFile(file, src)) {
       throw PreprocBad(L"required include path", pos);
     }
     file = *pos->first / file;
     try {
       file = filesystem::canonical(file);
     } catch (filesystem::filesystem_error) {
-      throw PreprocBad(L"cannot open file: " + file);
+      throw PreprocBad(L"cannot open file: " + file.wstring());
     }
     auto it = find_if(ast.loadeds.begin(), ast.loadeds.end(), [&file] (auto &p) { return *p.first == file; });
     if (it != ast.loadeds.end()) {
