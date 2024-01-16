@@ -23,10 +23,12 @@ namespace zlt::mylisp {
     Value(bool b) noexcept {
       operator =(b);
     }
-    Value(std::derived_from<Object> auto *o) noexcept: variant(static_cast<Object *>(o)) {}
+    Value(Object *o) noexcept: variant(o) {}
+    template<std::derived_from<Object> T>
+    Value(T *t) noexcept: variant(static_cast<Object *>(t)) {}
     // constructors end
     // assignment operations begin
-    template<AnyOf<Null, double, wchar_t, const std::wstring *, const std::string *, Object *, NativeFunction *> T>
+    template<AnyOf<Null, double, wchar_t, const std::wstring *, const std::string *, NativeFunction *> T>
     Value &operator =(T &&t) noexcept {
       variant::operator =(std::forward<T>(t));
       return *this;
@@ -43,10 +45,14 @@ namespace zlt::mylisp {
       }
       return *this;
     }
-    // template<std::derived_from<Object> T>
-    // Value &operator =(T *o) noexcept {
-    //   return variant::operator =(static_cast<Object *>(o));
-    // }
+    Value &operator =(Object *o) noexcept {
+      variant::operator =(o);
+      return *this;
+    }
+    Value &operator =(std::derived_from<Object> auto *o) noexcept {
+      variant::operator =(static_cast<Object *>(o));
+      return *this;
+    }
     // assignment operations end
     // cast operations begin
     operator double() const noexcept {
@@ -64,21 +70,26 @@ namespace zlt::mylisp {
   };
 
   // static cast operations begin
-  template<AnyOf<double, wchar_t, const std::wstring *, const std::string *, Object *, NativeFunction *, void *> T>
+  template<AnyOf<double, wchar_t, const std::wstring *, const std::string *, NativeFunction *, void *> T>
   static inline int staticast(T &dest, const Value &src) noexcept {
     dest = *(T *) &src;
     return 0;
   }
 
+  static inline int staticast(Object *&dest, const Value &src) noexcept {
+    dest = *(Object **) &src;
+    return 0;
+  }
+
   template<std::derived_from<Object> T>
-  static inline int staticast(T *&dest, Value &src) noexcept {
+  static inline int staticast(T *&dest, const Value &src) noexcept {
     dest = static_cast<T *>(*(Object **) &src);
     return 0;
   }
   // static cast operations end
 
   // dynamic cast operations begin
-  template<AnyOf<double, wchar_t, Object *, NativeFunction *> T>
+  template<AnyOf<double, wchar_t, NativeFunction *> T>
   static inline bool dynamicast(T &dest, const Value &src) noexcept {
     if (auto t = std::get_if<T>(&src); t) {
       dest = *t;
@@ -100,6 +111,16 @@ namespace zlt::mylisp {
 
   bool dynamicast(std::string_view &dest, const Value &src) noexcept;
   bool dynamicast(std::wstring_view &dest, const Value &src) noexcept;
+
+  static inline bool dynamicast(Object *&dest, const Value &src) noexcept {
+    auto o = std::get_if<Object *>(&src);
+    if (o) {
+      dest = *o;
+      return true;
+    } else {
+      return false;
+    }
+  }
 
   template<std::derived_from<Object> T>
   static inline bool dynamicast(T *&dest, const Value &src) noexcept {

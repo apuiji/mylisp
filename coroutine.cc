@@ -11,7 +11,7 @@ namespace zlt::mylisp {
   }
 
   Coroutine::Coroutine(unique_ptr<ValueStack> &&valuek) noexcept: valuek(std::move(valuek)), alive(true) {
-    valuekBottom = valuek->data;
-    valuekTop = valuek->data;
+    valuekBottom = this->valuek->data;
+    valuekTop = this->valuek->data;
   }
 }

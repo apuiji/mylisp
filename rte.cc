@@ -13,12 +13,19 @@ namespace zlt::mylisp::rte {
   ItCoroutine itCoroutine;
   set<wstring> strings;
 
+  static int nativeFnWrite(Value *it, Value *end);
+
   int init() {
     {
-      auto &id = *strings.insert(L"stdout").first;
+      auto &name = *strings.insert(L"stdout").first;
       auto o = new WriterObj(wcout);
       gc::neobj(o);
-      globalDefs[&id] = o;
+      globalDefs[&name] = o;
+    }
+    {
+      auto &name = *strings.insert(L"write").first;
+      NativeFunction *fp = nativeFnWrite;
+      globalDefs[&name] = fp;
     }
     return 0;
   }
@@ -35,5 +42,19 @@ namespace zlt::mylisp::rte {
     Frame f = itCoroutine->framek.back();
     itCoroutine->framek.pop_back();
     return eval(f.prevNext, f.prevEnd);
+  }
+
+  int nativeFnWrite(Value *it, Value *end) {
+    if (it == end) [[unlikely]] {
+      return 0;
+    }
+    WriterObj *wo;
+    if (!dynamicast(wo, *it)) [[unlikely]] {
+      return 0;
+    }
+    if (it + 1 == end) [[unlikely]] {
+      return 0;
+    }
+    return write(wo->ostream, it[1]);
   }
 }

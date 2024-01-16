@@ -1,5 +1,4 @@
 #include<algorithm>
-#include<cmath>
 #include<cstring>
 #include<cwchar>
 #include<cwctype>
@@ -21,7 +20,7 @@ namespace zlt::mylisp::ast {
     It operator ()(It it, It end);
   };
 
-  static bool isRawChar(wchar_t c) noexcept;
+  static bool notRawChar(wchar_t c) noexcept;
   static bool isNumber(double &dest, wstring_view src);
   static bool isToken(uint64_t &dest, wstring_view src) noexcept;
 
@@ -55,13 +54,17 @@ namespace zlt::mylisp::ast {
       }
       return { token::STRING, it, it1 + 1 };
     }
-    size_t n = count_if(it, end, isRawChar);
+    size_t n = find_if(it, end, notRawChar) - it;
     if (!n) {
       throw LexerBad(it, L"unrecognized symbol");
     }
     raw = wstring_view(it, n);
-    if (isNumber(numval, raw)) {
-      return { token::NUMBER, it, it + n };
+    try {
+      if (isNumber(numval, raw)) {
+        return { token::NUMBER, it, it + n };
+      }
+    } catch (out_of_range) {
+      throw LexerBad(it, L"number literal out of range");
     }
     if (uint64_t t; isToken(t, raw)) {
       return { t, it, it + n };
@@ -163,8 +166,8 @@ namespace zlt::mylisp::ast {
     }
   }
 
-  bool isRawChar(wchar_t c) noexcept {
-    return !strchr("\"'();", c) && !iswspace(c);
+  bool notRawChar(wchar_t c) noexcept {
+    return strchr("\"'();", c) || iswspace(c);
   }
 
   static bool isBaseInt(double &dest, wstring_view src);
@@ -172,9 +175,12 @@ namespace zlt::mylisp::ast {
   bool isNumber(double &dest, wstring_view src) {
     if (isBaseInt(dest, src)) {
       return true;
-    } else {
+    }
+    try {
       dest = stod(wstring(src));
-      return isnan(dest);
+      return true;
+    } catch (invalid_argument) {
+      return false;
     }
   }
 
@@ -197,8 +203,12 @@ namespace zlt::mylisp::ast {
     if (!regex_match(src.begin(), src.end(), m, re)) {
       return false;
     }
-    dest = stoi(m.str(1) + m.str(2), nullptr, base);
-    return true;
+    try {
+      dest = stoi(m.str(1) + m.str(2), nullptr, base);
+      return true;
+    } catch (invalid_argument) {
+      return false;
+    }
   }
 
   bool isToken(uint64_t &dest, wstring_view raw) noexcept {
