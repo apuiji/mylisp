@@ -41,8 +41,16 @@ namespace zlt::mylisp {
     return 0;
   }
 
-  template<class K>
-  static Value poolGetMemb(const map<K, Value> &m, const K &k) noexcept {
+  bool MapObj::StrPoolComparator::operator ()(const Value &a, const Value &b) const noexcept {
+    wstring_view s;
+    dynamicast(s, a);
+    wstring_view s1;
+    dynamicast(s1, b);
+    return s < s1;
+  }
+
+  template<class K, class Cmp>
+  static Value poolGetMemb(const map<K, Value, Cmp> &m, const K &k) noexcept {
     auto it = m.find(k);
     if (it != m.end()) {
       return it->second;
@@ -79,27 +87,13 @@ namespace zlt::mylisp {
         return poolGetMemb(charPool, c);
       }
       case Value::STR_INDEX: {
-        const wstring *s;
-        staticast(s, memb);
-        BasicStringViewKey<wchar_t> k(s, (wstring_view) *s);
-        return poolGetMemb(strPool, k);
-      }
-      case Value::LATIN1_INDEX: {
-        const string *s;
-        staticast(s, memb);
-        BasicStringViewKey<char> k(s, (string_view) *s);
-        return poolGetMemb(latin1Pool, k);
+        return poolGetMemb(strPool, memb);
       }
       case Value::OBJ_INDEX: {
         Object *o;
         staticast(o, memb);
-        if (auto s = dynamic_cast<StringViewObj *>(o); s) {
-          BasicStringViewKey<wchar_t> k(o, (wstring_view) *s);
-          return poolGetMemb(strPool, k);
-        }
-        if (auto s = dynamic_cast<Latin1ViewObj *>(o); s) {
-          BasicStringViewKey<char> k(o, (string_view) *s);
-          return poolGetMemb(latin1Pool, k);
+        if (dynamic_cast<StringViewObj *>(o)) {
+          return poolGetMemb(strPool, memb);
         }
         return poolGetMemb(objPool, o);
       }
@@ -135,27 +129,13 @@ namespace zlt::mylisp {
         return m->charPool[c];
       }
       case Value::STR_INDEX: {
-        const wstring *s;
-        staticast(s, memb);
-        MapObj::BasicStringViewKey<wchar_t> k(s, (wstring_view) *s);
-        return m->strPool[k];
-      }
-      case Value::LATIN1_INDEX: {
-        const string *s;
-        staticast(s, memb);
-        MapObj::BasicStringViewKey<char> k(s, (string_view) *s);
-        return m->latin1Pool[k];
+        return m->strPool[memb];
       }
       case Value::OBJ_INDEX: {
         Object *o;
         staticast(o, memb);
-        if (auto s = dynamic_cast<StringViewObj *>(o); s) {
-          MapObj::BasicStringViewKey<wchar_t> k(o, (wstring_view) *s);
-          return m->strPool[k];
-        }
-        if (auto s = dynamic_cast<Latin1ViewObj *>(o); s) {
-          MapObj::BasicStringViewKey<char> k(o, (string_view) *s);
-          return m->latin1Pool[k];
+        if (dynamic_cast<StringViewObj *>(o)) {
+          return m->strPool[memb];
         }
         return m->objPool[o];
       }
@@ -181,11 +161,7 @@ namespace zlt::mylisp {
       gc::grayValue(p.second);
     }
     for (auto &p : strPool) {
-      gc::grayValue(p.first.string);
-      gc::grayValue(p.second);
-    }
-    for (auto &p : latin1Pool) {
-      gc::grayValue(p.first.string);
+      gc::grayValue(p.first);
       gc::grayValue(p.second);
     }
     for (auto &p : objPool) {

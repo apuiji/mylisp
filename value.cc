@@ -8,12 +8,6 @@ namespace zlt::mylisp {
   // cast operations begin
   bool dynamicast(string_view &dest, const Value &src) noexcept {
     switch (src.index()) {
-      case Value::LATIN1_INDEX: {
-        const string *s;
-        staticast(s, src);
-        dest = (string_view) *s;
-        return true;
-      }
       case Value::OBJ_INDEX: {
         Object *o;
         staticast(o, src);
@@ -75,7 +69,6 @@ namespace zlt::mylisp {
       caseIT(NUM, double);
       caseIT(CHAR, wchar_t);
       caseIT(STR, const wstring *);
-      caseIT(LATIN1, const string *);
       caseIT(NAT_FN, NativeFunction *);
       #undef caseIT
       default: {
@@ -135,14 +128,6 @@ namespace zlt::mylisp {
         dest = x->compare(*y);
         return true;
       }
-      case Value::LATIN1_INDEX: {
-        const string *x;
-        staticast(x, a);
-        const string *y;
-        staticast(y, b);
-        dest = x->compare(*y);
-        return true;
-      }
       case Value::NAT_FN_INDEX: {
         NativeFunction *x;
         staticast(x, a);
@@ -174,11 +159,6 @@ namespace zlt::mylisp {
         const wstring *s;
         staticast(s, v);
         return getMemb((wstring_view) *s, memb);
-      }
-      case Value::LATIN1_INDEX: {
-        const string *s;
-        staticast(s, v);
-        return getMemb((string_view) *s, memb);
       }
       case Value::OBJ_INDEX: {
         Object *o;

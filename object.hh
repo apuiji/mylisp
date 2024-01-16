@@ -202,21 +202,14 @@ namespace zlt::mylisp {
   };
 
   struct MapObj final: Object {
-    template<class C>
-    struct BasicStringViewKey {
-      Value string;
-      std::basic_string_view<C> view;
-      BasicStringViewKey(const Value &string, std::basic_string_view<C> view) noexcept: string(string), view(view) {}
-      bool operator <(const BasicStringViewKey<C> &a) const noexcept {
-        return view < a.view;
-      }
+    struct StrPoolComparator {
+      bool operator ()(const Value &a, const Value &b) const noexcept;
     };
     std::pair<bool, Value> nullPool;
     std::pair<bool, Value> nanPool;
     std::map<double, Value> numPool;
     std::map<wchar_t, Value> charPool;
-    std::map<BasicStringViewKey<wchar_t>, Value> strPool;
-    std::map<BasicStringViewKey<char>, Value> latin1Pool;
+    std::map<Value, Value, StrPoolComparator> strPool;
     std::map<Object *, Value> objPool;
     std::map<void *, Value> ptrPool;
     // member operations begin

@@ -1,1 +1,1 @@
-(write stdout "HelloWorld")
+(write stdout "HelloWorld\n")

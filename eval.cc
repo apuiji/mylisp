@@ -151,6 +151,7 @@ namespace zlt::mylisp {
     if (top + 1 == itCoroutine->valuek->end()) {
       throw EvalBad(L"out of stack");
     }
+    *top = itCoroutine->value;
     ++top;
     return 0;
   }
