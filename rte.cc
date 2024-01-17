@@ -1,7 +1,7 @@
 #include<iostream>
 #include"eval.hh"
 #include"gc.hh"
-#include"io_object.hh"
+#include"io_obj.hh"
 #include"rte.hh"
 
 using namespace std;
@@ -13,20 +13,26 @@ namespace zlt::mylisp::rte {
   ItCoroutine itCoroutine;
   set<wstring> strings;
 
-  static int nativeFnWrite(Value *it, Value *end);
+  static const wstring *globDefName(const wchar_t *name) {
+    return &*strings.insert(name).first;
+  }
+
+  static int natFnWrite(Value *it, Value *end);
+  // static int natFnStrcat(Value *it, Value *end);
 
   int init() {
     {
-      auto &name = *strings.insert(L"stdout").first;
       auto o = new WriterObj(wcout);
       gc::neobj(o);
-      globalDefs[&name] = o;
+      globalDefs[globDefName(L"stdout")] = o;
     }
     {
-      auto &name = *strings.insert(L"write").first;
-      NativeFunction *fp = nativeFnWrite;
-      globalDefs[&name] = fp;
+      auto o = new WriterObj(wcerr);
+      gc::neobj(o);
+      globalDefs[globDefName(L"stderr")] = o;
     }
+    globalDefs[globDefName(L"write")] = natFnWrite;
+    // globalDefs[globDefName(L"strcat")] = natFnStrcat;
     return 0;
   }
 
@@ -44,7 +50,7 @@ namespace zlt::mylisp::rte {
     return eval(f.prevNext, f.prevEnd);
   }
 
-  int nativeFnWrite(Value *it, Value *end) {
+  int natFnWrite(Value *it, Value *end) {
     if (it == end) [[unlikely]] {
       return 0;
     }
@@ -57,4 +63,10 @@ namespace zlt::mylisp::rte {
     }
     return write(wo->ostream, it[1]);
   }
+
+  // int natFnStrcat(Value *it, Value *end) {
+  //   if (it == end) [[unlikely]] {
+  //     return 0;
+  //   }
+  // }
 }

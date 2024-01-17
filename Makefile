@@ -15,7 +15,7 @@ HHS = \
 	direction \
 	eval \
 	gc \
-	io_object \
+	io_obj \
 	object \
 	rte \
 	value
@@ -33,7 +33,7 @@ OBJS = \
 	coroutine \
 	eval \
 	gc \
-	io_object \
+	io_obj \
 	main \
 	object \
 	rte \
