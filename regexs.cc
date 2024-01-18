@@ -24,7 +24,7 @@ namespace zlt::mylisp {
   Value natFnRegexec(const Value *it, const Value *end) {
     RegexObj *ro;
     wstring_view sv;
-    if (!dynamicast(ro, it, end) || !dynamicast(sv, it + 1, end)) [[unlikely]] {
+    if (!dynamicasts(make_tuple(&ro, &sv), it, end)) [[unlikely]] {
       return Null();
     }
     using Match = match_results<wstring_view::iterator>;

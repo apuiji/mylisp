@@ -3,6 +3,7 @@
 #include<cmath>
 #include<concepts>
 #include<string>
+#include<tuple>
 #include<variant>
 #include"myccutils/xyz.hh"
 
@@ -155,6 +156,15 @@ namespace zlt::mylisp {
   template<class T>
   static inline bool dynamicast(T &dest, const Value *it, const Value *end) noexcept {
     return it < end && dynamicast(dest, *it);
+  }
+
+  template<int I = 0, class ...T>
+  static inline bool dynamicasts(const std::tuple<T *...> &dest, const Value *it, const Value *end) noexcept {
+    if constexpr (I == sizeof...(T)) {
+      return true;
+    } else {
+      return dynamicast(*std::get<I>(dest), it, end) && dynamicasts<I + 1>(dest, it + 1, end);
+    }
   }
   // dynamic cast operations end
 
