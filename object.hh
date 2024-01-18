@@ -201,6 +201,7 @@ namespace zlt::mylisp {
     using Iterator = List::iterator;
     using ConstIterator = List::const_iterator;
     List list;
+    ListObj(List &&list = {}) noexcept: list(std::move(list)) {}
     // member operations begin
     Value objGetMemb(const Value &memb) const noexcept override;
     int objSetMemb(const Value &memb, const Value &value) override;

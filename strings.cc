@@ -1,3 +1,6 @@
+#include<algorithm>
+#include<cmath>
+#include<cwctype>
 #include"strings.hh"
 
 using namespace std;
@@ -123,8 +126,69 @@ namespace zlt::mylisp {
 
   Value natFnStrtod(const Value *it, const Value *end) {
     if (it == end) [[unlikely]] {
+      return NAN;
+    }
+    wstring_view sv;
+    if (!dynamicast(sv, *it)) {
+      return NAN;
+    }
+    try {
+      return stod(sv);
+    } catch (...) {
+      return NAN;
+    }
+  }
+
+  Value natFnStrtoi(const Value *it, const Value *end) {
+    if (it == end) [[unlikely]] {
       return Null();
     }
-    ;
+    wstring_view sv;
+    if (!dynamicast(sv, *it)) {
+      return Null();
+    }
+    int base;
+    if (!(it + 1 != end && dynamicast(base, it[1]))) {
+      base = 10;
+    }
+    try {
+      return stoi(sv, nullptr, base);
+    } catch (...) {
+      return Null();
+    }
+  }
+
+  Value natFnStrtolower(const Value *it, const Value *end) {
+    if (it == end) [[unlikely]] {
+      return Null();
+    }
+    wstring_view sv;
+    if (!dynamicast(sv, *it)) {
+      return Null();
+    }
+    struct It: wstring_view::iterator {
+      using iterator::iterator;
+      wchar_t operator *() noexcept {
+        return tolower(iterator::operator *());
+      }
+    };
+    return wstring(It(sv.begin()), It(sv.end()));
+  }
+
+  Value natFnStrtoupper(const Value *it, const Value *end) {
+    if (it == end) [[unlikely]] {
+      return Null();
+    }
+    wstring_view sv;
+    if (!dynamicast(sv, *it)) {
+      return Null();
+    }
+    struct It: wstring_view::iterator {
+      using iterator::iterator;
+      wchar_t operator *() noexcept {
+        return toupper(iterator::operator *());
+      }
+    };
+    return wstring(It(sv.begin()), It(sv.end()));
   }
 }
