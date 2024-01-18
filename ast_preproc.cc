@@ -313,15 +313,15 @@ namespace zlt::mylisp::ast {
     const wstring *s;
     wstring_view sv;
     switch (toString(c, s, sv, src)) {
-      case 1: {
+      case 0: {
         dest.reset(new CharAtom(pos, c));
         break;
       }
-      case 2: {
+      case 1: {
         dest.reset(new StringAtom(pos, s));
         break;
       }
-      case 3: {
+      case 2: {
         auto &value = *rte::strings.insert(wstring(sv)).first;
         dest.reset(new StringAtom(pos, &value));
         break;
@@ -340,22 +340,22 @@ namespace zlt::mylisp::ast {
     if (auto a = dynamic_cast<const RawAtom *>(src.get()); a) {
       if (a->raw.size() == 1) {
         dest = a->raw[0];
-        return 1;
+        return 0;
       } else {
         dest2 = a->raw;
-        return 3;
+        return 2;
       }
     }
     if (auto a = dynamic_cast<const IDAtom *>(src.get()); a) {
       if (a->name->size() == 1) {
         dest = a->name->front();
-        return 1;
+        return 0;
       } else {
         dest1 = a->name;
-        return 2;
+        return 1;
       }
     }
-    return 0;
+    return -1;
   }
 
   UNode &ppd_undef(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {

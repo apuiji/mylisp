@@ -3,7 +3,9 @@
 #include"eval.hh"
 #include"gc.hh"
 #include"io.hh"
+#include"regexs.hh"
 #include"rte.hh"
+#include"strings.hh"
 
 using namespace std;
 
@@ -15,12 +17,22 @@ namespace zlt::mylisp::rte {
   set<wstring> strings;
 
   static int setGlobalDef(const wchar_t *name, const Value &value);
-  static Value natFnStrcat(const Value *it, const Value *end);
-  static Value natFnStrjoin(const Value *it, const Value *end);
 
   int init() {
+    // strings begin
     setGlobalDef(L"strcat", natFnStrcat);
     setGlobalDef(L"strjoin", natFnStrjoin);
+    setGlobalDef(L"strslice", natFnStrslice);
+    setGlobalDef(L"strtod", natFnStrtod);
+    setGlobalDef(L"strtoi", natFnStrtoi);
+    setGlobalDef(L"strtolower", natFnStrtolower);
+    setGlobalDef(L"strtoupper", natFnStrtoupper);
+    setGlobalDef(L"strview", natFnStrview);
+    // strings end
+    // regex begin
+    setGlobalDef(L"regcomp", natFnRegcomp);
+    setGlobalDef(L"regexec", natFnRegexec);
+    // regex end
     // io begin
     setGlobalDef(L"stdout", gc::neobj(new WriterObj(wcout)));
     setGlobalDef(L"stderr", gc::neobj(new WriterObj(wcerr)));
@@ -34,50 +46,6 @@ namespace zlt::mylisp::rte {
     auto name1 = &*strings.insert(name).first;
     globalDefs[name1] = value;
     return 0;
-  }
-
-  static int strcat1(wstringstream &dest, const Value *it, const Value *end);
-
-  Value natFnStrcat(const Value *it, const Value *end) {
-    if (it == end) [[unlikely]] {
-      return L"";
-    }
-    wstringstream ss;
-    strcat1(ss, it, end);
-    return ss.str();
-  }
-
-  int strcat1(wstringstream &dest, const Value *it, const Value *end) {
-    write(dest, *it);
-    return it + 1 != end ? strcat1(dest, it + 1, end) : 0;
-  }
-
-  static int strjoin1(wstringstream &dest, wstring_view sepa, ListObj::ConstIterator it, ListObj::ConstIterator end);
-
-  Value natFnStrjoin(const Value *it, const Value *end) {
-    if (it == end) [[unlikely]] {
-      return L"";
-    }
-    ListObj *lso;
-    if (!dynamicast(lso, *it)) {
-      return toStringValue(*it);
-    }
-    wstring_view sepa;
-    if (!(it + 1 != end && dynamicast(sepa, it[1]))) {
-      sepa = L"";
-    }
-    wstringstream ss;
-    strjoin1(ss, sepa, lso->list.begin(), lso->list.end());
-    return ss.str();
-  }
-
-  int strjoin1(wstringstream &dest, wstring_view sepa, ListObj::ConstIterator it, ListObj::ConstIterator end) {
-    write(dest, *it);
-    if (it + 1 == end) {
-      return 0;
-    }
-    dest << sepa;
-    return strjoin1(dest, sepa, it + 1, end);
   }
 
   int yield() {

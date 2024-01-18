@@ -17,7 +17,9 @@ HHS = \
 	gc \
 	io \
 	object \
+	regexs \
 	rte \
+	strings \
 	value
 OBJS = \
 	ast \
@@ -36,5 +38,7 @@ OBJS = \
 	io \
 	main \
 	object \
+	regexs \
 	rte \
+	strings \
 	value
