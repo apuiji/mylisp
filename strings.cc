@@ -1,6 +1,9 @@
 #include<algorithm>
 #include<cmath>
 #include<cwctype>
+#include<sstream>
+#include"io.hh"
+#include"myccutils/xyz.hh"
 #include"strings.hh"
 
 using namespace std;
@@ -25,17 +28,16 @@ namespace zlt::mylisp {
   static int strjoin1(wstringstream &dest, wstring_view sepa, ListObj::ConstIterator it, ListObj::ConstIterator end);
 
   Value natFnStrjoin(const Value *it, const Value *end) {
-    if (it == end) [[unlikely]] {
-      return L"";
-    }
     ListObj *lso;
-    if (!dynamicast(lso, *it)) {
-      return toStringValue(*it);
+    if (!dynamicast(lso, it, end)) [[unlikely]] {
+      if (wstring_view sv; dynamicast(sv, *it)) {
+        return *it;
+      } else {
+        return L"";
+      }
     }
     wstring_view sepa;
-    if (!(it + 1 != end && dynamicast(sepa, it[1]))) {
-      sepa = L"";
-    }
+    dynamicast(sepa, it + 1, end);
     wstringstream ss;
     strjoin1(ss, sepa, lso->list.begin(), lso->list.end());
     return ss.str();
@@ -50,145 +52,89 @@ namespace zlt::mylisp {
     return strjoin1(dest, sepa, it + 1, end);
   }
 
-  static int strview1(wchar_t &dest, const wstring *&dest1, wstring_view &dest2, const Value *it, const Value *end);
+  template<bool Slice>
+  static inline Value sliceOrView(const Value *it, const Value *end) {
+    wstring_view sv;
+    if (!dynamicast(sv, it, end)) [[unlikely]] {
+      return Null();
+    }
+    int start;
+    if (!dynamicast(start, it + 1, end) || start < 0) {
+      start = 0;
+    }
+    int end1;
+    if (!dynamicast(end1, it + 2, end) || end1 > sv.size()) {
+      end1 = sv.size();
+    }
+    if (start >= end1) {
+      return L"";
+    }
+    if (start == 0 && end1 == sv.size()) {
+      return *it;
+    }
+    if constexpr (Slice) {
+      return sv.substr(start, end1 - start);
+    } else {
+      return Value(*it, sv.substr(start, end1 - start));
+    }
+  }
 
   Value natFnStrslice(const Value *it, const Value *end) {
-    wchar_t c;
-    const wstring *s;
-    wstring_view sv;
-    switch (strview1(c, s, sv, it, end)) {
-      case 0: {
-        return c;
-      }
-      case 1: {
-        return s;
-      }
-      case 2: {
-        return wstring(sv);
-      }
-      default: {
-        return Null();
-      }
-    }
+    return sliceOrView<true>(it, end);
   }
 
   Value natFnStrview(const Value *it, const Value *end) {
-    wchar_t c;
-    const wstring *s;
-    wstring_view sv;
-    switch (strview1(c, s, sv, it, end)) {
-      case 0: {
-        return c;
-      }
-      case 1: {
-        return s;
-      }
-      case 2: {
-        return gc::neobj(new StringViewObj(*it, sv));
-      }
-      default: {
-        return Null();
-      }
-    }
-  }
-
-  int strview1(wchar_t &dest, const wstring *&dest1, wstring_view &dest2, const Value *it, const Value *end) {
-    if (it == end) [[unlikely]] {
-      return -1;
-    }
-    wstring_view sv;
-    if (!dynamicast(sv, *it)) {
-      return -1;
-    }
-    int sstart = it + 1 != end ? max((int) it[1], 0) : 0;
-    int send = sv.size();
-    send = it + 2 < end ? min((int) it[2], send) : send;
-    if (!(sstart < send)) {
-      dest1 = L"";
-      return 1;
-    }
-    size_t n = send - sstart;
-    switch (n) {
-      case 0: {
-        dest1 = L"";
-        return 1;
-      }
-      case 1: {
-        dest = sv[sstart];
-        return 0;
-      }
-      default: {
-        dest2 = sv.substr(sstart, n);
-        return 2;
-      }
-    }
+    return sliceOrView<false>(it, end);
   }
 
   Value natFnStrtod(const Value *it, const Value *end) {
-    if (it == end) [[unlikely]] {
-      return NAN;
-    }
     wstring_view sv;
-    if (!dynamicast(sv, *it)) {
+    if (!dynamicast(sv, it, end)) [[unlikely]] {
       return NAN;
     }
     try {
-      return stod(sv);
+      return stod(wstring(sv));
     } catch (...) {
       return NAN;
     }
   }
 
   Value natFnStrtoi(const Value *it, const Value *end) {
-    if (it == end) [[unlikely]] {
-      return Null();
-    }
     wstring_view sv;
-    if (!dynamicast(sv, *it)) {
+    if (!dynamicast(sv, it, end)) [[unlikely]] {
       return Null();
     }
     int base;
-    if (!(it + 1 != end && dynamicast(base, it[1]))) {
+    if (!dynamicast(base, it + 1, end)) {
       base = 10;
     }
     try {
-      return stoi(sv, nullptr, base);
+      return stoi(wstring(sv), nullptr, base);
     } catch (...) {
       return Null();
     }
   }
 
-  Value natFnStrtolower(const Value *it, const Value *end) {
-    if (it == end) [[unlikely]] {
-      return Null();
-    }
+  template<bool Lower>
+  static inline Value strtocase(const Value *it, const Value *end) {
     wstring_view sv;
-    if (!dynamicast(sv, *it)) {
+    if (!dynamicast(sv, it, end)) [[unlikely]] {
       return Null();
     }
-    struct It: wstring_view::iterator {
-      using iterator::iterator;
-      wchar_t operator *() noexcept {
-        return tolower(iterator::operator *());
-      }
-    };
-    return wstring(It(sv.begin()), It(sv.end()));
+    wstring s(sv.size(), L'\0');
+    if constexpr (Lower) {
+      transform(sv.begin(), sv.end(), s.begin(), towlower);
+    } else {
+      transform(sv.begin(), sv.end(), s.begin(), towupper);
+    }
+    return std::move(s);
+  }
+
+  Value natFnStrtolower(const Value *it, const Value *end) {
+    return strtocase<true>(it, end);
   }
 
   Value natFnStrtoupper(const Value *it, const Value *end) {
-    if (it == end) [[unlikely]] {
-      return Null();
-    }
-    wstring_view sv;
-    if (!dynamicast(sv, *it)) {
-      return Null();
-    }
-    struct It: wstring_view::iterator {
-      using iterator::iterator;
-      wchar_t operator *() noexcept {
-        return toupper(iterator::operator *());
-      }
-    };
-    return wstring(It(sv.begin()), It(sv.end()));
+    return strtocase<false>(it, end);
   }
 }
