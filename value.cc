@@ -5,7 +5,26 @@
 using namespace std;
 
 namespace zlt::mylisp {
+  Value &Value::operator =(wstring &&s) {
+    if (s.size() == 1) {
+      return operator =(s[0]);
+    }
+    Object *o = gc::neobj(new StringObj(std::move(s)));
+    return operator =(o);
+  }
+
   // cast operations begin
+  Value toStringValue(const Value &src) {
+    wstring_view sv;
+    if (!dynamicast(sv, src)) {
+      return L"";
+    }
+    if (sv.size() == 1) {
+      return sv[0];
+    }
+    return gc::neobj(new StringViewObj(src, sv));
+  }
+
   bool dynamicast(string_view &dest, const Value &src) noexcept {
     switch (src.index()) {
       case Value::OBJ_INDEX: {

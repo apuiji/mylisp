@@ -151,9 +151,9 @@ namespace zlt::mylisp::gc {
     return 0;
   }
 
-  int neobj(Object *o) noexcept {
+  Object *neobj(Object *o) noexcept {
     o->color = Object::BLACK_COLOR;
     put(blacks, o);
-    return 0;
+    return o;
   }
 }

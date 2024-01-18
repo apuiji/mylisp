@@ -10,7 +10,7 @@ namespace zlt::mylisp {
   struct Object;
   struct Value;
 
-  using NativeFunction = int (Value *it, Value *end);
+  using NativeFunction = Value (const Value *it, const Value *end);
   using Null = std::monostate;
 
   struct Value: std::variant<Null, double, wchar_t, const std::wstring *, Object *, NativeFunction *> {
@@ -29,6 +29,9 @@ namespace zlt::mylisp {
     Value(size_t n) noexcept: variant((double) n) {}
     Value(bool b) noexcept {
       operator =(b);
+    }
+    Value(std::wstring &&s) {
+      operator =(std::move(s));
     }
     // constructors end
     // assignment operations begin
@@ -60,6 +63,7 @@ namespace zlt::mylisp {
       }
       return *this;
     }
+    Value &operator =(std::wstring &&s);
     Value &operator =(std::derived_from<Object> auto *o) noexcept {
       variant::operator =(static_cast<Object *>(o));
       return *this;
@@ -78,6 +82,8 @@ namespace zlt::mylisp {
     }
     // cast operations end
   };
+
+  Value toStringValue(const Value &src);
 
   // static cast operations begin
   template<AnyOf<double, wchar_t, const std::wstring *, const std::string *, NativeFunction *, void *> T>

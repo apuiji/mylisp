@@ -11,5 +11,5 @@ namespace zlt::mylisp::gc {
   int grayValue(const Value &v) noexcept;
   /// insert write barrier
   int iwb(Value &v, Value &w) noexcept;
-  int neobj(Object *o) noexcept;
+  Object *neobj(Object *o) noexcept;
 }

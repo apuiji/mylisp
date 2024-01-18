@@ -171,6 +171,10 @@ namespace zlt::mylisp::ast {
       replace(dest, b ? src.then : src.elze);
       return optimize(dest);
     }
+    if (auto a = dynamic_cast<LogicNotOper *>(src.cond.get()); a) {
+      replace(src.cond, a->item);
+      swap(src.then, src.elze);
+    }
     if (isTerminated(src.then) && isTerminated(src.elze)) {
       return 0;
     }

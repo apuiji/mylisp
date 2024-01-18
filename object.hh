@@ -3,6 +3,7 @@
 #include<deque>
 #include<map>
 #include<set>
+#include"gc.hh"
 #include"value.hh"
 
 namespace zlt::mylisp {
@@ -163,7 +164,10 @@ namespace zlt::mylisp {
     Value string;
     std::basic_string_view<C> view;
     BasicStringViewObj1(const Value &string, std::basic_string_view<C> view) noexcept: string(string), view(view) {}
-    int graySubjs() noexcept override;
+    int graySubjs() noexcept override {
+      gc::grayValue(string);
+      return 0;
+    }
     operator std::basic_string_view<C>() const noexcept override {
       return view;
     }
@@ -193,7 +197,10 @@ namespace zlt::mylisp {
   };
 
   struct ListObj final: Object {
-    std::deque<Value> list;
+    using List = std::deque<Value>;
+    using Iterator = List::iterator;
+    using ConstIterator = List::const_iterator;
+    List list;
     // member operations begin
     Value objGetMemb(const Value &memb) const noexcept override;
     int objSetMemb(const Value &memb, const Value &value) override;
