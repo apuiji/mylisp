@@ -13,4 +13,7 @@ namespace zlt::mylisp {
 
   int output(std::ostream &dest, const Value &src);
   int write(std::wostream &dest, const Value &src);
+
+  Value natFnOutput(const Value *it, const Value *end);
+  Value natFnWrite(const Value *it, const Value *end);
 }
