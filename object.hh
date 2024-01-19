@@ -211,13 +211,15 @@ namespace zlt::mylisp {
 
   struct MapObj final: Object {
     struct StrPoolComparator {
-      bool operator ()(const Value &a, const Value &b) const noexcept;
+      bool operator ()(const StringViewObj *a, const StringViewObj *b) const noexcept {
+        return (wstring_view) *a < (wstring_view) *b;
+      }
     };
     std::pair<bool, Value> nullPool;
     std::pair<bool, Value> nanPool;
     std::map<double, Value> numPool;
     std::map<wchar_t, Value> charPool;
-    std::map<Value, Value, StrPoolComparator> strPool;
+    std::map<StringViewObj *, Value, StrPoolComparator> strPool;
     std::map<Object *, Value> objPool;
     std::map<void *, Value> ptrPool;
     // member operations begin
