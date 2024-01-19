@@ -1,3 +1,5 @@
+#include<dlfcn.h>
+#include<filesystem>
 #include<iostream>
 #include<sstream>
 #include"eval.hh"
@@ -11,10 +13,13 @@ using namespace std;
 
 namespace zlt::mylisp::rte {
   Coroutines coroutines;
+  map<string, void *> dlibs;
   set<string> fnBodies;
   map<const wchar_t *, Value, GlobalDefsKeyComparator> globalDefs;
   ItCoroutine itCoroutine;
   set<wstring> strings;
+
+  static Value natfn_dlopen(const Value *it, const Value *end);
 
   int init() {
     #define globalDefn(name) globalDefs[L###name] = natfn_##name
@@ -41,6 +46,7 @@ namespace zlt::mylisp::rte {
     globalDefn(write);
     globalDefn(output);
     // io end
+    globalDefn(dlopen);
     return 0;
   }
 
@@ -56,5 +62,52 @@ namespace zlt::mylisp::rte {
     Frame f = itCoroutine->framek.back();
     itCoroutine->framek.pop_back();
     return eval(f.prevNext, f.prevEnd);
+  }
+
+  static bool dlname(string &dest, const Value *it, const Value *end) noexcept;
+  static void *dlib(string &name);
+
+  Value natfn_dlopen(const Value *it, const Value *end) {
+    string name;
+    if (!dlname(name, it, end)) {
+      return Null();
+    }
+    auto dl = dlib(name);
+    if (!dl) {
+      return Null();
+    }
+    auto load = (Value (*)()) dlsym(dl, "load");
+    if (!load) {
+      return Null();
+    }
+    return load();
+  }
+
+  bool dlname(string &dest, const Value *it, const Value *end) noexcept {
+    wstring_view sv;
+    if (!dynamicast(sv, it, end)) {
+      return false;
+    }
+    filesystem::path path(sv);
+    try {
+      path = filesystem::canonical(path);
+    } catch (...) {
+      return false;
+    }
+    dest = path.string();
+    return true;
+  }
+
+  void *dlib(string &name) {
+    auto it = dlibs.find(name);
+    if (it != dlibs.end()) {
+      return it->second;
+    }
+    void *dl = dlopen(name.data(), RTLD_LAZY | RTLD_LOCAL);
+    if (!dl) {
+      return nullptr;
+    }
+    dlibs[std::move(name)] = dl;
+    return dl;
   }
 }
