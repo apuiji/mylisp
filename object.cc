@@ -79,7 +79,10 @@ namespace zlt::mylisp {
         return poolGetMemb(charPool, c);
       }
       case Value::STR_INDEX: {
-        return poolGetMemb(strPool, memb);
+        const wstring *s;
+        staticast(s, memb);
+        StringViewObj svo(memb, (wstring_view) *s);
+        return poolGetMemb(strPool, &svo);
       }
       case Value::OBJ_INDEX: {
         Object *o;
@@ -125,7 +128,11 @@ namespace zlt::mylisp {
         return m->charPool[c];
       }
       case Value::STR_INDEX: {
-        return m->strPool[memb];
+        const wstring *s;
+        staticast(s, memb);
+        auto svo = new StringViewObj(memb, (wstring_view) *s);
+        gc::neobj(svo);
+        return m->strPool[svo];
       }
       case Value::OBJ_INDEX: {
         Object *o;

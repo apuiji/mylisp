@@ -212,7 +212,7 @@ namespace zlt::mylisp {
   struct MapObj final: Object {
     struct StrPoolComparator {
       bool operator ()(const StringViewObj *a, const StringViewObj *b) const noexcept {
-        return (wstring_view) *a < (wstring_view) *b;
+        return (std::wstring_view) *a < (std::wstring_view) *b;
       }
     };
     std::pair<bool, Value> nullPool;

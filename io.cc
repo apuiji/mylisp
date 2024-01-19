@@ -28,7 +28,7 @@ namespace zlt::mylisp {
     }
   }
 
-  Value natFnWrite(const Value *it, const Value *end) {
+  Value natfn_write(const Value *it, const Value *end) {
     if (it == end) [[unlikely]] {
       return Null();
     }
@@ -43,7 +43,7 @@ namespace zlt::mylisp {
     return Null();
   }
 
-  Value natFnOutput(const Value *it, const Value *end) {
+  Value natfn_output(const Value *it, const Value *end) {
     if (it == end) [[unlikely]] {
       return Null();
     }

@@ -11,7 +11,7 @@ using namespace std;
 namespace zlt::mylisp {
   static int strcat1(wstringstream &dest, const Value *it, const Value *end);
 
-  Value natFnStrcat(const Value *it, const Value *end) {
+  Value natfn_strcat(const Value *it, const Value *end) {
     if (it == end) [[unlikely]] {
       return L"";
     }
@@ -27,7 +27,7 @@ namespace zlt::mylisp {
 
   static int strjoin1(wstringstream &dest, wstring_view sepa, ListObj::ConstIterator it, ListObj::ConstIterator end);
 
-  Value natFnStrjoin(const Value *it, const Value *end) {
+  Value natfn_strjoin(const Value *it, const Value *end) {
     ListObj *lso;
     if (!dynamicast(lso, it, end)) [[unlikely]] {
       if (wstring_view sv; dynamicast(sv, *it)) {
@@ -79,15 +79,15 @@ namespace zlt::mylisp {
     }
   }
 
-  Value natFnStrslice(const Value *it, const Value *end) {
+  Value natfn_strslice(const Value *it, const Value *end) {
     return sliceOrView<true>(it, end);
   }
 
-  Value natFnStrview(const Value *it, const Value *end) {
+  Value natfn_strview(const Value *it, const Value *end) {
     return sliceOrView<false>(it, end);
   }
 
-  Value natFnStrtod(const Value *it, const Value *end) {
+  Value natfn_strtod(const Value *it, const Value *end) {
     wstring_view sv;
     if (!dynamicast(sv, it, end)) [[unlikely]] {
       return NAN;
@@ -99,7 +99,7 @@ namespace zlt::mylisp {
     }
   }
 
-  Value natFnStrtoi(const Value *it, const Value *end) {
+  Value natfn_strtoi(const Value *it, const Value *end) {
     wstring_view sv;
     if (!dynamicast(sv, it, end)) [[unlikely]] {
       return Null();
@@ -130,11 +130,50 @@ namespace zlt::mylisp {
     return std::move(s);
   }
 
-  Value natFnStrtolower(const Value *it, const Value *end) {
+  Value natfn_strtolower(const Value *it, const Value *end) {
     return strtocase<true>(it, end);
   }
 
-  Value natFnStrtoupper(const Value *it, const Value *end) {
+  Value natfn_strtoupper(const Value *it, const Value *end) {
     return strtocase<false>(it, end);
+  }
+
+  template<bool L, bool R>
+  static inline wstring_view trim1(wstring_view src) noexcept {
+    int start;
+    if constexpr (L) {
+      start = find_if_not(src.begin(), src.end(), iswspace) - src.begin();
+    } else {
+      start = 0;
+    }
+    int end;
+    if constexpr (R) {
+      end = src.size() - (find_if_not(src.rbegin(), src.rend(), iswspace) - src.rbegin());
+    } else {
+      end = src.size();
+    }
+    return src.substr(start, end);
+  }
+
+  template<bool L, bool R>
+  static inline Value trim(const Value *it, const Value *end) {
+    wstring_view sv;
+    if (dynamicast(sv, it, end)) {
+      return gc::neobj(new StringViewObj(*it, trim1<L, R>(sv)));
+    } else {
+      return Null();
+    }
+  }
+
+  Value natfn_strtrim(const Value *it, const Value *end) {
+    return trim<true, true>(it, end);
+  }
+
+  Value natfn_strtriml(const Value *it, const Value *end) {
+    return trim<true, false>(it, end);
+  }
+
+  Value natfn_strtrimr(const Value *it, const Value *end) {
+    return trim<false, true>(it, end);
   }
 }
