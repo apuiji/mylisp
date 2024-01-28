@@ -13,7 +13,7 @@ namespace zlt::mylisp::rte {
   };
 
   extern Coroutines coroutines;
-  extern std::map<std::string, void *> dlibs;
+  extern std::map<std::string, std::pair<void *, Value>> dlibs;
   extern std::set<std::string> fnBodies;
   extern ItCoroutine itCoroutine;
   extern std::set<std::wstring> strings;

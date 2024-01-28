@@ -13,7 +13,7 @@ using namespace std;
 
 namespace zlt::mylisp::rte {
   Coroutines coroutines;
-  map<string, void *> dlibs;
+  map<string, pair<void *, Value>> libs;
   set<string> fnBodies;
   ItCoroutine itCoroutine;
   set<wstring> strings;
@@ -23,6 +23,8 @@ namespace zlt::mylisp::rte {
   bool GlobalDefsComp::operator ()(const wstring *a, const wstring *b) const noexcept {
     return *a < *b;
   }
+
+  static Value natFnDlopen(const Value *it, const Value *end);
 
   int init() {
     #define globalDefn(name) globalDefs[L###name] = natfn_##name
@@ -46,6 +48,7 @@ namespace zlt::mylisp::rte {
     globalDefs[constring<'w', 'r', 'i', 't', 'e'>] = natFnWrite;
     globalDefs[constring<'o', 'u', 't', 'p', 'u', 't'>] = natFnOutput;
     // io end
+    globalDefs[constring<'d', 'l', 'o', 'p', 'e', 'n'>] = natFnDlopen;
     return 0;
   }
 
@@ -64,22 +67,14 @@ namespace zlt::mylisp::rte {
   }
 
   static bool dlname(string &dest, const Value *it, const Value *end) noexcept;
-  static void *dlib(string &name);
+  static Value dlib(string &name);
 
-  Value natfn_dlopen(const Value *it, const Value *end) {
+  Value natFnDlopen(const Value *it, const Value *end) {
     string name;
     if (!dlname(name, it, end)) {
       return Null();
     }
-    auto dl = dlib(name);
-    if (!dl) {
-      return Null();
-    }
-    auto load = (Value (*)()) dlsym(dl, "load");
-    if (!load) {
-      return Null();
-    }
-    return load();
+    return dlib(name);
   }
 
   bool dlname(string &dest, const Value *it, const Value *end) noexcept {
@@ -97,16 +92,21 @@ namespace zlt::mylisp::rte {
     return true;
   }
 
-  void *dlib(string &name) {
+  Value dlib(string &name) {
     auto it = dlibs.find(name);
     if (it != dlibs.end()) {
-      return it->second;
+      return it->second.second;
     }
     void *dl = dlopen(name.data(), RTLD_LAZY | RTLD_LOCAL);
     if (!dl) {
-      return nullptr;
+      return Null();
     }
-    dlibs[std::move(name)] = dl;
-    return dl;
+    auto load = (Value (*)()) dlsym(dl, "mylispLoadDlib");
+    if (!load) {
+      return Null();
+    }
+    auto a = load();
+    dlibs[std::move(name)] = make_pair(dl, a);
+    return a;
   }
 }
