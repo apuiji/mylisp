@@ -41,16 +41,16 @@ namespace zlt::mylisp {
     return 0;
   }
 
-  bool MapObj::StrPoolComparator::operator ()(const Value &a, const Value &b) const noexcept {
-    wstring_view s;
-    dynamicast(s, a);
-    wstring_view s1;
-    dynamicast(s1, b);
-    return s < s1;
+  bool MapObj::StrPoolComp::operator ()(const Value &a, const Value &b) const noexcept {
+    wstring_view x;
+    dynamicast(x, a);
+    wstring_view y;
+    dynamicast(y, b);
+    return x < y;
   }
 
-  template<class K, class Cmp>
-  static Value poolGetMemb(const map<K, Value, Cmp> &m, const K &k) noexcept {
+  template<class K, class Comp>
+  static Value poolGetMemb(const map<K, Value, Comp> &m, const K &k) noexcept {
     auto it = m.find(k);
     if (it != m.end()) {
       return it->second;
@@ -81,18 +81,15 @@ namespace zlt::mylisp {
           return poolGetMemb(numPool, d);
         }
       }
-      case Value::CHAR_INDEX: {
-        wchar_t c;
-        staticast(c, memb);
-        return poolGetMemb(charPool, c);
-      }
+      case Value::CHAR_INDEX:
+        [[fallthrough]];
       case Value::STR_INDEX: {
         return poolGetMemb(strPool, memb);
       }
       case Value::OBJ_INDEX: {
         Object *o;
         staticast(o, memb);
-        if (dynamic_cast<StringViewObj *>(o)) {
+        if (wstring_view sv; o->objDynamicast(sv)) {
           return poolGetMemb(strPool, memb);
         }
         return poolGetMemb(objPool, o);
@@ -123,18 +120,15 @@ namespace zlt::mylisp {
         staticast(d, memb);
         return isnan(d) ? m->nanPool.second : m->numPool[d];
       }
-      case Value::CHAR_INDEX: {
-        wchar_t c;
-        staticast(c, memb);
-        return m->charPool[c];
-      }
+      case Value::CHAR_INDEX:
+        [[fallthrough]];
       case Value::STR_INDEX: {
         return m->strPool[memb];
       }
       case Value::OBJ_INDEX: {
         Object *o;
         staticast(o, memb);
-        if (dynamic_cast<StringViewObj *>(o)) {
+        if (wstring_view sv; o->objDynamicast(sv)) {
           return m->strPool[memb];
         }
         return m->objPool[o];
@@ -155,9 +149,6 @@ namespace zlt::mylisp {
       gc::grayValue(nanPool.second);
     }
     for (auto &p : numPool) {
-      gc::grayValue(p.second);
-    }
-    for (auto &p : charPool) {
       gc::grayValue(p.second);
     }
     for (auto &p : strPool) {

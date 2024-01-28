@@ -12,39 +12,36 @@ using namespace std;
 namespace zlt::mylisp::rte {
   Coroutines coroutines;
   set<string> fnBodies;
-  map<const wstring *, Value> globalDefs;
   ItCoroutine itCoroutine;
   set<wstring> strings;
 
-  static int setGlobalDef(const wchar_t *name, const Value &value);
+  map<const wstring *, Value, GlobalDefsComp> globalDefs;
+
+  bool GlobalDefsComp::operator ()(const wstring *a, const wstring *b) const noexcept {
+    return *a < *b;
+  }
 
   int init() {
     // strings begin
-    setGlobalDef(L"strcat", natFnStrcat);
-    setGlobalDef(L"strjoin", natFnStrjoin);
-    setGlobalDef(L"strslice", natFnStrslice);
-    setGlobalDef(L"strtod", natFnStrtod);
-    setGlobalDef(L"strtoi", natFnStrtoi);
-    setGlobalDef(L"strtolower", natFnStrtolower);
-    setGlobalDef(L"strtoupper", natFnStrtoupper);
-    setGlobalDef(L"strview", natFnStrview);
+    globalDefs[constring<'s', 't', 'r', 'c', 'a', 't'>] = natFnStrcat;
+    globalDefs[constring<'s', 't', 'r', 'j', 'o', 'i', 'n'>] = natFnStrjoin;
+    globalDefs[constring<'s', 't', 'r', 's', 'l', 'i', 'c', 'e'>] = natFnStrslice;
+    globalDefs[constring<'s', 't', 'r', 't', 'o', 'd'>] = natFnStrtod;
+    globalDefs[constring<'s', 't', 'r', 't', 'o', 'i'>] = natFnStrtoi;
+    globalDefs[constring<'s', 't', 'r', 't', 'o', 'l', 'o', 'w', 'e', 'r'>] = natFnStrtolower;
+    globalDefs[constring<'s', 't', 'r', 't', 'o', 'u', 'p', 'p', 'e', 'r'>] = natFnStrtoupper;
+    globalDefs[constring<'s', 't', 'r', 'v', 'i', 'e', 'w'>] = natFnStrview;
     // strings end
     // regex begin
-    setGlobalDef(L"regcomp", natFnRegcomp);
-    setGlobalDef(L"regexec", natFnRegexec);
+    globalDefs[constring<'r', 'e', 'g', 'c', 'o', 'm', 'p'>] = natFnRegcomp;
+    globalDefs[constring<'r', 'e', 'g', 'e', 'x', 'e', 'c'>] = natFnRegexec;
     // regex end
     // io begin
-    setGlobalDef(L"stdout", gc::neobj(new WriterObj(wcout)));
-    setGlobalDef(L"stderr", gc::neobj(new WriterObj(wcerr)));
-    setGlobalDef(L"write", natFnWrite);
-    setGlobalDef(L"output", natFnOutput);
+    globalDefs[constring<'s', 't', 'd', 'o', 'u', 't'>] = gc::neobj(new WriterObj(wcout));
+    globalDefs[constring<'s', 't', 'd', 'e', 'r', 'r'>] = gc::neobj(new WriterObj(wcerr));
+    globalDefs[constring<'w', 'r', 'i', 't', 'e'>] = natFnWrite;
+    globalDefs[constring<'o', 'u', 't', 'p', 'u', 't'>] = natFnOutput;
     // io end
-    return 0;
-  }
-
-  int setGlobalDef(const wchar_t *name, const Value &value) {
-    auto name1 = &*strings.insert(name).first;
-    globalDefs[name1] = value;
     return 0;
   }
 

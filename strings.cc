@@ -13,7 +13,7 @@ namespace zlt::mylisp {
 
   Value natFnStrcat(const Value *it, const Value *end) {
     if (it == end) [[unlikely]] {
-      return L"";
+      return constring<>;
     }
     wstringstream ss;
     strcat1(ss, it, end);
@@ -33,7 +33,7 @@ namespace zlt::mylisp {
       if (wstring_view sv; dynamicast(sv, *it)) {
         return *it;
       } else {
-        return L"";
+        return constring<>;
       }
     }
     wstring_view sepa;
@@ -67,7 +67,7 @@ namespace zlt::mylisp {
       end1 = sv.size();
     }
     if (start >= end1) {
-      return L"";
+      return constring<>;
     }
     if (start == 0 && end1 == sv.size()) {
       return *it;

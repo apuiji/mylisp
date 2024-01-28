@@ -8,7 +8,7 @@ namespace zlt::mylisp {
   Value::Value(const Value &string, std::wstring_view view) {
     switch (view.size()) {
       case 0: {
-        operator =(L"");
+        operator =(constring<>);
         break;
       }
       case 1: {
@@ -24,7 +24,7 @@ namespace zlt::mylisp {
   Value &Value::operator =(wstring_view sv) {
     switch (sv.size()) {
       case 0: {
-        return operator =(L"");
+        return operator =(constring<>);
       }
       case 1: {
         return operator =(sv[0]);
@@ -75,99 +75,127 @@ namespace zlt::mylisp {
 
   // comparisons begin
   bool operator ==(const Value &a, const Value &b) noexcept {
-    if (Object *o; dynamicast(o, a)) {
-      return *o == b;
-    }
     if (Object *o; dynamicast(o, b)) {
       return a == *o;
     }
-    if (a.index() != b.index()) {
-      return false;
-    }
     switch (a.index()) {
       case Value::NULL_INDEX: {
-        return true;
+        switch (b.index()) {
+          case Value::NULL_INDEX: {
+            return true;
+          }
+          default: {
+            return false;
+          }
+        }
       }
-      #define caseIT(I, T) \
-      case Value::I##_INDEX: { \
-        T x; \
-        staticast(x, a); \
-        T y; \
-        staticast(y, b); \
-        return x == y; \
+      case Value::NUM_INDEX: {
+        double x;
+        staticast(x, a);
+        switch (b.index()) {
+          case Value::NUM_INDEX: {
+            double y;
+            staticast(y, b);
+            return x == y;
+          }
+          default: {
+            return false;
+          }
+        }
       }
-      caseIT(NUM, double);
-      caseIT(CHAR, wchar_t);
-      caseIT(STR, const wstring *);
-      caseIT(NAT_FN, NativeFunction *);
-      #undef caseIT
+      case Value::CHAR_INDEX:
+        [[fallthrough]];
+      case Value::STR_INDEX: {
+        wstring_view x;
+        dynamicast(x, a);
+        switch (b.index()) {
+          case Value::CHAR_INDEX:
+            [[fallthrough]];
+          case Value::STR_INDEX: {
+            wstring_view y;
+            dynamicast(y, b);
+            return x == y;
+          }
+          default: {
+            return false;
+          }
+        }
+      }
+      case Value::OBJ_INDEX: {
+        Object *o;
+        staticast(o, a);
+        return *o == b;
+      }
       default: {
-        // never
-        return false;
+        void *x;
+        staticast(x, a);
+        switch (b.index()) {
+          case Value::NAT_FN_INDEX: {
+            void *y;
+            staticast(y, b);
+            return x == y;
+          }
+          default: {
+            return false;
+          }
+        }
       }
     }
   }
 
   bool compare(int &dest, const Value &a, const Value &b) noexcept {
-    if (Object *o; dynamicast(o, a)) {
-      return o->compare(dest, b);
-    }
     if (Object *o; dynamicast(o, b)) {
       return compare(dest, a, *o);
     }
-    if (a.index() != b.index()) {
-      return false;
-    }
     switch (a.index()) {
       case Value::NULL_INDEX: {
-        dest = 0;
-        return true;
+        switch (b.index()) {
+          case Value::NULL_INDEX: {
+            dest = 0;
+            return true;
+          }
+          default: {
+            return false;
+          }
+        }
       }
       case Value::NUM_INDEX: {
         double x;
         staticast(x, a);
-        double y;
-        staticast(y, b);
-        if (x < y) {
-          dest = -1;
-          return true;
+        switch (b.index()) {
+          case Value::NUM_INDEX: {
+            double y;
+            staticast(y, b);
+            return Compare {}(dest, x, y);
+          }
+          default: {
+            return false;
+          }
         }
-        if (x > y) {
-          dest = 1;
-          return true;
-        }
-        if (x == y) {
-          dest = 0;
-          return true;
-        }
-        return false;
       }
-      case Value::CHAR_INDEX: {
-        wchar_t x;
-        staticast(x, a);
-        wchar_t y;
-        staticast(y, b);
-        dest = x < y ? -1 : x > y ? 1 : 0;
-        return true;
-      }
+      case Value::CHAR_INDEX:
+        [[fallthrough]];
       case Value::STR_INDEX: {
-        const wstring *x;
-        staticast(x, a);
-        const wstring *y;
-        staticast(y, b);
-        dest = x->compare(*y);
-        return true;
-      }
-      case Value::NAT_FN_INDEX: {
-        NativeFunction *x;
-        staticast(x, a);
-        NativeFunction *y;
-        staticast(y, b);
-        if (x == y) {
-          dest = 0;
-          return true;
+        wstring_view x;
+        dynamicast(x, a);
+        switch (b.index()) {
+          case Value::CHAR_INDEX:
+            [[fallthrough]];
+          case Value::STR_INDEX: {
+            wstring_view y;
+            dynamicast(y, b);
+            dest = x.compare(y);
+            return true;
+          }
+          default: {
+            return false;
+          }
         }
-        return false;
+      }
+      case Value::OBJ_INDEX: {
+        Object *o;
+        staticast(o, a);
+        return o->compare(dest, b);
       }
       default: {
         // never
@@ -207,7 +235,7 @@ namespace zlt::mylisp {
     if (!dynamicast(i, memb)) {
       return Null();
     }
-    if (!(i >= 0 && i <= s.size())) {
+    if (!(i >= 0 && i < s.size())) {
       return Null();
     }
     return (wchar_t) s[i];

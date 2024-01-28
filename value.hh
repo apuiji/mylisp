@@ -21,11 +21,14 @@ namespace zlt::mylisp {
     // constructors begin
     Value() noexcept {}
     Value(Null) noexcept {}
-    Value(double d) noexcept: variant(d) {}
-    Value(wchar_t c) noexcept: variant(c) {}
-    Value(const std::wstring *s) noexcept: variant(s) {}
-    Value(Object *o) noexcept: variant(o) {}
-    Value(NativeFunction *f) noexcept: variant(f) {}
+    #define baseCons(T) \
+    Value(T t) noexcept: variant(t) {}
+    baseCons(double);
+    baseCons(wchar_t);
+    baseCons(const std::wstring *);
+    baseCons(Object *);
+    baseCons(NativeFunction *);
+    #undef baseCons
     Value(int i) noexcept: variant((double) i) {}
     Value(size_t n) noexcept: variant((double) n) {}
     Value(bool b) noexcept {
@@ -109,7 +112,7 @@ namespace zlt::mylisp {
   // static cast operations end
 
   // dynamic cast operations begin
-  template<AnyOf<double, wchar_t, NativeFunction *> T>
+  template<AnyOf<double, wchar_t, Object *, NativeFunction *> T>
   static inline bool dynamicast(T &dest, const Value &src) noexcept {
     if (auto t = std::get_if<T>(&src); t) {
       dest = *t;
@@ -133,17 +136,8 @@ namespace zlt::mylisp {
   bool dynamicast(std::string_view &dest, const Value &src) noexcept;
   bool dynamicast(std::wstring_view &dest, const Value &src) noexcept;
 
-  static inline bool dynamicast(Object *&dest, const Value &src) noexcept {
-    auto o = std::get_if<Object *>(&src);
-    if (o) {
-      dest = *o;
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  template<std::derived_from<Object> T>
+  template<class T>
+  requires (std::is_base_of_v<Object, T> && !std::is_same_v<T, Object>)
   static inline bool dynamicast(T *&dest, const Value &src) noexcept {
     if (Object *o; dynamicast(o, src)) {
       dest = dynamic_cast<T *>(o);
@@ -206,4 +200,15 @@ namespace zlt::mylisp {
   static inline bool operator !(const Value &v) noexcept {
     return v.index() == Value::NULL_INDEX;
   }
+
+  template<int ...S>
+  struct Constring {
+    static const std::wstring value;
+  };
+
+  template<int ...S>
+  const std::wstring Constring<S...>::value = { S... };
+
+  template<int ...S>
+  static inline const std::wstring *constring = &Constring<S...>::value;
 }
