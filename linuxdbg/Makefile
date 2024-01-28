@@ -1,6 +1,6 @@
 include ../Makefile
 
-LIBS = stdc++fs
+LIBS = dl stdc++fs
 
 mylisp: $(addsuffix .o, ${OBJS})
 	clang++ -o $@ $^ $(addprefix -l, ${LIBS}) -g

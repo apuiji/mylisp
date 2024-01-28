@@ -41,6 +41,7 @@ namespace zlt::mylisp {
     return 0;
   }
 
+<<<<<<< HEAD
   bool MapObj::StrPoolComp::operator ()(const Value &a, const Value &b) const noexcept {
     wstring_view x;
     dynamicast(x, a);
@@ -51,6 +52,10 @@ namespace zlt::mylisp {
 
   template<class K, class Comp>
   static Value poolGetMemb(const map<K, Value, Comp> &m, const K &k) noexcept {
+=======
+  template<class K, class Cmp>
+  static Value poolGetMemb(const map<K, Value, Cmp> &m, const K &k) noexcept {
+>>>>>>> e73a35fe0e4ccd47611f22acb4c9e57a00823bfa
     auto it = m.find(k);
     if (it != m.end()) {
       return it->second;
@@ -84,7 +89,10 @@ namespace zlt::mylisp {
       case Value::CHAR_INDEX:
         [[fallthrough]];
       case Value::STR_INDEX: {
-        return poolGetMemb(strPool, memb);
+        const wstring *s;
+        staticast(s, memb);
+        StringViewObj svo(memb, (wstring_view) *s);
+        return poolGetMemb(strPool, &svo);
       }
       case Value::OBJ_INDEX: {
         Object *o;
@@ -123,13 +131,27 @@ namespace zlt::mylisp {
       case Value::CHAR_INDEX:
         [[fallthrough]];
       case Value::STR_INDEX: {
-        return m->strPool[memb];
+        const wstring *s;
+        staticast(s, memb);
+        auto svo = new StringViewObj(memb, (wstring_view) *s);
+        gc::neobj(svo);
+        return m->strPool[svo];
       }
       case Value::OBJ_INDEX: {
         Object *o;
         staticast(o, memb);
+<<<<<<< HEAD
         if (wstring_view sv; o->objDynamicast(sv)) {
           return m->strPool[memb];
+=======
+        if (auto svo = dynamic_cast<StringViewObj *>(o); svo) {
+          return m->strPool[svo];
+        }
+        if (wstring_view sv; o->objDynamicast(sv)) {
+          auto svo = new StringViewObj(memb, sv);
+          gc::neobj(svo);
+          return m->strPool[svo];
+>>>>>>> e73a35fe0e4ccd47611f22acb4c9e57a00823bfa
         }
         return m->objPool[o];
       }

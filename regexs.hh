@@ -9,6 +9,6 @@ namespace zlt::mylisp {
     RegexObj(std::wregex &&regex) noexcept: regex(std::move(regex)) {}
   };
 
-  Value natFnRegcomp(const Value *it, const Value *end);
-  Value natFnRegexec(const Value *it, const Value *end);
+  Value natfn_regcomp(const Value *it, const Value *end);
+  Value natfn_regexec(const Value *it, const Value *end);
 }

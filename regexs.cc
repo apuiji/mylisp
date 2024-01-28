@@ -3,7 +3,7 @@
 using namespace std;
 
 namespace zlt::mylisp {
-  Value natFnRegcomp(const Value *it, const Value *end) {
+  Value natfn_regcomp(const Value *it, const Value *end) {
     wstring_view sv;
     if (!dynamicast(sv, it, end)) [[unlikely]] {
       return Null();
@@ -21,7 +21,7 @@ namespace zlt::mylisp {
     }
   }
 
-  Value natFnRegexec(const Value *it, const Value *end) {
+  Value natfn_regexec(const Value *it, const Value *end) {
     RegexObj *ro;
     wstring_view sv;
     if (!dynamicasts(make_tuple(&ro, &sv), it, end)) [[unlikely]] {

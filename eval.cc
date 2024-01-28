@@ -490,7 +490,7 @@ namespace zlt::mylisp {
 
   int evalGET_GLOBAL(const char *it, const char *end) {
     auto name = *(const wstring **) it;
-    itCoroutine->value = rte::globalDefs[name];
+    itCoroutine->value = rte::globalDefs[name->data()];
     return eval(it + sizeof(void *), end);
   }
 
@@ -601,7 +601,7 @@ namespace zlt::mylisp {
 
   int evalSET_GLOBAL(const char *it, const char *end) {
     auto name = *(const wstring **) it;
-    rte::globalDefs[name] = itCoroutine->value;
+    rte::globalDefs[name->data()] = itCoroutine->value;
     return eval(it + sizeof(void *), end);
   }
 
