@@ -245,7 +245,7 @@ namespace zlt::mylisp {
         return x.compare(y);
       }
     };
-    using StrPool = MyMap<Value, Value, StrPoolComp>;
+    using StrPool = mymap::Map<Value, Value, StrPoolComp>;
     std::pair<bool, Value> nullPool;
     std::pair<bool, Value> nanPool;
     std::map<double, Value> numPool;

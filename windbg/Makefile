@@ -1,13 +1,19 @@
 include ../Makefile
 
-mylisp: $(addsuffix .o, ${OBJS})
-	clang++ -o $@ $^ $(addprefix -l, ${LIBS}) -g
+LIBS := myccutils
+
+mylisp.exe: $(addsuffix .o, ${OBJS}) MAKELIBS
+	clang++ -o $@ $^ -L ../.. $(addprefix -l, ${LIBS}) -g
 
 %.o: ../%.cc $(addprefix ../, $(addsuffix .hh, ${HHS}))
 	clang++ -o $@ $< -I .. -I../.. -std=c++2b -c -g
 
+MAKELIBS:
+	cd ../../myccutils/windbg
+	make
+
 clean:
-	echo>mylisp.exe
+	echo > mylisp.exe
 	del mylisp.exe *.o
 
-.PHONY: clean
+.PHONY: MAKELIBS clean

@@ -1,4 +1,6 @@
 HHS = \
+	../myccutils/mymap \
+	../myccutils/rbtree \
 	../myccutils/xyz \
 	ast \
 	ast_lexer \
