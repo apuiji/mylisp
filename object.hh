@@ -4,6 +4,7 @@
 #include<map>
 #include<set>
 #include"gc.hh"
+#include"myccutils/mymap.hh"
 #include"value.hh"
 
 namespace zlt::mylisp {
@@ -238,12 +239,17 @@ namespace zlt::mylisp {
 
   struct MapObj final: Object {
     struct StrPoolComp {
-      bool operator ()(const Value &a, const Value &b) const noexcept;
+      int operator ()(std::wstring_view x, const Value &b) const noexcept {
+        std::wstring_view y;
+        dynamicast(y, b);
+        return x.compare(y);
+      }
     };
+    using StrPool = MyMap<Value, Value, StrPoolComp>;
     std::pair<bool, Value> nullPool;
     std::pair<bool, Value> nanPool;
     std::map<double, Value> numPool;
-    std::map<Value, Value, StrPoolComp> strPool;
+    StrPool strPool;
     std::map<Object *, Value> objPool;
     std::map<void *, Value> ptrPool;
     // member operations begin

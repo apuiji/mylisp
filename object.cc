@@ -41,19 +41,20 @@ namespace zlt::mylisp {
     return 0;
   }
 
-  bool MapObj::StrPoolComp::operator ()(const Value &a, const Value &b) const noexcept {
-    wstring_view x;
-    dynamicast(x, a);
-    wstring_view y;
-    dynamicast(y, b);
-    return x < y;
-  }
-
   template<class K, class Comp>
   static Value poolGetMemb(const map<K, Value, Comp> &m, const K &k) noexcept {
     auto it = m.find(k);
     if (it != m.end()) {
       return it->second;
+    } else {
+      return Null();
+    }
+  }
+
+  static Value strPoolGetMemb(const MapObj::StrPool &sp, std::wstring_view sv) noexcept {
+    auto node = find(sp, sv);
+    if (node) {
+      return node->second;
     } else {
       return Null();
     }
@@ -81,16 +82,21 @@ namespace zlt::mylisp {
           return poolGetMemb(numPool, d);
         }
       }
-      case Value::CHAR_INDEX:
-        [[fallthrough]];
+      case Value::CHAR_INDEX: {
+        wstring_view sv;
+        staticast<Value::CHAR_INDEX>(sv, memb);
+        return strPoolGetMemb(strPool, sv);
+      }
       case Value::STR_INDEX: {
-        return poolGetMemb(strPool, memb);
+        wstring_view sv;
+        staticast<Value::STR_INDEX>(sv, memb);
+        return strPoolGetMemb(strPool, sv);
       }
       case Value::OBJ_INDEX: {
         Object *o;
         staticast(o, memb);
         if (wstring_view sv; o->objDynamicast(sv)) {
-          return poolGetMemb(strPool, memb);
+          return strPoolGetMemb(strPool, sv);
         }
         return poolGetMemb(objPool, o);
       }
@@ -120,20 +126,21 @@ namespace zlt::mylisp {
         staticast(d, memb);
         return isnan(d) ? m->nanPool.second : m->numPool[d];
       }
-      case Value::CHAR_INDEX:
-        [[fallthrough]];
+      case Value::CHAR_INDEX: {
+        wstring_view sv;
+        staticast<Value::CHAR_INDEX>(sv, memb);
+        return insert(m->strPool, sv, memb)->second;
+      }
       case Value::STR_INDEX: {
-        const wstring *s;
-        staticast(s, memb);
-        auto svo = new StringViewObj(memb, (wstring_view) *s);
-        gc::neobj(svo);
-        return m->strPool[svo];
+        wstring_view sv;
+        staticast<Value::STR_INDEX>(sv, memb);
+        return insert(m->strPool, sv, memb)->second;
       }
       case Value::OBJ_INDEX: {
         Object *o;
         staticast(o, memb);
         if (wstring_view sv; o->objDynamicast(sv)) {
-          return m->strPool[memb];
+          return insert(m->strPool, sv, memb)->second;
         }
         return m->objPool[o];
       }
