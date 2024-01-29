@@ -52,13 +52,11 @@ namespace zlt::mylisp {
   bool dynamicast(wstring_view &dest, const Value &src) noexcept {
     switch (src.index()) {
       case Value::CHAR_INDEX: {
-        dest = wstring_view((const wchar_t *) &src, 1);
+        staticast<Value::CHAR_INDEX>(dest, src);
         return true;
       }
       case Value::STR_INDEX: {
-        const wstring *s;
-        staticast(s, src);
-        dest = (wstring_view) *s;
+        staticast<Value::STR_INDEX>(dest, src);
         return true;
       }
       case Value::OBJ_INDEX: {
@@ -75,51 +73,24 @@ namespace zlt::mylisp {
 
   // comparisons begin
   bool operator ==(const Value &a, const Value &b) noexcept {
-    if (Object *o; dynamicast(o, b)) {
-      return a == *o;
-    }
     switch (a.index()) {
       case Value::NULL_INDEX: {
-        switch (b.index()) {
-          case Value::NULL_INDEX: {
-            return true;
-          }
-          default: {
-            return false;
-          }
-        }
+        return b.index() == Value::NULL_INDEX;
       }
       case Value::NUM_INDEX: {
         double x;
         staticast(x, a);
-        switch (b.index()) {
-          case Value::NUM_INDEX: {
-            double y;
-            staticast(y, b);
-            return x == y;
-          }
-          default: {
-            return false;
-          }
-        }
+        return x == b;
       }
-      case Value::CHAR_INDEX:
-        [[fallthrough]];
+      case Value::CHAR_INDEX: {
+        wstring_view x;
+        staticast<Value::CHAR_INDEX>(x, a);
+        return x == b;
+      }
       case Value::STR_INDEX: {
         wstring_view x;
-        dynamicast(x, a);
-        switch (b.index()) {
-          case Value::CHAR_INDEX:
-            [[fallthrough]];
-          case Value::STR_INDEX: {
-            wstring_view y;
-            dynamicast(y, b);
-            return x == y;
-          }
-          default: {
-            return false;
-          }
-        }
+        staticast<Value::STR_INDEX>(x, a);
+        return x == b;
       }
       case Value::OBJ_INDEX: {
         Object *o;
@@ -144,53 +115,29 @@ namespace zlt::mylisp {
   }
 
   bool compare(int &dest, const Value &a, const Value &b) noexcept {
-    if (Object *o; dynamicast(o, b)) {
-      return compare(dest, a, *o);
-    }
     switch (a.index()) {
       case Value::NULL_INDEX: {
-        switch (b.index()) {
-          case Value::NULL_INDEX: {
-            dest = 0;
-            return true;
-          }
-          default: {
-            return false;
-          }
+        if (b.index() == Value::NULL_INDEX) {
+          dest = 0;
+          return true;
+        } else {
+          return false;
         }
       }
       case Value::NUM_INDEX: {
         double x;
         staticast(x, a);
-        switch (b.index()) {
-          case Value::NUM_INDEX: {
-            double y;
-            staticast(y, b);
-            return Compare {}(dest, x, y);
-          }
-          default: {
-            return false;
-          }
-        }
+        return compare(dest, x, b);
       }
-      case Value::CHAR_INDEX:
-        [[fallthrough]];
+      case Value::CHAR_INDEX: {
+        wstring_view x;
+        staticast<Value::CHAR_INDEX>(x, a);
+        return compare(dest, x, b);
+      }
       case Value::STR_INDEX: {
         wstring_view x;
-        dynamicast(x, a);
-        switch (b.index()) {
-          case Value::CHAR_INDEX:
-            [[fallthrough]];
-          case Value::STR_INDEX: {
-            wstring_view y;
-            dynamicast(y, b);
-            dest = x.compare(y);
-            return true;
-          }
-          default: {
-            return false;
-          }
-        }
+        staticast<Value::STR_INDEX>(x, a);
+        return compare(dest, x, b);
       }
       case Value::OBJ_INDEX: {
         Object *o;
@@ -198,25 +145,114 @@ namespace zlt::mylisp {
         return o->compare(dest, b);
       }
       default: {
-        // never
+        void *x;
+        staticast(x, a);
+        switch (b.index()) {
+          case Value::NAT_FN_INDEX: {
+            void *y;
+            staticast(y, b);
+            if (x == y) {
+              dest = 0;
+              return true;
+            } else {
+              return false;
+            }
+          }
+          default: {
+            return false;
+          }
+        }
+      }
+    }
+  }
+
+  bool operator ==(const Value &a, double b) noexcept {
+    switch (a.index()) {
+      case Value::NUM_INDEX: {
+        double x;
+        staticast(x, a);
+        return x == b;
+      }
+      default: {
+        return false;
+      }
+    }
+  }
+
+  bool compare(int &dest, const Value &a, double b) noexcept {
+    switch (a.index()) {
+      case Value::NUM_INDEX: {
+        double x;
+        staticast(x, a);
+        return Compare {}(dest, x, b);
+      }
+      default: {
+        return false;
+      }
+    }
+  }
+
+  bool operator ==(const Value &a, wstring_view b) noexcept {
+    switch (a.index()) {
+      case Value::CHAR_INDEX: {
+        wstring_view x;
+        staticast<Value::CHAR_INDEX>(x, a);
+        return x == b;
+      }
+      case Value::STR_INDEX: {
+        wstring_view x;
+        staticast<Value::STR_INDEX>(x, a);
+        return x == b;
+      }
+      case Value::OBJ_INDEX: {
+        wstring_view x;
+        return dynamicast(x, a) && x == b;
+      }
+      default: {
+        return false;
+      }
+    }
+  }
+
+  bool compare(int &dest, const Value &a, wstring_view b) noexcept {
+    switch (a.index()) {
+      case Value::CHAR_INDEX: {
+        wstring_view x;
+        staticast<Value::CHAR_INDEX>(x, a);
+        dest = x.compare(b);
+        return true;
+      }
+      case Value::STR_INDEX: {
+        wstring_view x;
+        staticast<Value::STR_INDEX>(x, a);
+        dest = x.compare(b);
+        return true;
+      }
+      case Value::OBJ_INDEX: {
+        Object *o;
+        staticast(o, a);
+        return o->compare(dest, b);
+      }
+      default: {
         return false;
       }
     }
   }
   // comparisons end
 
-  template<class C>
-  static Value getMemb(basic_string_view<C> s, const Value &memb);
+  static Value getMemb(wstring_view s, const Value &memb);
 
   Value getMemb(const Value &v, const Value &memb) noexcept {
     switch (v.index()) {
       case Value::CHAR_INDEX: {
-        return getMemb(wstring_view((const wchar_t *) &v, 1), memb);
+        wstring_view s;
+        staticast<Value::CHAR_INDEX>(s, v);
+        return getMemb(s, memb);
       }
       case Value::STR_INDEX: {
-        const wstring *s;
-        staticast(s, v);
-        return getMemb((wstring_view) *s, memb);
+        wstring_view s;
+        staticast<Value::STR_INDEX>(s, v);
+        return getMemb(s, memb);
       }
       case Value::OBJ_INDEX: {
         Object *o;
@@ -229,16 +265,13 @@ namespace zlt::mylisp {
     }
   }
 
-  template<class C>
-  Value getMemb(basic_string_view<C> s, const Value &memb) {
+  Value getMemb(wstring_view s, const Value &memb) {
     int i;
-    if (!dynamicast(i, memb)) {
+    if (dynamicast(i, memb) && i >= 0 && i < s.size()) {
+      return s[i];
+    } else {
       return Null();
     }
-    if (!(i >= 0 && i < s.size())) {
-      return Null();
-    }
-    return (wchar_t) s[i];
   }
 
   int setMemb(Value &v, const Value &memb, const Value &value) {

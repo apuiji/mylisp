@@ -93,9 +93,21 @@ namespace zlt::mylisp {
   };
 
   // static cast operations begin
-  template<AnyOf<double, wchar_t, const std::wstring *, const std::string *, NativeFunction *, void *> T>
+  template<AnyOf<double, wchar_t, const std::wstring *, NativeFunction *, void *> T>
   static inline int staticast(T &dest, const Value &src) noexcept {
     dest = *(T *) &src;
+    return 0;
+  }
+
+  template<int I>
+  static inline int staticast(std::wstring_view &dest, const Value &src) noexcept {
+    if constexpr (I == Value::CHAR_INDEX) {
+      dest = std::wstring_view((const wchar_t *) &src, 1);
+    } else if constexpr (I == Value::STR_INDEX) {
+      dest = (std::wstring_view) **(const std::wstring **) &src;
+    } else {
+      // never
+    }
     return 0;
   }
 
@@ -112,15 +124,22 @@ namespace zlt::mylisp {
   // static cast operations end
 
   // dynamic cast operations begin
-  template<AnyOf<double, wchar_t, Object *, NativeFunction *> T>
-  static inline bool dynamicast(T &dest, const Value &src) noexcept {
-    if (auto t = std::get_if<T>(&src); t) {
-      dest = *t;
-      return true;
-    } else {
-      return false;
-    }
+  #define baseDynamicast(T) \
+  static inline bool dynamicast(T &dest, const Value &src) noexcept { \
+    if (auto t = std::get_if<T>(&src); t) { \
+      dest = *t; \
+      return true; \
+    } else { \
+      return false; \
+    } \
   }
+
+  baseDynamicast(double);
+  baseDynamicast(wchar_t);
+  baseDynamicast(Object *);
+  baseDynamicast(NativeFunction *);
+
+  #undef baseDynamicast
 
   template<class I>
   requires (std::is_integral_v<I> && !std::is_pointer_v<I>)
@@ -136,8 +155,7 @@ namespace zlt::mylisp {
   bool dynamicast(std::string_view &dest, const Value &src) noexcept;
   bool dynamicast(std::wstring_view &dest, const Value &src) noexcept;
 
-  template<class T>
-  requires (std::is_base_of_v<Object, T> && !std::is_same_v<T, Object>)
+  template<std::derived_from<Object> T>
   static inline bool dynamicast(T *&dest, const Value &src) noexcept {
     if (Object *o; dynamicast(o, src)) {
       dest = dynamic_cast<T *>(o);
@@ -163,33 +181,74 @@ namespace zlt::mylisp {
   // dynamic cast operations end
 
   // comparisons begin
-  bool operator ==(const Value &a, const Value &b) noexcept;
-
-  static inline bool operator !=(const Value &a, const Value &b) noexcept {
-    return !operator ==(a, b);
+  #define compBetween(T) \
+  bool operator ==(const Value &a, T b) noexcept; \
+  \
+  static inline bool operator !=(const Value &a, T b) noexcept { \
+    return !operator ==(a, b); \
+  } \
+  \
+  bool compare(int &dest, const Value &a, T b) noexcept; \
+  \
+  static inline bool operator <(const Value &a, T b) noexcept { \
+    int diff; \
+    return compare(diff, a, b) && diff < 0; \
+  } \
+  \
+  static inline bool operator >(const Value &a, T b) noexcept { \
+    int diff; \
+    return compare(diff, a, b) && diff > 0; \
+  } \
+  \
+  static inline bool operator <=(const Value &a, T b) noexcept { \
+    int diff; \
+    return compare(diff, a, b) && diff <= 0; \
+  } \
+  \
+  static inline bool operator >=(const Value &a, T b) noexcept { \
+    int diff; \
+    return compare(diff, a, b) && diff >= 0; \
   }
 
-  bool compare(int &dest, const Value &a, const Value &b) noexcept;
+  compBetween(const Value &);
+  compBetween(double);
+  compBetween(std::wstring_view);
 
-  static inline bool operator <(const Value &a, const Value &b) noexcept {
-    int diff;
-    return compare(diff, a, b) && diff < 0;
+  #undef compBetween
+
+  #define compBetween1(T) \
+  static inline bool operator ==(T a, const Value &b) noexcept { \
+    return b == a; \
+  } \
+  \
+  static inline bool operator !=(T a, const Value &b) noexcept { \
+    return b != a; \
+  } \
+  \
+  static inline bool operator <(T a, const Value &b) noexcept { \
+    int diff; \
+    return compare(diff, b, a) && diff > 0; \
+  } \
+  \
+  static inline bool operator >(T a, const Value &b) noexcept { \
+    int diff; \
+    return compare(diff, b, a) && diff < 0; \
+  } \
+  \
+  static inline bool operator <=(T a, const Value &b) noexcept { \
+    int diff; \
+    return compare(diff, b, a) && diff >= 0; \
+  } \
+  \
+  static inline bool operator >=(T a, const Value &b) noexcept { \
+    int diff; \
+    return compare(diff, b, a) && diff <= 0; \
   }
 
-  static inline bool operator >(const Value &a, const Value &b) noexcept {
-    int diff;
-    return compare(diff, a, b) && diff > 0;
-  }
+  compBetween1(double);
+  compBetween1(std::wstring_view);
 
-  static inline bool operator <=(const Value &a, const Value &b) noexcept {
-    int diff;
-    return compare(diff, a, b) && diff <= 0;
-  }
-
-  static inline bool operator >=(const Value &a, const Value &b) noexcept {
-    int diff;
-    return compare(diff, a, b) && diff >= 0;
-  }
+  #undef compBetween1
   // comparisons end
 
   // member operations begin
@@ -201,6 +260,7 @@ namespace zlt::mylisp {
     return v.index() == Value::NULL_INDEX;
   }
 
+  // const string * begin
   template<int ...S>
   struct Constring {
     static const std::wstring value;
@@ -211,4 +271,5 @@ namespace zlt::mylisp {
 
   template<int ...S>
   static inline const std::wstring *constring = &Constring<S...>::value;
+  // const string * end
 }

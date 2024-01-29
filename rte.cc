@@ -13,7 +13,7 @@ using namespace std;
 
 namespace zlt::mylisp::rte {
   Coroutines coroutines;
-  map<string, pair<void *, Value>> libs;
+  map<string, pair<void *, Value>> dlibs;
   set<string> fnBodies;
   ItCoroutine itCoroutine;
   set<wstring> strings;
@@ -24,31 +24,31 @@ namespace zlt::mylisp::rte {
     return *a < *b;
   }
 
-  static Value natFnDlopen(const Value *it, const Value *end);
+  static Value natfn_dlopen(const Value *it, const Value *end);
 
   int init() {
     #define globalDefn(name) globalDefs[L###name] = natfn_##name
     // strings begin
-    globalDefs[constring<'s', 't', 'r', 'c', 'a', 't'>] = natFnStrcat;
-    globalDefs[constring<'s', 't', 'r', 'j', 'o', 'i', 'n'>] = natFnStrjoin;
-    globalDefs[constring<'s', 't', 'r', 's', 'l', 'i', 'c', 'e'>] = natFnStrslice;
-    globalDefs[constring<'s', 't', 'r', 't', 'o', 'd'>] = natFnStrtod;
-    globalDefs[constring<'s', 't', 'r', 't', 'o', 'i'>] = natFnStrtoi;
-    globalDefs[constring<'s', 't', 'r', 't', 'o', 'l', 'o', 'w', 'e', 'r'>] = natFnStrtolower;
-    globalDefs[constring<'s', 't', 'r', 't', 'o', 'u', 'p', 'p', 'e', 'r'>] = natFnStrtoupper;
-    globalDefs[constring<'s', 't', 'r', 'v', 'i', 'e', 'w'>] = natFnStrview;
+    globalDefs[constring<'s', 't', 'r', 'c', 'a', 't'>] = natfn_strcat;
+    globalDefs[constring<'s', 't', 'r', 'j', 'o', 'i', 'n'>] = natfn_strjoin;
+    globalDefs[constring<'s', 't', 'r', 's', 'l', 'i', 'c', 'e'>] = natfn_strslice;
+    globalDefs[constring<'s', 't', 'r', 't', 'o', 'd'>] = natfn_strtod;
+    globalDefs[constring<'s', 't', 'r', 't', 'o', 'i'>] = natfn_strtoi;
+    globalDefs[constring<'s', 't', 'r', 't', 'o', 'l', 'o', 'w', 'e', 'r'>] = natfn_strtolower;
+    globalDefs[constring<'s', 't', 'r', 't', 'o', 'u', 'p', 'p', 'e', 'r'>] = natfn_strtoupper;
+    globalDefs[constring<'s', 't', 'r', 'v', 'i', 'e', 'w'>] = natfn_strview;
     // strings end
     // regex begin
-    globalDefs[constring<'r', 'e', 'g', 'c', 'o', 'm', 'p'>] = natFnRegcomp;
-    globalDefs[constring<'r', 'e', 'g', 'e', 'x', 'e', 'c'>] = natFnRegexec;
+    globalDefs[constring<'r', 'e', 'g', 'c', 'o', 'm', 'p'>] = natfn_regcomp;
+    globalDefs[constring<'r', 'e', 'g', 'e', 'x', 'e', 'c'>] = natfn_regexec;
     // regex end
     // io begin
     globalDefs[constring<'s', 't', 'd', 'o', 'u', 't'>] = gc::neobj(new WriterObj(wcout));
     globalDefs[constring<'s', 't', 'd', 'e', 'r', 'r'>] = gc::neobj(new WriterObj(wcerr));
-    globalDefs[constring<'w', 'r', 'i', 't', 'e'>] = natFnWrite;
-    globalDefs[constring<'o', 'u', 't', 'p', 'u', 't'>] = natFnOutput;
+    globalDefs[constring<'w', 'r', 'i', 't', 'e'>] = natfn_write;
+    globalDefs[constring<'o', 'u', 't', 'p', 'u', 't'>] = natfn_output;
     // io end
-    globalDefs[constring<'d', 'l', 'o', 'p', 'e', 'n'>] = natFnDlopen;
+    globalDefs[constring<'d', 'l', 'o', 'p', 'e', 'n'>] = natfn_dlopen;
     return 0;
   }
 
@@ -69,7 +69,7 @@ namespace zlt::mylisp::rte {
   static bool dlname(string &dest, const Value *it, const Value *end) noexcept;
   static Value dlib(string &name);
 
-  Value natFnDlopen(const Value *it, const Value *end) {
+  Value natfn_dlopen(const Value *it, const Value *end) {
     string name;
     if (!dlname(name, it, end)) {
       return Null();

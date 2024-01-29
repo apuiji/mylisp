@@ -29,6 +29,12 @@ namespace zlt::mylisp {
       auto o = std::get_if<Object *>(&v);
       return o && this == *o;
     }
+    virtual bool operator ==(std::string_view s) const noexcept {
+      return false;
+    }
+    virtual bool operator ==(std::wstring_view s) const noexcept {
+      return false;
+    }
     /// @param[out] dest comparison result
     /// @return comparable
     virtual bool compare(int &dest, const Value &v) const noexcept {
@@ -39,6 +45,12 @@ namespace zlt::mylisp {
       } else {
         return false;
       }
+    }
+    virtual bool compare(int &dest, std::string_view) const noexcept {
+      return false;
+    }
+    virtual bool compare(int &dest, std::wstring_view) const noexcept {
+      return false;
     }
     // comparisons end
     // member operations begin
@@ -55,66 +67,73 @@ namespace zlt::mylisp {
   };
 
   // comparisons begin
-  static inline bool operator !=(const Object &o, const Value &v) noexcept {
-    return !(o == v);
+  #define compBetween(T) \
+  static inline bool operator !=(const Object &o, T t) noexcept { \
+    return !(o == t); \
+  } \
+  \
+  static inline bool operator <(const Object &o, T t) noexcept { \
+    int diff; \
+    return o.compare(diff, t) && diff < 0; \
+  } \
+  \
+  static inline bool operator >(const Object &o, T t) noexcept { \
+    int diff; \
+    return o.compare(diff, t) && diff > 0; \
+  } \
+  \
+  static inline bool operator <=(const Object &o, T t) noexcept { \
+    int diff; \
+    return o.compare(diff, t) && diff <= 0; \
+  } \
+  \
+  static inline bool operator >=(const Object &o, T t) noexcept { \
+    int diff; \
+    return o.compare(diff, t) && diff >= 0; \
+  } \
+  \
+  static inline bool operator ==(T t, const Object &o) noexcept { \
+    return o == t; \
+  } \
+  \
+  static inline bool operator !=(T t, const Object &o) noexcept { \
+    return o != t; \
+  } \
+  \
+  static inline bool compare(int &dest, T t, const Object &o) noexcept { \
+    if (o.compare(dest, t)) { \
+      dest = -dest; \
+      return true; \
+    } else { \
+      return false; \
+    } \
+  } \
+  \
+  static inline bool operator <(T t, const Object &o) noexcept { \
+    int diff; \
+    return o.compare(diff, t) && diff > 0; \
+  } \
+  \
+  static inline bool operator >(T t, const Object &o) noexcept { \
+    int diff; \
+    return o.compare(diff, t) && diff < 0; \
+  } \
+  \
+  static inline bool operator <=(T t, const Object &o) noexcept { \
+    int diff; \
+    return o.compare(diff, t) && diff >= 0; \
+  } \
+  \
+  static inline bool operator >=(T t, const Object &o) noexcept { \
+    int diff; \
+    return o.compare(diff, t) && diff <= 0; \
   }
 
-  static inline bool operator <(const Object &o, const Value &v) noexcept {
-    int diff;
-    return o.compare(diff, v) && diff < 0;
-  }
+  compBetween(const Value &);
+  compBetween(std::string_view);
+  compBetween(std::wstring_view);
 
-  static inline bool operator >(const Object &o, const Value &v) noexcept {
-    int diff;
-    return o.compare(diff, v) && diff > 0;
-  }
-
-  static inline bool operator <=(const Object &o, const Value &v) noexcept {
-    int diff;
-    return o.compare(diff, v) && diff <= 0;
-  }
-
-  static inline bool operator >=(const Object &o, const Value &v) noexcept {
-    int diff;
-    return o.compare(diff, v) && diff >= 0;
-  }
-
-  static inline bool operator ==(const Value &v, const Object &o) noexcept {
-    return o == v;
-  }
-
-  static inline bool operator !=(const Value &v, const Object &o) noexcept {
-    return o != v;
-  }
-
-  static inline bool compare(int &dest, const Value &v, const Object &o) noexcept {
-    if (o.compare(dest, v)) {
-      dest = -dest;
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  static inline bool operator <(const Value &v, const Object &o) noexcept {
-    int diff;
-    return compare(diff, v, o) && diff < 0;
-  }
-
-  static inline bool operator >(const Value &v, const Object &o) noexcept {
-    int diff;
-    return compare(diff, v, o) && diff > 0;
-  }
-
-  static inline bool operator <=(const Value &v, const Object &o) noexcept {
-    int diff;
-    return compare(diff, v, o) && diff <= 0;
-  }
-
-  static inline bool operator >=(const Value &v, const Object &o) noexcept {
-    int diff;
-    return compare(diff, v, o) && diff >= 0;
-  }
+  #undef compBetween
   // comparisons end
 
   template<class C>
@@ -139,6 +158,13 @@ namespace zlt::mylisp {
       } else {
         return false;
       }
+    }
+    bool operator ==(std::basic_string_view<C> sv) const noexcept override {
+      return operator std::basic_string_view<C>() == sv;
+    }
+    bool compare(int &dest, std::basic_string_view<C> sv) const noexcept override {
+      dest = operator std::basic_string_view<C>().compare(sv);
+      return true;
     }
     // comparisons end
     // member operations begin
@@ -183,10 +209,11 @@ namespace zlt::mylisp {
       return Null();
     }
     auto sv = operator std::basic_string_view<C>();
-    if (!(i >= 0 && i < sv.size())) {
+    if (i >= 0 && i < sv.size()) {
+      return sv[i];
+    } else {
       return Null();
     }
-    return sv[i];
   }
 
   struct FunctionObj final: Object {
