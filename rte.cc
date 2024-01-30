@@ -110,9 +110,11 @@ namespace zlt::mylisp::rte {
     bool no = true;
     auto g = makeGuard([dl] () { dlclose(dl); }, no);
     auto exp0rt = (Value (*)()) dlsym(dl, "mylispExport");
+    #ifdef __WIN32__
     #undef dlopen
     #undef dlclose
     #undef dlsym
+    #endif
     if (!exp0rt) {
       return Null();
     }
