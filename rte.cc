@@ -1,4 +1,3 @@
-#include<dlfcn.h>
 #include<filesystem>
 #include<iostream>
 #include<sstream>
@@ -9,22 +8,24 @@
 #include"rte.hh"
 #include"strings.hh"
 
+#ifdef __WIN32__
+#include<libloaderapi.h>
+#else
+#include<dlfcn.h>
+#endif
+
 using namespace std;
 
 namespace zlt::mylisp::rte {
   Coroutines coroutines;
-  map<string, pair<void *, Value>> dlibs;
+  map<string, Value> mods;
   set<string> fnBodies;
   ItCoroutine itCoroutine;
   set<wstring> strings;
 
-  map<const wstring *, Value, GlobalDefsComp> globalDefs;
+  mymap::Map<const wstring *, Value, GlobalDefsComp> globalDefs;
 
-  bool GlobalDefsComp::operator ()(const wstring *a, const wstring *b) const noexcept {
-    return *a < *b;
-  }
-
-  static Value natfn_dlopen(const Value *it, const Value *end);
+  static Value natfn_import(const Value *it, const Value *end);
 
   int init() {
     #define globalDefn(name) globalDefs[L###name] = natfn_##name
@@ -48,7 +49,7 @@ namespace zlt::mylisp::rte {
     globalDefs[constring<'w', 'r', 'i', 't', 'e'>] = natfn_write;
     globalDefs[constring<'o', 'u', 't', 'p', 'u', 't'>] = natfn_output;
     // io end
-    globalDefs[constring<'d', 'l', 'o', 'p', 'e', 'n'>] = natfn_dlopen;
+    globalDefs[constring<'i', 'm', 'p', 'o', 'r', 't'>] = natfn_import;
     return 0;
   }
 
@@ -66,18 +67,18 @@ namespace zlt::mylisp::rte {
     return eval(f.prevNext, f.prevEnd);
   }
 
-  static bool dlname(string &dest, const Value *it, const Value *end) noexcept;
-  static Value dlib(string &name);
+  static bool modCanonicalPath(string &dest, const Value *it, const Value *end) noexcept;
+  static Value loadMod(string &path);
 
-  Value natfn_dlopen(const Value *it, const Value *end) {
-    string name;
-    if (!dlname(name, it, end)) {
+  Value natfn_import(const Value *it, const Value *end) {
+    string path;
+    if (!modCanonicalPath(path, it, end)) {
       return Null();
     }
-    return dlib(name);
+    return loadMod(path);
   }
 
-  bool dlname(string &dest, const Value *it, const Value *end) noexcept {
+  bool modCanonicalPath(string &dest, const Value *it, const Value *end) noexcept {
     wstring_view sv;
     if (!dynamicast(sv, it, end)) {
       return false;
@@ -92,21 +93,32 @@ namespace zlt::mylisp::rte {
     return true;
   }
 
-  Value dlib(string &name) {
-    auto it = dlibs.find(name);
-    if (it != dlibs.end()) {
-      return it->second.second;
+  Value loadMod(string &path) {
+    auto it = mods.find(path);
+    if (it != mods.end()) {
+      return it->second;
     }
-    void *dl = dlopen(name.data(), RTLD_LAZY | RTLD_LOCAL);
+    #ifdef __WIN32__
+    #define dlopen(path, ignore) LoadLibraryA(path)
+    #define dlclose FreeLibrary
+    #define dlsym GetProcAddress
+    #endif
+    void *dl = dlopen(path.data(), RTLD_LAZY | RTLD_LOCAL);
     if (!dl) {
       return Null();
     }
-    auto load = (Value (*)()) dlsym(dl, "mylispLoadDlib");
-    if (!load) {
+    bool no = true;
+    auto g = makeGuard([dl] () { dlclose(dl); }, no);
+    auto exp0rt = (Value (*)()) dlsym(dl, "mylispExport");
+    #undef dlopen
+    #undef dlclose
+    #undef dlsym
+    if (!exp0rt) {
       return Null();
     }
-    auto a = load();
-    dlibs[std::move(name)] = make_pair(dl, a);
-    return a;
+    auto mod = exp0rt();
+    mods[std::move(path)] = mod;
+    no = false;
+    return mod;
   }
 }
