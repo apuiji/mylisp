@@ -1,9 +1,10 @@
 include ../Makefile
 
-LIBS = dl stdc++fs
+LIBS = dl myccutils stdc++fs
 
 mylisp: $(addsuffix .o, ${OBJS})
-	clang++ -o $@ $^ $(addprefix -l, ${LIBS}) -g
+	make -C ../../myccutils/linuxdbg
+	clang++ -o $@ $^ -L ../../myccutils/linuxdbg $(addprefix -l, ${LIBS}) -g
 
 %.o: ../%.cc $(addprefix ../, $(addsuffix .hh, ${HHS}))
 	clang++ -o $@ $< -I .. -I ../.. -std=c++2b -c -g
