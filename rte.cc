@@ -4,6 +4,7 @@
 #include"eval.hh"
 #include"gc.hh"
 #include"io.hh"
+#include"myccutils/dl.hh"
 #include"regexs.hh"
 #include"rte.hh"
 #include"strings.hh"
@@ -98,23 +99,13 @@ namespace zlt::mylisp::rte {
     if (it != mods.end()) {
       return it->second;
     }
-    #ifdef __WIN32__
-    #define dlopen(path, ignore) LoadLibraryA(path)
-    #define dlclose FreeLibrary
-    #define dlsym GetProcAddress
-    #endif
-    void *dl = dlopen(path.data(), RTLD_LAZY | RTLD_LOCAL);
+    auto dl = dl::open(path, dl::LAZY | dl::LOCAL);
     if (!dl) {
       return Null();
     }
     bool no = true;
-    auto g = makeGuard([dl] () { dlclose(dl); }, no);
-    auto exp0rt = (Value (*)()) dlsym(dl, "mylispExport");
-    #ifdef __WIN32__
-    #undef dlopen
-    #undef dlclose
-    #undef dlsym
-    #endif
+    auto g = makeGuard([dl] () { dl::close(dl); }, no);
+    auto exp0rt = dl::funct<Value>(dl, "mylispExport");
     if (!exp0rt) {
       return Null();
     }
