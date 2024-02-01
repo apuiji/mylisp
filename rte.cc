@@ -99,7 +99,7 @@ namespace zlt::mylisp::rte {
     if (it != mods.end()) {
       return it->second;
     }
-    auto dl = dl::open(path, dl::LAZY | dl::LOCAL);
+    auto dl = dl::open(path);
     if (!dl) {
       return Null();
     }
