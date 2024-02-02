@@ -20,6 +20,8 @@ HHS = \
 	gc \
 	gc_wb \
 	io \
+	lists \
+	maps \
 	object \
 	regexs \
 	rte \
@@ -40,6 +42,8 @@ OBJS = \
 	eval \
 	gc \
 	io \
+	lists \
+	maps \
 	main \
 	object \
 	regexs \

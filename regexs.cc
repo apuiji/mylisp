@@ -1,3 +1,4 @@
+#include"lists.hh"
 #include"regexs.hh"
 
 using namespace std;

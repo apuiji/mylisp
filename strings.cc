@@ -3,6 +3,7 @@
 #include<cwctype>
 #include<sstream>
 #include"io.hh"
+#include"lists.hh"
 #include"myccutils/xyz.hh"
 #include"strings.hh"
 

@@ -1,10 +1,7 @@
 #pragma once
 
-#include<deque>
 #include<map>
-#include<set>
 #include"gc.hh"
-#include"myccutils/mymap.hh"
 #include"value.hh"
 
 namespace zlt::mylisp {
@@ -140,41 +137,6 @@ namespace zlt::mylisp {
     std::map<const std::wstring *, Value> closures;
     const std::string &body;
     FunctionObj(const std::string &body) noexcept: body(body) {}
-    int graySubjs() noexcept override;
-  };
-
-  struct ListObj final: Object {
-    using List = std::deque<Value>;
-    using Iterator = List::iterator;
-    using ConstIterator = List::const_iterator;
-    List list;
-    ListObj(List &&list = {}) noexcept: list(std::move(list)) {}
-    // member operations begin
-    Value objGetMemb(const Value &memb) const noexcept override;
-    int objSetMemb(const Value &memb, const Value &value) override;
-    // member operations end
-    int graySubjs() noexcept override;
-  };
-
-  struct MapObj final: Object {
-    struct StrPoolComp {
-      int operator ()(std::wstring_view x, const Value &b) const noexcept {
-        std::wstring_view y;
-        dynamicast(y, b);
-        return x.compare(y);
-      }
-    };
-    using StrPool = mymap::Map<Value, Value, StrPoolComp>;
-    std::pair<bool, Value> nullPool;
-    std::pair<bool, Value> nanPool;
-    std::map<double, Value> numPool;
-    StrPool strPool;
-    std::map<Object *, Value> objPool;
-    std::map<void *, Value> ptrPool;
-    // member operations begin
-    Value objGetMemb(const Value &memb) const noexcept override;
-    int objSetMemb(const Value &memb, const Value &value) override;
-    // member operations end
     int graySubjs() noexcept override;
   };
 
