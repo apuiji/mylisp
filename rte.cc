@@ -45,8 +45,8 @@ namespace zlt::mylisp::rte {
     globalDefs[constring<'r', 'e', 'g', 'e', 'x', 'e', 'c'>] = natfn_regexec;
     // regex end
     // io begin
-    globalDefs[constring<'s', 't', 'd', 'o', 'u', 't'>] = gc::neobj(new WriterObj(wcout));
-    globalDefs[constring<'s', 't', 'd', 'e', 'r', 'r'>] = gc::neobj(new WriterObj(wcerr));
+    globalDefs[constring<'s', 't', 'd', 'o', 'u', 't'>] = neobj<WriterObj>(wcout);
+    globalDefs[constring<'s', 't', 'd', 'e', 'r', 'r'>] = neobj<WriterObj>(wcerr);
     globalDefs[constring<'w', 'r', 'i', 't', 'e'>] = natfn_write;
     globalDefs[constring<'o', 'u', 't', 'p', 'u', 't'>] = natfn_output;
     // io end

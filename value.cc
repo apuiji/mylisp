@@ -16,7 +16,7 @@ namespace zlt::mylisp {
         break;
       }
       default: {
-        operator =(gc::neobj(new StringViewObj(string, view)));
+        operator =(neobj<StringViewObj>(string, view));
       }
     }
   }
@@ -30,7 +30,7 @@ namespace zlt::mylisp {
         return operator =(sv[0]);
       }
       default: {
-        return operator =(gc::neobj(new StringObj(wstring(sv))));
+        return operator =(neobj<StringObj>(wstring(sv)));
       }
     }
   }

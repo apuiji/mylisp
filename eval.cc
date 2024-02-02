@@ -550,16 +550,12 @@ namespace zlt::mylisp {
 
   int evalMAKE_FN(const char *it, const char *end) {
     auto body = *(const string **) it;
-    auto fo = new FunctionObj(*body);
-    itCoroutine->value = fo;
-    gc::neobj(fo);
+    itCoroutine->value = neobj<FunctionObj>(*body);
     return eval(it + sizeof(void *), end);
   }
 
   int evalMAKE_PTR(const char *it, const char *end) {
-    auto po = new PointerObj;
-    itCoroutine->value = po;
-    gc::neobj(po);
+    itCoroutine->value = neobj<PointerObj>();
     return eval(it, end);
   }
 

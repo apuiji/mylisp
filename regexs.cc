@@ -15,7 +15,7 @@ namespace zlt::mylisp {
       flags = flags | regex_constants::icase;
     }
     try {
-      return gc::neobj(new RegexObj(wregex(sv.begin(), sv.end(), flags)));
+      return neobj<RegexObj>(wregex(sv.begin(), sv.end(), flags));
     } catch (...) {
       return Null();
     }
@@ -30,7 +30,7 @@ namespace zlt::mylisp {
     using Match = match_results<wstring_view::iterator>;
     Match m;
     if (!regex_search(sv.begin(), sv.end(), m, ro->regex)) {
-      return gc::neobj(new ListObj);
+      return neobj<ListObj>();
     }
     size_t n = m.size();
     deque<Value> ls(n);
@@ -41,8 +41,8 @@ namespace zlt::mylisp {
       a[0] = start;
       a[1] = start + len;
       a[2] = Value(it[1], sv.substr(start, len));
-      ls[i] = gc::neobj(new ListObj(std::move(a)));
+      ls[i] = neobj<ListObj>(std::move(a));
     }
-    return gc::neobj(new ListObj(std::move(ls)));
+    return neobj<ListObj>(std::move(ls));
   }
 }

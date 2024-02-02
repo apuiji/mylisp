@@ -16,7 +16,7 @@ namespace zlt::mylisp::gc {
 
   static Object *whites;
   static Object *grays;
-  static Object *blacks;
+  Object *blacks;
 
   static int whiteBlacks(Object *o) noexcept;
   static int firstGrays(ItCoroutine it, ItCoroutine end) noexcept;
@@ -29,6 +29,9 @@ namespace zlt::mylisp::gc {
         whiteBlacks(blacks);
         whites = exchange(blacks, nullptr);
         firstGrays(rte::coroutines.begin(), rte::coroutines.end());
+        for (auto &m : rte::mods) {
+          grayValue(m.second);
+        }
         step = NEXT_GRAYS_STEP;
         return 0;
       }
@@ -80,7 +83,6 @@ namespace zlt::mylisp::gc {
   }
 
   static int take(Object *&set, Object *o) noexcept;
-  static int put(Object *&dest, Object *o) noexcept;
 
   int grayObj(Object *o) noexcept {
     if (o->color == Object::WHITE_COLOR) {
@@ -142,18 +144,35 @@ namespace zlt::mylisp::gc {
     return cleanWhites(next);
   }
 
-  int iwb(Value &v, Value &w) noexcept {
-    Object *o;
-    dynamicast(o, v);
-    if (o && o->color == Object::BLACK_COLOR) {
-      grayValue(w);
+  // insert write barrier begin
+  int iwb(Object *o, Object *p) noexcept {
+    if (o->color == Object::BLACK_COLOR) {
+      grayObj(p);
     }
     return 0;
   }
 
-  Object *neobj(Object *o) noexcept {
-    o->color = Object::BLACK_COLOR;
-    put(blacks, o);
-    return o;
+  int iwb(Object *o, const Value &v) noexcept {
+    if (o->color == Object::BLACK_COLOR) {
+      grayValue(v);
+    }
+    return 0;
   }
+  // insert write barrier end
+
+  // delete write barrier begin
+  int dwb(Object *o, Object *p) noexcept {
+    if (o->color != Object::BLACK_COLOR) {
+      grayObj(p);
+    }
+    return 0;
+  }
+
+  int dwb(Object *o, const Value &v) noexcept {
+    if (o->color != Object::BLACK_COLOR) {
+      grayValue(v);
+    }
+    return 0;
+  }
+  // delete write barrier end
 }

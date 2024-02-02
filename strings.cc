@@ -159,7 +159,7 @@ namespace zlt::mylisp {
   static inline Value trim(const Value *it, const Value *end) {
     wstring_view sv;
     if (dynamicast(sv, it, end)) {
-      return gc::neobj(new StringViewObj(*it, trim1<L, R>(sv)));
+      return neobj<StringViewObj>(*it, trim1<L, R>(sv));
     } else {
       return Null();
     }

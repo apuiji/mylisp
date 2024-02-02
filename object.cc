@@ -33,6 +33,7 @@ namespace zlt::mylisp {
       return 0;
     }
     list[i] = value;
+    gc::iwb(this, value);
     return 0;
   }
 
@@ -112,6 +113,7 @@ namespace zlt::mylisp {
 
   int MapObj::objSetMemb(const Value &memb, const Value &value) {
     mapGetMemb4set(this, memb) = value;
+    gc::iwb(this, value);
     return 0;
   }
 
@@ -139,6 +141,7 @@ namespace zlt::mylisp {
       case Value::OBJ_INDEX: {
         Object *o;
         staticast(o, memb);
+        gc::iwb(m, o);
         if (wstring_view sv; o->objDynamicast(sv)) {
           return insert(m->strPool, sv, memb)->second;
         }

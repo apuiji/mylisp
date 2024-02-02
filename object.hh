@@ -16,7 +16,7 @@ namespace zlt::mylisp {
     };
     Object *prev;
     Object *next;
-    int color;
+    int color = BLACK_COLOR;
     // cast operations begin
     virtual bool objDynamicast(std::wstring_view &dest) const noexcept {
       return false;
@@ -66,6 +66,13 @@ namespace zlt::mylisp {
       return 0;
     }
   };
+
+  template<std::derived_from<Object> T, class ...Args>
+  static inline T *neobj(Args &&...args) {
+    T *t = new T(std::forward<Args>(args)...);
+    gc::put(gc::blacks, t);
+    return t;
+  }
 
   // comparisons begin
   #define compBetween(T) \
