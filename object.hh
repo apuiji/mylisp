@@ -8,15 +8,7 @@
 #include"value.hh"
 
 namespace zlt::mylisp {
-  struct Object {
-    enum {
-      WHITE_COLOR,
-      GRAY_COLOR,
-      BLACK_COLOR
-    };
-    Object *prev;
-    Object *next;
-    int color = BLACK_COLOR;
+  struct Object: gc::Head {
     // cast operations begin
     virtual bool objDynamicast(std::wstring_view &dest) const noexcept {
       return false;

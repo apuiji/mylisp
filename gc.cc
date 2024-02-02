@@ -57,7 +57,7 @@ namespace zlt::mylisp::gc {
       return 0;
     }
     Object *next = o->next;
-    o->color = Object::WHITE_COLOR;
+    o->color = WHITE_COLOR;
     return whiteBlacks(next);
   }
 
@@ -85,9 +85,9 @@ namespace zlt::mylisp::gc {
   static int take(Object *&set, Object *o) noexcept;
 
   int grayObj(Object *o) noexcept {
-    if (o->color == Object::WHITE_COLOR) {
+    if (o->color == WHITE_COLOR) {
       take(whites, o);
-      o->color = Object::GRAY_COLOR;
+      o->color = GRAY_COLOR;
       put(grays, o);
     }
     return 0;
@@ -129,7 +129,7 @@ namespace zlt::mylisp::gc {
       return 0;
     }
     Object *next = o->next;
-    o->color = Object::BLACK_COLOR;
+    o->color = BLACK_COLOR;
     put(blacks, o);
     o->graySubjs();
     return nextGrays(next);
@@ -143,36 +143,4 @@ namespace zlt::mylisp::gc {
     delete o;
     return cleanWhites(next);
   }
-
-  // insert write barrier begin
-  int iwb(Object *o, Object *p) noexcept {
-    if (o->color == Object::BLACK_COLOR) {
-      grayObj(p);
-    }
-    return 0;
-  }
-
-  int iwb(Object *o, const Value &v) noexcept {
-    if (o->color == Object::BLACK_COLOR) {
-      grayValue(v);
-    }
-    return 0;
-  }
-  // insert write barrier end
-
-  // delete write barrier begin
-  int dwb(Object *o, Object *p) noexcept {
-    if (o->color != Object::BLACK_COLOR) {
-      grayObj(p);
-    }
-    return 0;
-  }
-
-  int dwb(Object *o, const Value &v) noexcept {
-    if (o->color != Object::BLACK_COLOR) {
-      grayValue(v);
-    }
-    return 0;
-  }
-  // delete write barrier end
 }

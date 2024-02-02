@@ -18,6 +18,7 @@ HHS = \
 	direction \
 	eval \
 	gc \
+	gc_wb \
 	io \
 	object \
 	regexs \

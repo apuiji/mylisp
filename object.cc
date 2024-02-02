@@ -1,7 +1,6 @@
 #include<algorithm>
 #include<cmath>
-#include"gc.hh"
-#include"object.hh"
+#include"gc_wb.hh"
 
 using namespace std;
 
