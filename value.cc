@@ -1,6 +1,5 @@
 #include"gc.hh"
-#include"object.hh"
-#include"value.hh"
+#include"strings.hh"
 
 using namespace std;
 

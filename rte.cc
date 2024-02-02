@@ -29,7 +29,6 @@ namespace zlt::mylisp::rte {
   static Value natfn_import(const Value *it, const Value *end);
 
   int init() {
-    #define globalDefn(name) globalDefs[L###name] = natfn_##name
     // strings begin
     globalDefs[constring<'s', 't', 'r', 'c', 'a', 't'>] = natfn_strcat;
     globalDefs[constring<'s', 't', 'r', 'j', 'o', 'i', 'n'>] = natfn_strjoin;
