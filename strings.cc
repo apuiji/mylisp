@@ -10,6 +10,40 @@
 using namespace std;
 
 namespace zlt::mylisp {
+  Value natfn_charcode(const Value *it, const Value *end) {
+    wstring_view s;
+    if (!dynamicast(s, it, end)) [[unlikely]] {
+      return Null();
+    }
+    int i;
+    if (dynamicast(i, it, end)) {
+      if (!(i >= 0 && i < s.size())) {
+        return Null();
+      }
+    } else {
+      i = 0;
+    }
+    return s[i];
+  }
+
+  static int fromcharcode1(wstringstream &dest, const Value *it, const Value *end);
+
+  Value natfn_fromcharcode(const Value *it, const Value *end) {
+    if (it == end) [[unlikely]] {
+      return constring<>;
+    }
+    wstringstream ss;
+    fromcharcode1(ss, it, end);
+    return ss.str();
+  }
+
+  int fromcharcode1(wstringstream &dest, const Value *it, const Value *end) {
+    if (int c; dynamicast(c, *it) && c > 0) {
+      dest.put(c);
+    }
+    return it + 1 != end ? fromcharcode1(dest, it + 1, end) : 0;
+  }
+
   static int strcat1(wstringstream &dest, const Value *it, const Value *end);
 
   Value natfn_strcat(const Value *it, const Value *end) {

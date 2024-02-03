@@ -83,6 +83,8 @@ namespace zlt::mylisp {
     }
   }
 
+  NativeFunction natfn_charcode;
+  NativeFunction natfn_fromcharcode;
   NativeFunction natfn_strcat;
   NativeFunction natfn_strjoin;
   NativeFunction natfn_strslice;

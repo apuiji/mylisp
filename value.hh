@@ -34,7 +34,10 @@ namespace zlt::mylisp {
     Value(bool b) noexcept {
       operator =(b);
     }
-    Value(std::wstring &&s): Value((std::wstring_view) s) {}
+    Value(const std::wstring &s): Value((std::wstring_view) s) {}
+    Value(std::wstring &&s) {
+      operator =(std::move(s));
+    }
     Value(std::wstring_view sv) {
       operator =(sv);
     }
@@ -69,9 +72,10 @@ namespace zlt::mylisp {
       }
       return *this;
     }
-    Value &operator =(std::wstring &&s) {
+    Value &operator =(const std::wstring &s) {
       return operator =((std::wstring_view) s);
     }
+    Value &operator =(std::wstring &&s);
     Value &operator =(std::wstring_view sv);
     Value &operator =(std::derived_from<Object> auto *o) noexcept {
       variant::operator =(static_cast<Object *>(o));

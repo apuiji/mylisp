@@ -20,6 +20,20 @@ namespace zlt::mylisp {
     }
   }
 
+  Value &Value::operator =(wstring &&s) {
+    switch (s.size()) {
+      case 0: {
+        return operator =(constring<>);
+      }
+      case 1: {
+        return operator =(s[0]);
+      }
+      default: {
+        return operator =(neobj<StringObj>(std::move(s)));
+      }
+    }
+  }
+
   Value &Value::operator =(wstring_view sv) {
     switch (sv.size()) {
       case 0: {

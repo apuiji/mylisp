@@ -30,6 +30,8 @@ namespace zlt::mylisp::rte {
 
   int init() {
     // strings begin
+    globalDefs[constring<'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e'>] = natfn_charcode;
+    globalDefs[constring<'f', 'r', 'o', 'm', 'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e'>] = natfn_fromcharcode;
     globalDefs[constring<'s', 't', 'r', 'c', 'a', 't'>] = natfn_strcat;
     globalDefs[constring<'s', 't', 'r', 'j', 'o', 'i', 'n'>] = natfn_strjoin;
     globalDefs[constring<'s', 't', 'r', 's', 'l', 'i', 'c', 'e'>] = natfn_strslice;
