@@ -34,6 +34,7 @@ namespace zlt::mylisp {
   int output(std::wostream &dest, const Value *it, const Value *end);
 
   // native functions begin
+  Value natfn_getc(const Value *it, const Value *end);
   Value natfn_output(const Value *it, const Value *end);
   Value natfn_write(const Value *it, const Value *end);
   // native functions end

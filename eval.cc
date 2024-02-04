@@ -328,9 +328,9 @@ namespace zlt::mylisp {
       itCoroutine->localDefsk.push_back({});
       return eval(fo->body.data(), fo->body.data() + fo->body.size());
     }
-    itCoroutine->value = false;
+    itCoroutine->value = Null();
     top = callee;
-    return 0;
+    return eval(next, end);
   }
 
   using ItFrame = list<Frame>::reverse_iterator;
@@ -475,7 +475,7 @@ namespace zlt::mylisp {
     if (arg < itCoroutine->valuekTop) {
       itCoroutine->value = *arg;
     } else {
-      itCoroutine->value = false;
+      itCoroutine->value = Null();
     }
     return eval(it + sizeof(size_t), end);
   }
@@ -621,7 +621,7 @@ namespace zlt::mylisp {
   }
 
   int evalSET_NULL(const char *it, const char *end) {
-    itCoroutine->value = false;
+    itCoroutine->value = Null();
     return eval(it, end);
   }
 

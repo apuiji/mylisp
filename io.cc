@@ -3,6 +3,15 @@
 using namespace std;
 
 namespace zlt::mylisp {
+  Value natfn_getc(const Value *it, const Value *end) {
+    InputObj *io;
+    if (!dynamicast(io, it, end)) [[unlikely]] {
+      return Null();
+    }
+    wchar_t c = io->istream.get();
+    return c;
+  }
+
   template<class To, class From>
   static inline bool output1(basic_ostream<To> &dest, const Value *it, const Value *end) {
     basic_string_view<From> src;

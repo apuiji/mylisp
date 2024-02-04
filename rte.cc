@@ -31,6 +31,7 @@ namespace zlt::mylisp::rte {
   int init() {
     // strings begin
     globalDefs[constring<'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e'>] = natfn_charcode;
+    globalDefs[constring<'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e', 's'>] = natfn_charcodes;
     globalDefs[constring<'f', 'r', 'o', 'm', 'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e'>] = natfn_fromcharcode;
     globalDefs[constring<'s', 't', 'r', 'c', 'a', 't'>] = natfn_strcat;
     globalDefs[constring<'s', 't', 'r', 'j', 'o', 'i', 'n'>] = natfn_strjoin;
@@ -58,8 +59,9 @@ namespace zlt::mylisp::rte {
     globalDefs[constring<'s', 't', 'd', 'i', 'n'>] = neobj<InputObj>(cin);
     globalDefs[constring<'s', 't', 'd', 'o', 'u', 't'>] = neobj<OutputObj>(cout);
     globalDefs[constring<'s', 't', 'd', 'e', 'r', 'r'>] = neobj<OutputObj>(cerr);
-    globalDefs[constring<'w', 'r', 'i', 't', 'e'>] = natfn_write;
+    globalDefs[constring<'g', 'e', 't', 'c'>] = natfn_getc;
     globalDefs[constring<'o', 'u', 't', 'p', 'u', 't'>] = natfn_output;
+    globalDefs[constring<'w', 'r', 'i', 't', 'e'>] = natfn_write;
     // io end
     globalDefs[constring<'i', 'm', 'p', 'o', 'r', 't'>] = natfn_import;
     return 0;
