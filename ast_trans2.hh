@@ -12,7 +12,7 @@ namespace zlt::mylisp::ast {
     Node(pos), body(std::move(body)), inputClosure(std::move(inputClosure)) {}
   };
 
-  struct GetPointerOper final: Operation<1> {
+  struct GetIndirectOper final: Operation<1> {
     using Operation<1>::Operation;
   };
 
@@ -22,11 +22,11 @@ namespace zlt::mylisp::ast {
     InputClosure(const std::wstring *name, const Reference &ref) noexcept: name(name), ref(ref) {}
   };
 
-  struct MakePointer final: Node {
+  struct MakeIndirect final: Node {
     using Node::Node;
   };
 
-  struct SetPointerOper final: Operation<2> {
+  struct SetIndirectOper final: Operation<2> {
     using Operation<2>::Operation;
   };
 }

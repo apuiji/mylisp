@@ -31,6 +31,7 @@ namespace zlt::mylisp::rte {
   int init() {
     // strings begin
     globalDefs[constring<'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e'>] = natfn_charcode;
+    globalDefs[constring<'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e', 's'>] = natfn_charcodes;
     globalDefs[constring<'f', 'r', 'o', 'm', 'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e'>] = natfn_fromcharcode;
     globalDefs[constring<'s', 't', 'r', 'c', 'a', 't'>] = natfn_strcat;
     globalDefs[constring<'s', 't', 'r', 'j', 'o', 'i', 'n'>] = natfn_strjoin;
@@ -45,11 +46,22 @@ namespace zlt::mylisp::rte {
     globalDefs[constring<'r', 'e', 'g', 'c', 'o', 'm', 'p'>] = natfn_regcomp;
     globalDefs[constring<'r', 'e', 'g', 'e', 'x', 'e', 'c'>] = natfn_regexec;
     // regex end
+    // iconvs begin
+    defaultIconv<char, wchar_t> = iconv_open("UTF-8", "WCHAR_T");
+    defaultIconv<wchar_t, char> = iconv_open("WCHAR_T", "UTF-8");
+    globalDefs[constring<'i', 'c', 'o', 'n', 'v'>] = natfn_iconv;
+    globalDefs[constring<'i', 'c', 'o', 'n', 'v', '_', 'c', 'l', 'o', 's', 'e'>] = natfn_iconv_close;
+    globalDefs[constring<'i', 'c', 'o', 'n', 'v', '_', 'o', 'p', 'e', 'n'>] = natfn_iconv_open;
+    globalDefs[constring<'s', 't', 'r', 'd', 'e', 'c'>] = natfn_strdec;
+    globalDefs[constring<'s', 't', 'r', 'e', 'n', 'c'>] = natfn_strenc;
+    // iconvs end
     // io begin
-    globalDefs[constring<'s', 't', 'd', 'o', 'u', 't'>] = neobj<WriterObj>(wcout);
-    globalDefs[constring<'s', 't', 'd', 'e', 'r', 'r'>] = neobj<WriterObj>(wcerr);
-    globalDefs[constring<'w', 'r', 'i', 't', 'e'>] = natfn_write;
+    globalDefs[constring<'s', 't', 'd', 'i', 'n'>] = neobj<InputObj>(cin);
+    globalDefs[constring<'s', 't', 'd', 'o', 'u', 't'>] = neobj<OutputObj>(cout);
+    globalDefs[constring<'s', 't', 'd', 'e', 'r', 'r'>] = neobj<OutputObj>(cerr);
+    globalDefs[constring<'g', 'e', 't', 'c'>] = natfn_getc;
     globalDefs[constring<'o', 'u', 't', 'p', 'u', 't'>] = natfn_output;
+    globalDefs[constring<'w', 'r', 'i', 't', 'e'>] = natfn_write;
     // io end
     globalDefs[constring<'i', 'm', 'p', 'o', 'r', 't'>] = natfn_import;
     return 0;
@@ -106,11 +118,12 @@ namespace zlt::mylisp::rte {
     }
     bool no = true;
     auto g = makeGuard([dl] () { dl::close(dl); }, no);
-    auto exp0rt = dl::funct<Value>(dl, "mylispExport");
+    auto exp0rt = dl::funct<int, Value &>(dl, "mylispExport");
     if (!exp0rt) {
       return Null();
     }
-    auto mod = exp0rt();
+    Value mod;
+    exp0rt(mod);
     mods[std::move(path)] = mod;
     no = false;
     return mod;

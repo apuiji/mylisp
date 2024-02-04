@@ -140,16 +140,8 @@ namespace zlt::mylisp {
     int graySubjs() noexcept override;
   };
 
-  struct PointerObj final: Object {
+  struct ValueObj final: Object {
     Value value;
     int graySubjs() noexcept override;
   };
-
-  static inline Value &operator *(PointerObj &p) noexcept {
-    return p.value;
-  }
-
-  static inline const Value &operator *(const PointerObj &p) noexcept {
-    return p.value;
-  }
 }

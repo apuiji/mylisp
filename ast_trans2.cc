@@ -3,26 +3,26 @@
 using namespace std;
 
 namespace zlt::mylisp::ast {
-  using PtrDefs = set<const wstring *>;
+  using Indefs = set<const wstring *>;
 
-  static int trans(const PtrDefs &ptrDefs, UNode &src);
+  static int trans(const Indefs &indefs, UNode &src);
 
   int trans2(UNode &src) {
-    return trans(PtrDefs(), src);
+    return trans(Indefs(), src);
   }
 
-  static int trans1(const PtrDefs &ptrDefs, UNode &src);
+  static int trans1(const Indefs &indefs, UNode &src);
 
-  int trans(const PtrDefs &ptrDefs, UNode &src) {
+  int trans(const Indefs &indefs, UNode &src) {
     if (!src) [[unlikely]] {
       return 0;
     }
-    trans1(ptrDefs, src);
-    return trans(ptrDefs, src->next);
+    trans1(indefs, src);
+    return trans(indefs, src->next);
   }
 
   #define declTrans(T) \
-  static int trans(UNode &dest, const PtrDefs &ptrDefs, T &src)
+  static int trans(UNode &dest, const Indefs &indefs, T &src)
 
   declTrans(Call);
   declTrans(Defer);
@@ -41,10 +41,10 @@ namespace zlt::mylisp::ast {
 
   #undef declTrans
 
-  int trans1(const PtrDefs &ptrDefs, UNode &src) {
+  int trans1(const Indefs &indefs, UNode &src) {
     #define ifType(T) \
     if (auto a = dynamic_cast<T *>(src.get()); a) { \
-      return trans(src, ptrDefs, *a); \
+      return trans(src, indefs, *a); \
     }
     ifType(Call);
     ifType(Defer);
@@ -66,78 +66,78 @@ namespace zlt::mylisp::ast {
   }
 
   template<class It>
-  static int trans(const PtrDefs &ptrDefs, It it, It end) {
+  static int trans(const Indefs &indefs, It it, It end) {
     if (it == end) [[unlikely]] {
       return 0;
     }
-    trans(ptrDefs, *it);
-    return trans(ptrDefs, it + 1, end);
+    trans(indefs, *it);
+    return trans(indefs, it + 1, end);
   }
 
-  int trans(UNode &dest, const PtrDefs &ptrDefs, Call &src) {
-    trans(ptrDefs, src.callee);
-    trans(ptrDefs, src.args.begin(), src.args.end());
+  int trans(UNode &dest, const Indefs &indefs, Call &src) {
+    trans(indefs, src.callee);
+    trans(indefs, src.args.begin(), src.args.end());
     return 0;
   }
 
-  int trans(UNode &dest, const PtrDefs &ptrDefs, Defer &src) {
-    trans(ptrDefs, src.item);
+  int trans(UNode &dest, const Indefs &indefs, Defer &src) {
+    trans(indefs, src.item);
     return 0;
   }
 
-  int trans(UNode &dest, const PtrDefs &ptrDefs, Forward &src) {
-    trans(ptrDefs, src.callee);
-    trans(ptrDefs, src.args.begin(), src.args.end());
+  int trans(UNode &dest, const Indefs &indefs, Forward &src) {
+    trans(indefs, src.callee);
+    trans(indefs, src.args.begin(), src.args.end());
     return 0;
   }
 
-  int trans(UNode &dest, const PtrDefs &ptrDefs, If &src) {
-    trans(ptrDefs, src.cond);
-    trans(ptrDefs, src.then);
-    trans(ptrDefs, src.elze);
+  int trans(UNode &dest, const Indefs &indefs, If &src) {
+    trans(indefs, src.cond);
+    trans(indefs, src.then);
+    trans(indefs, src.elze);
     return 0;
   }
 
-  int trans(UNode &dest, const PtrDefs &ptrDefs, Return &src) {
-    trans(ptrDefs, src.value);
+  int trans(UNode &dest, const Indefs &indefs, Return &src) {
+    trans(indefs, src.value);
     return 0;
   }
 
-  int trans(UNode &dest, const PtrDefs &ptrDefs, Throw &src) {
-    trans(ptrDefs, src.value);
+  int trans(UNode &dest, const Indefs &indefs, Throw &src) {
+    trans(indefs, src.value);
     return 0;
   }
 
-  int trans(UNode &dest, const PtrDefs &ptrDefs, Try &src) {
-    trans(ptrDefs, src.body);
+  int trans(UNode &dest, const Indefs &indefs, Try &src) {
+    trans(indefs, src.body);
     return 0;
   }
 
-  int trans(UNode &dest, const PtrDefs &ptrDefs, Yield &src) {
-    trans(ptrDefs, src.then);
+  int trans(UNode &dest, const Indefs &indefs, Yield &src) {
+    trans(indefs, src.then);
     return 0;
   }
 
-  int trans(UNode &dest, const PtrDefs &ptrDefs, AssignOper &src) {
-    trans(ptrDefs, src.items[0]);
-    trans(ptrDefs, src.items[1]);
-    if (auto a = dynamic_cast<GetPointerOper *>(src.items[0].get()); a) {
+  int trans(UNode &dest, const Indefs &indefs, AssignOper &src) {
+    trans(indefs, src.items[0]);
+    trans(indefs, src.items[1]);
+    if (auto a = dynamic_cast<GetIndirectOper *>(src.items[0].get()); a) {
       array<UNode, 2> items;
       items[0] = std::move(a->item);
       items[1] = std::move(src.items[1]);
-      replace(dest, UNode(new SetPointerOper(src.pos, std::move(items))));
+      replace(dest, UNode(new SetIndirectOper(src.pos, std::move(items))));
     }
     return 0;
   }
 
-  int trans(UNode &dest, const PtrDefs &ptrDefs, Operation<1> &src) {
-    trans(ptrDefs, src.item);
+  int trans(UNode &dest, const Indefs &indefs, Operation<1> &src) {
+    trans(indefs, src.item);
     return 0;
   }
 
   template<int N>
-  int trans(UNode &dest, const PtrDefs &ptrDefs, Operation<N> &src) {
-    trans(ptrDefs, src.items.begin(), src.items.end());
+  int trans(UNode &dest, const Indefs &indefs, Operation<N> &src) {
+    trans(indefs, src.items.begin(), src.items.end());
     return 0;
   }
 
@@ -147,14 +147,14 @@ namespace zlt::mylisp::ast {
 
   using ItPtrDef = set<const wstring *>::const_iterator;
 
-  static UNode &makePointer(UNode &dest, ItPtrDef it, ItPtrDef end);
+  static UNode &makeIndirect(UNode &dest, ItPtrDef it, ItPtrDef end);
 
-  int trans(UNode &dest, const PtrDefs &ptrDefs, Function1 &src) {
+  int trans(UNode &dest, const Indefs &indefs, Function1 &src) {
     UNode inputClosure;
     makeInputClosure(inputClosure, src.closureDefs.begin(), src.closureDefs.end());
     UNode body;
-    auto &next = makePointer(body, src.ptrDefs.begin(), src.ptrDefs.end());
-    trans(src.ptrDefs, src.body);
+    auto &next = makeIndirect(body, src.indefs.begin(), src.indefs.end());
+    trans(src.indefs, src.body);
     next = std::move(src.body);
     UNode a(new Function2(src.pos, std::move(body), std::move(inputClosure)));
     replace(dest, a);
@@ -169,7 +169,7 @@ namespace zlt::mylisp::ast {
     return makeInputClosure(dest->next, ++it, end);
   }
 
-  UNode &makePointer(UNode &dest, ItPtrDef it, ItPtrDef end) {
+  UNode &makeIndirect(UNode &dest, ItPtrDef it, ItPtrDef end) {
     if (it == end) [[unlikely]] {
       return dest;
     }
@@ -177,27 +177,27 @@ namespace zlt::mylisp::ast {
       array<UNode, 2> items;
       Reference ref(Reference::LOCAL_SCOPE, *it);
       items[0].reset(new Reference1(nullptr, ref));
-      items[1].reset(new MakePointer);
+      items[1].reset(new MakeIndirect);
       dest.reset(new AssignOper(nullptr, std::move(items)));
     }
-    return makePointer(dest->next, ++it, end);
+    return makeIndirect(dest->next, ++it, end);
   }
 
-  static bool isPointer(const PtrDefs &ptrDefs, const Reference &src) noexcept;
+  static bool isIndirect(const Indefs &indefs, const Reference &src) noexcept;
 
-  int trans(UNode &dest, const PtrDefs &ptrDefs, Reference1 &src) {
-    if (isPointer(ptrDefs, src)) {
+  int trans(UNode &dest, const Indefs &indefs, Reference1 &src) {
+    if (isIndirect(indefs, src)) {
       UNode a(new Reference1(src.pos, src));
-      a.reset(new GetPointerOper(src.pos, std::move(a)));
+      a.reset(new GetIndirectOper(src.pos, std::move(a)));
       replace(dest, a);
     }
     return 0;
   }
 
-  bool isPointer(const PtrDefs &ptrDefs, const Reference &src) noexcept {
+  bool isIndirect(const Indefs &indefs, const Reference &src) noexcept {
     switch (src.scope) {
       case Reference::LOCAL_SCOPE: {
-        return ptrDefs.find(src.name) != ptrDefs.end();
+        return indefs.find(src.name) != indefs.end();
       }
       case Reference::CLOSURE_SCOPE: {
         return true;

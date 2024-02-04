@@ -19,6 +19,7 @@ HHS = \
 	eval \
 	gc \
 	gc_wb \
+	iconvs \
 	io \
 	lists \
 	maps \
@@ -41,6 +42,7 @@ OBJS = \
 	coroutine \
 	eval \
 	gc \
+	iconvs \
 	io \
 	lists \
 	maps \

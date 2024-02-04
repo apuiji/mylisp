@@ -31,9 +31,9 @@ namespace zlt::mylisp {
   declEval(GET_ARG);
   declEval(GET_CLOSURE);
   declEval(GET_GLOBAL);
+  declEval(GET_INDIRECT);
   declEval(GET_LOCAL);
   declEval(GET_MEMB);
-  declEval(GET_PTR);
   declEval(GT);
   declEval(GTEQ);
   declEval(INPUT_CLOSURE);
@@ -43,7 +43,7 @@ namespace zlt::mylisp {
   declEval(LT);
   declEval(LTEQ);
   declEval(MAKE_FN);
-  declEval(MAKE_PTR);
+  declEval(MAKE_INDIRECT);
   declEval(MOD);
   declEval(MUL);
   declEval(NOT);
@@ -61,7 +61,7 @@ namespace zlt::mylisp {
   declEval(SET_MEMB);
   declEval(SET_NULL);
   declEval(SET_NUM);
-  declEval(SET_PTR);
+  declEval(SET_INDIRECT);
   declEval(SET_STR);
   declEval(SUB);
   declEval(THROW);
@@ -101,9 +101,9 @@ namespace zlt::mylisp {
       ifDir(GET_ARG);
       ifDir(GET_CLOSURE);
       ifDir(GET_GLOBAL);
+      ifDir(GET_INDIRECT);
       ifDir(GET_LOCAL);
       ifDir(GET_MEMB);
-      ifDir(GET_PTR);
       ifDir(GT);
       ifDir(GTEQ);
       ifDir(INPUT_CLOSURE);
@@ -113,7 +113,7 @@ namespace zlt::mylisp {
       ifDir(LT);
       ifDir(LTEQ);
       ifDir(MAKE_FN);
-      ifDir(MAKE_PTR);
+      ifDir(MAKE_INDIRECT);
       ifDir(MOD);
       ifDir(MUL);
       ifDir(NOT);
@@ -131,7 +131,7 @@ namespace zlt::mylisp {
       ifDir(SET_MEMB);
       ifDir(SET_NULL);
       ifDir(SET_NUM);
-      ifDir(SET_PTR);
+      ifDir(SET_INDIRECT);
       ifDir(SET_STR);
       ifDir(SUB);
       ifDir(THROW);
@@ -328,9 +328,9 @@ namespace zlt::mylisp {
       itCoroutine->localDefsk.push_back({});
       return eval(fo->body.data(), fo->body.data() + fo->body.size());
     }
-    itCoroutine->value = false;
+    itCoroutine->value = Null();
     top = callee;
-    return 0;
+    return eval(next, end);
   }
 
   using ItFrame = list<Frame>::reverse_iterator;
@@ -475,7 +475,7 @@ namespace zlt::mylisp {
     if (arg < itCoroutine->valuekTop) {
       itCoroutine->value = *arg;
     } else {
-      itCoroutine->value = false;
+      itCoroutine->value = Null();
     }
     return eval(it + sizeof(size_t), end);
   }
@@ -519,10 +519,10 @@ namespace zlt::mylisp {
     return getMemb(dest, it + 1, end);
   }
 
-  int evalGET_PTR(const char *it, const char *end) {
-    PointerObj *po;
-    staticast(po, itCoroutine->value);
-    itCoroutine->value = **po;
+  int evalGET_INDIRECT(const char *it, const char *end) {
+    ValueObj *vo;
+    staticast(vo, itCoroutine->value);
+    itCoroutine->value = vo->value;
     return eval(it, end);
   }
 
@@ -554,8 +554,8 @@ namespace zlt::mylisp {
     return eval(it + sizeof(void *), end);
   }
 
-  int evalMAKE_PTR(const char *it, const char *end) {
-    itCoroutine->value = neobj<PointerObj>();
+  int evalMAKE_INDIRECT(const char *it, const char *end) {
+    itCoroutine->value = neobj<ValueObj>();
     return eval(it, end);
   }
 
@@ -621,7 +621,7 @@ namespace zlt::mylisp {
   }
 
   int evalSET_NULL(const char *it, const char *end) {
-    itCoroutine->value = false;
+    itCoroutine->value = Null();
     return eval(it, end);
   }
 
@@ -631,10 +631,10 @@ namespace zlt::mylisp {
     return eval(it + sizeof(double), end);
   }
 
-  int evalSET_PTR(const char *it, const char *end) {
-    PointerObj *po;
-    staticast(po, itCoroutine->valuekTop[-1]);
-    **po = itCoroutine->value;
+  int evalSET_INDIRECT(const char *it, const char *end) {
+    ValueObj *vo;
+    staticast(vo, itCoroutine->valuekTop[-1]);
+    vo->value = itCoroutine->value;
     --itCoroutine->valuekTop;
     return eval(it, end);
   }

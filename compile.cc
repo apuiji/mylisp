@@ -80,10 +80,10 @@ namespace zlt::mylisp {
   // ast_trans1.hh definitions end
   // ast_trans2.hh definitions begin
   declCompile(Function2);
-  declCompile(GetPointerOper);
+  declCompile(GetIndirectOper);
   declCompile(InputClosure);
-  declCompile(MakePointer);
-  declCompile(SetPointerOper);
+  declCompile(MakeIndirect);
+  declCompile(SetIndirectOper);
   // ast_trans2.hh definitions end
 
   #undef declCompile
@@ -152,10 +152,10 @@ namespace zlt::mylisp {
     // ast_trans1.hh definitions end
     // ast_trans2.hh definitions begin
     ifType(Function2);
-    ifType(GetPointerOper);
+    ifType(GetIndirectOper);
     ifType(InputClosure);
-    ifType(MakePointer);
-    ifType(SetPointerOper);
+    ifType(MakeIndirect);
+    ifType(SetIndirectOper);
     // ast_trans2.hh definitions end
     #undef ifType
     // never
@@ -423,20 +423,20 @@ namespace zlt::mylisp {
     return dest;
   }
 
-  Compile &operator <<(Compile &dest, const GetPointerOper &src) {
-    return dest << src.item << direction::GET_PTR;
+  Compile &operator <<(Compile &dest, const GetIndirectOper &src) {
+    return dest << src.item << direction::GET_INDIRECT;
   }
 
   Compile &operator <<(Compile &dest, const InputClosure &src) {
     return dest << src.ref << direction::INPUT_CLOSURE << src.name;
   }
 
-  Compile &operator <<(Compile &dest, const MakePointer &src) {
-    return dest << direction::MAKE_PTR;
+  Compile &operator <<(Compile &dest, const MakeIndirect &src) {
+    return dest << direction::MAKE_INDIRECT;
   }
 
-  Compile &operator <<(Compile &dest, const SetPointerOper &src) {
+  Compile &operator <<(Compile &dest, const SetIndirectOper &src) {
     compile(dest, src.items.begin(), src.items.end());
-    return dest << direction::SET_PTR;
+    return dest << direction::SET_INDIRECT;
   }
 }
