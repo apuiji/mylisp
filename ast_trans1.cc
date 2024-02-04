@@ -16,7 +16,7 @@ namespace zlt::mylisp::ast {
   struct FunctionScope: Scope {
     Scope &parent;
     const set<const wstring *> &defs;
-    set<const wstring *> ptrDefs;
+    set<const wstring *> indefs;
     map<const wstring *, Reference> closureDefs;
     FunctionScope(Scope &parent, const set<const wstring *> &defs) noexcept:
     Scope(FUNCTION_SCOPE_CLASS), parent(parent), defs(defs) {}
@@ -41,7 +41,7 @@ namespace zlt::mylisp::ast {
   Reference findDef(FunctionScope &scope, const wstring *name, bool cross) {
     if (scope.defs.find(name) != scope.defs.end()) {
       if (cross) {
-        scope.ptrDefs.insert(name);
+        scope.indefs.insert(name);
       }
       return Reference(Reference::LOCAL_SCOPE, name);
     }
@@ -151,7 +151,7 @@ namespace zlt::mylisp::ast {
     auto &next = transParams(body, 0, src.params.begin(), src.params.end());
     trans(fs, src.body);
     next = std::move(src.body);
-    UNode a(new Function1(src.pos, std::move(fs.ptrDefs), std::move(fs.closureDefs), std::move(body)));
+    UNode a(new Function1(src.pos, std::move(fs.indefs), std::move(fs.closureDefs), std::move(body)));
     replace(dest, a);
     return 0;
   }

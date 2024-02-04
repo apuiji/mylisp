@@ -28,15 +28,16 @@ namespace zlt::mylisp::ast {
   };
 
   struct Function1 final: Node {
-    std::set<const std::wstring *> ptrDefs;
+    /// indirect definitions
+    std::set<const std::wstring *> indefs;
     std::map<const std::wstring *, Reference> closureDefs;
     UNode body;
     Function1(
       const Pos *pos,
-      std::set<const std::wstring *> &&ptrDefs,
+      std::set<const std::wstring *> &&indefs,
       std::map<const std::wstring *, Reference> &&closureDefs,
       UNode &&body
-    ) noexcept: Node(pos), ptrDefs(std::move(ptrDefs)), closureDefs(std::move(closureDefs)), body(std::move(body)) {}
+    ) noexcept: Node(pos), indefs(std::move(indefs)), closureDefs(std::move(closureDefs)), body(std::move(body)) {}
   };
 
   struct Reference1 final: Node, Reference {

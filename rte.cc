@@ -55,6 +55,7 @@ namespace zlt::mylisp::rte {
     globalDefs[constring<'s', 't', 'r', 'e', 'n', 'c'>] = natfn_strenc;
     // iconvs end
     // io begin
+    globalDefs[constring<'s', 't', 'd', 'i', 'n'>] = neobj<InputObj>(cin);
     globalDefs[constring<'s', 't', 'd', 'o', 'u', 't'>] = neobj<OutputObj>(cout);
     globalDefs[constring<'s', 't', 'd', 'e', 'r', 'r'>] = neobj<OutputObj>(cerr);
     globalDefs[constring<'w', 'r', 'i', 't', 'e'>] = natfn_write;

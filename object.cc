@@ -12,7 +12,7 @@ namespace zlt::mylisp {
     return 0;
   }
 
-  int PointerObj::graySubjs() noexcept {
+  int ValueObj::graySubjs() noexcept {
     gc::grayValue(value);
     return 0;
   }
