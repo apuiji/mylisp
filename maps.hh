@@ -11,6 +11,9 @@ namespace zlt::mylisp {
         dynamicast(y, b);
         return x.compare(y);
       }
+      int operator ()(const std::wstring *x, const Value &b) const noexcept {
+        return operator ()((std::wstring_view) *x, b);
+      }
     };
     using StrPool = mymap::Map<Value, Value, StrPoolComp>;
     std::pair<bool, Value> nullPool;
