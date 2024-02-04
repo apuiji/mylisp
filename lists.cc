@@ -1,3 +1,4 @@
+#include<algorithm>
 #include"gc_wb.hh"
 #include"lists.hh"
 
