@@ -118,11 +118,12 @@ namespace zlt::mylisp::rte {
     }
     bool no = true;
     auto g = makeGuard([dl] () { dl::close(dl); }, no);
-    auto exp0rt = dl::funct<Value>(dl, "mylispExport");
+    auto exp0rt = dl::funct<int, Value &>(dl, "mylispExport");
     if (!exp0rt) {
       return Null();
     }
-    auto mod = exp0rt();
+    Value mod;
+    exp0rt(mod);
     mods[std::move(path)] = mod;
     no = false;
     return mod;
