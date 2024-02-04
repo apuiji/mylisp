@@ -51,7 +51,7 @@ namespace zlt::mylisp {
   static int charsetNames(wstring_view &to, wstring_view &from, const Value *it, const Value *end) noexcept;
 
   static inline bool open1(iconv_t &dest, const char *to, const char *from) noexcept {
-    dest = iconv_open(from, to);
+    dest = iconv_open(to, from);
     return dest != (iconv_t) -1;
   }
 
@@ -111,10 +111,12 @@ namespace zlt::mylisp {
       return Null();
     }
     iconv_t ic;
-    if (IconvObj1<To, From> *a; dynamicast(a, it + 1, end)) {
+    if (it + 1 == end || !it[1]) {
+      ic = defaultIconv<To, From>;
+    } else if (IconvObj1<To, From> *a; dynamicast(a, it[1])) {
       ic = a->value;
     } else {
-      ic = defaultIconv<To, From>;
+      return Null();
     }
     basic_string<To> s;
     if (strconv(s, ic, src)) {
@@ -133,7 +135,9 @@ namespace zlt::mylisp {
   }
 
   static inline size_t strconv2(char *dest, size_t n, iconv_t ic, const char *src, size_t m) noexcept {
-    return iconv(ic, (char **) &src, &m, &dest, &n);
+    size_t n1 = n;
+    iconv(ic, (char **) &src, &m, &dest, &n1);
+    return n - n1;
   }
 
   template<class To>

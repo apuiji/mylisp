@@ -45,9 +45,18 @@ namespace zlt::mylisp::rte {
     globalDefs[constring<'r', 'e', 'g', 'c', 'o', 'm', 'p'>] = natfn_regcomp;
     globalDefs[constring<'r', 'e', 'g', 'e', 'x', 'e', 'c'>] = natfn_regexec;
     // regex end
+    // iconvs begin
+    defaultIconv<char, wchar_t> = iconv_open("UTF-8", "WCHAR_T");
+    defaultIconv<wchar_t, char> = iconv_open("WCHAR_T", "UTF-8");
+    globalDefs[constring<'i', 'c', 'o', 'n', 'v'>] = natfn_iconv;
+    globalDefs[constring<'i', 'c', 'o', 'n', 'v', '_', 'c', 'l', 'o', 's', 'e'>] = natfn_iconv_close;
+    globalDefs[constring<'i', 'c', 'o', 'n', 'v', '_', 'o', 'p', 'e', 'n'>] = natfn_iconv_open;
+    globalDefs[constring<'s', 't', 'r', 'd', 'e', 'c'>] = natfn_strdec;
+    globalDefs[constring<'s', 't', 'r', 'e', 'n', 'c'>] = natfn_strenc;
+    // iconvs end
     // io begin
-    globalDefs[constring<'s', 't', 'd', 'o', 'u', 't'>] = neobj<WriterObj>(wcout);
-    globalDefs[constring<'s', 't', 'd', 'e', 'r', 'r'>] = neobj<WriterObj>(wcerr);
+    globalDefs[constring<'s', 't', 'd', 'o', 'u', 't'>] = neobj<OutputObj>(cout);
+    globalDefs[constring<'s', 't', 'd', 'e', 'r', 'r'>] = neobj<OutputObj>(cerr);
     globalDefs[constring<'w', 'r', 'i', 't', 'e'>] = natfn_write;
     globalDefs[constring<'o', 'u', 't', 'p', 'u', 't'>] = natfn_output;
     // io end

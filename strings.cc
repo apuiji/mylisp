@@ -12,18 +12,30 @@ using namespace std;
 namespace zlt::mylisp {
   Value natfn_charcode(const Value *it, const Value *end) {
     wstring_view s;
+    if (!dynamicast(s, it, end) || !s.size()) [[unlikely]] {
+      return Null();
+    }
+    return (int) s[0];
+  }
+
+  Value natfn_charcodes(const Value *it, const Value *end) {
+    wstring_view s;
     if (!dynamicast(s, it, end)) [[unlikely]] {
       return Null();
     }
-    int i;
-    if (dynamicast(i, it, end)) {
-      if (!(i >= 0 && i < s.size())) {
-        return Null();
-      }
-    } else {
-      i = 0;
+    deque<Value> a(s.size());
+    copy(s.begin(), s.end(), a.begin());
+    return neobj<ListObj>(std::move(a));
+  }
+
+  Value natfn_chars(const Value *it, const Value *end) {
+    wstring_view s;
+    if (!dynamicast(s, it, end)) [[unlikely]] {
+      return Null();
     }
-    return s[i];
+    deque<Value> a(s.size());
+    transform(s.begin(), s.end(), a.begin(), [] (wchar_t c) { return (int) c; });
+    return neobj<ListObj>(std::move(a));
   }
 
   static int fromcharcode1(wstringstream &dest, const Value *it, const Value *end);
@@ -56,7 +68,10 @@ namespace zlt::mylisp {
   }
 
   int strcat1(wstringstream &dest, const Value *it, const Value *end) {
-    write(dest, *it);
+    wstring_view s;
+    if (dynamicast(s, *it)) {
+      dest << s;
+    }
     return it + 1 != end ? strcat1(dest, it + 1, end) : 0;
   }
 
@@ -79,7 +94,10 @@ namespace zlt::mylisp {
   }
 
   int strjoin1(wstringstream &dest, wstring_view sepa, ListObj::ConstIterator it, ListObj::ConstIterator end) {
-    write(dest, *it);
+    wstring_view s;
+    if (dynamicast(s, *it)) {
+      dest << s;
+    }
     if (it + 1 == end) {
       return 0;
     }
