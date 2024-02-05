@@ -7,9 +7,6 @@
 namespace zlt::mylisp {
   struct Object: gc::Head {
     // cast operations begin
-    virtual bool objDynamicast(std::wstring_view &dest) const noexcept {
-      return false;
-    }
     virtual bool objDynamicast(std::string_view &dest) const noexcept {
       return false;
     }
@@ -20,9 +17,6 @@ namespace zlt::mylisp {
       return o && this == *o;
     }
     virtual bool operator ==(std::string_view s) const noexcept {
-      return false;
-    }
-    virtual bool operator ==(std::wstring_view s) const noexcept {
       return false;
     }
     /// @param[out] dest comparison result
@@ -37,9 +31,6 @@ namespace zlt::mylisp {
       }
     }
     virtual bool compare(int &dest, std::string_view) const noexcept {
-      return false;
-    }
-    virtual bool compare(int &dest, std::wstring_view) const noexcept {
       return false;
     }
     // comparisons end
@@ -128,13 +119,12 @@ namespace zlt::mylisp {
 
   compBetween(const Value &);
   compBetween(std::string_view);
-  compBetween(std::wstring_view);
 
   #undef compBetween
   // comparisons end
 
   struct FunctionObj final: Object {
-    std::map<const std::wstring *, Value> closures;
+    std::map<const std::string *, Value> closures;
     const std::string &body;
     FunctionObj(const std::string &body) noexcept: body(body) {}
     int graySubjs() noexcept override;

@@ -12,21 +12,7 @@
 namespace zlt::mylisp::ast {
   using Pos = std::pair<const std::filesystem::path *, int>;
 
-  int pos2str(std::wstring &dest, const Pos &src);
-
-  template<class Ostr, class It>
-  requires requires (It it) {
-    { **it } -> std::same_as<const Pos &>;
-  }
-  int poss2str(Ostr &ostr, It it, It end) {
-    if (it == end) [[unlikely]] {
-      return 0;
-    }
-    std::wstring s;
-    pos2str(s, **it);
-    ostr << '\n' << s;
-    return poss2str(ostr, ++it, end);
-  }
+  int pos2str(std::string &dest, const Pos &pos);
 
   struct Node;
 
@@ -53,7 +39,7 @@ namespace zlt::mylisp::ast {
   UNode shift(UNode &src) noexcept;
 
   struct Macro {
-    using Params = std::vector<const std::wstring *>;
+    using Params = std::vector<const std::string *>;
     using ItParam = Params::const_iterator;
     Params params;
     UNode body;
@@ -62,20 +48,20 @@ namespace zlt::mylisp::ast {
   };
 
   struct Ast {
-    using Sources = std::map<const std::filesystem::path *, std::wstring>;
+    using Sources = std::map<const std::filesystem::path *, std::string>;
     using Loadeds = std::map<const std::filesystem::path *, UNode>;
     using ItSource = Sources::const_iterator;
     using ItLoaded = Loadeds::const_iterator;
     std::set<std::filesystem::path> files;
-    std::map<const std::filesystem::path *, std::wstring> sources;
+    std::map<const std::filesystem::path *, std::string> sources;
     Loadeds loadeds;
     std::set<Pos> positions;
-    std::map<const std::wstring *, Macro> macros;
+    std::map<const std::string *, Macro> macros;
     int operator ()(UNode &dest, const std::filesystem::path &src);
   };
 
   struct AstBad {
-    std::wstring what;
-    AstBad(std::wstring &&what) noexcept: what(std::move(what)) {}
+    std::string what;
+    AstBad(std::string &&what) noexcept: what(std::move(what)) {}
   };
 }

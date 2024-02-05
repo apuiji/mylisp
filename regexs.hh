@@ -5,8 +5,8 @@
 
 namespace zlt::mylisp {
   struct RegexObj: Object {
-    std::wregex regex;
-    RegexObj(std::wregex &&regex) noexcept: regex(std::move(regex)) {}
+    std::regex regex;
+    RegexObj(std::regex &&regex) noexcept: regex(std::move(regex)) {}
   };
 
   Value natfn_regcomp(const Value *it, const Value *end);

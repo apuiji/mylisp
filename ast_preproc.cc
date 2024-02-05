@@ -1,5 +1,5 @@
 #include<algorithm>
-#include<cwchar>
+#include<cstring>
 #include<sstream>
 #include"ast_load.hh"
 #include"ast_preproc.hh"
@@ -35,7 +35,7 @@ namespace zlt::mylisp::ast {
   static const Macro *findMacro(const Ast &ast, const UNode &src) noexcept;
 
   struct MacroExpand {
-    map<const wstring *, const UNode *> map;
+    map<const string *, const UNode *> map;
     UNode &operator ()(UNode &dest, const UNode &src);
   };
 
@@ -138,7 +138,7 @@ namespace zlt::mylisp::ast {
       if (!it->second) {
         return operator ()(dest, src->next);
       }
-      if (!wcsncmp(it->first->data(), L"...", 3)) {
+      if (!strncmp(it->first->data(), "...", 3)) {
         auto &next = clones(dest, *it->second);
         return operator ()(next, src->next);
       }
@@ -160,14 +160,14 @@ namespace zlt::mylisp::ast {
   UNode &ppd_def(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
     auto id = dynamic_cast<const IDAtom *>(src.get());
     if (!id) {
-      throw PreprocBad(L"required macro name", pos);
+      throw PreprocBad("required macro name", pos);
     }
     if (ast.macros.find(id->name) != ast.macros.end()) {
-      throw PreprocBad(L"macro already defined", pos);
+      throw PreprocBad("macro already defined", pos);
     }
     auto ls = dynamic_cast<const List *>(src->next.get());
     if (!ls) {
-      throw PreprocBad(L"required macro parameter list", pos);
+      throw PreprocBad("required macro parameter list", pos);
     }
     Macro::Params params;
     makeMacroParams(params, ls->first);
@@ -184,8 +184,8 @@ namespace zlt::mylisp::ast {
     }
     if (auto id = dynamic_cast<const IDAtom *>(src.get()); id) {
       dest.push_back(id->name);
-      if (!wcsncmp(id->name->data(), L"...", 3) && src->next) {
-        throw PreprocBad(L"rest parameter must be last", id->pos);
+      if (!strncmp(id->name->data(), "...", 3) && src->next) {
+        throw PreprocBad("rest parameter must be last", id->pos);
       }
       return makeMacroParams(dest, src->next);
     }
@@ -193,26 +193,26 @@ namespace zlt::mylisp::ast {
       dest.push_back(nullptr);
       return makeMacroParams(dest, src->next);
     }
-    throw PreprocBad(L"illegal macro parameter", src->pos);
+    throw PreprocBad("illegal macro parameter", src->pos);
   }
 
   UNode &ppd_file(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
-    auto &file = *rte::strings.insert(pos->first->wstring()).first;
+    auto &file = *rte::strings.insert(pos->first->string()).first;
     dest.reset(new StringAtom(pos, &file));
     return dest->next;
   }
 
-  static int idcat(wstringstream &dest, const UNode &src);
+  static int idcat(ostream &dest, const UNode &src);
 
   UNode &ppd_idcat(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
-    wstringstream ss;
+    stringstream ss;
     idcat(ss, src);
     auto &name = *rte::strings.insert(ss.str()).first;
     dest.reset(new IDAtom(pos, &name));
     return dest->next;
   }
 
-  int idcat(wstringstream &dest, const UNode &src) {
+  int idcat(ostream &dest, const UNode &src) {
     if (!src) [[unlikely]] {
       return 0;
     }
@@ -224,7 +224,7 @@ namespace zlt::mylisp::ast {
       dest << r->raw;
       return idcat(dest, src->next);
     }
-    throw PreprocBad(L"illegal identifier concat token", src->pos);
+    throw PreprocBad("illegal identifier concat token", src->pos);
   }
 
   static bool ifdef(const Ast &ast, const Pos *pos, const UNode &src);
@@ -240,7 +240,7 @@ namespace zlt::mylisp::ast {
   bool ifdef(const Ast &ast, const Pos *pos, const UNode &src) {
     auto id = dynamic_cast<const IDAtom *>(src.get());
     if (!id) {
-      throw PreprocBad(L"required macro name", pos);
+      throw PreprocBad("required macro name", pos);
     }
     return ast.macros.find(id->name) != ast.macros.end();
   }
@@ -257,13 +257,13 @@ namespace zlt::mylisp::ast {
   const UNode &include(Ast &ast, const Pos *pos, const UNode &src) {
     filesystem::path file;
     if (!getFile(file, src)) {
-      throw PreprocBad(L"required include path", pos);
+      throw PreprocBad("required include path", pos);
     }
     file = *pos->first / file;
     try {
       file = filesystem::canonical(file);
     } catch (filesystem::filesystem_error) {
-      throw PreprocBad(L"cannot open file: " + file.wstring());
+      throw PreprocBad("cannot open file: " + file.string());
     }
     auto it = find_if(ast.loadeds.begin(), ast.loadeds.end(), [&file] (auto &p) { return *p.first == file; });
     if (it != ast.loadeds.end()) {
@@ -275,7 +275,7 @@ namespace zlt::mylisp::ast {
     } catch (LoadBad bad) {
       throw PreprocBad(std::move(bad.what), pos);
     } catch (ParseBad bad) {
-      wstring postr;
+      string postr;
       pos2str(postr, bad.pos);
       throw PreprocBad(std::move(bad.what) + postr, pos);
     } catch (PreprocBad bad) {
@@ -286,7 +286,7 @@ namespace zlt::mylisp::ast {
 
   bool getFile(filesystem::path &dest, const UNode &src) {
     if (auto a = dynamic_cast<const CharAtom *>(src.get()); a) {
-      dest = filesystem::path(wstring(1, a->value));
+      dest = filesystem::path(string(1, a->value));
       return true;
     }
     if (auto a = dynamic_cast<const StringAtom *>(src.get()); a) {
@@ -301,17 +301,17 @@ namespace zlt::mylisp::ast {
   }
 
   UNode &ppd_line(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
-    static const wchar_t *raw = L"#line";
-    dest.reset(new NumberAtom(pos, wstring_view(raw, 5), pos->second));
+    static const char *raw = "#line";
+    dest.reset(new NumberAtom(pos, string_view(raw, 5), pos->second));
     return dest->next;
   }
 
-  static int toString(wchar_t &dest, const wstring *&dest1, wstring_view &dest2, const UNode &src) noexcept;
+  static int toString(char &dest, const string *&dest1, string_view &dest2, const UNode &src) noexcept;
 
   UNode &ppd_toString(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
-    wchar_t c;
-    const wstring *s;
-    wstring_view sv;
+    char c;
+    const string *s;
+    string_view sv;
     switch (toString(c, s, sv, src)) {
       case 0: {
         dest.reset(new CharAtom(pos, c));
@@ -322,18 +322,18 @@ namespace zlt::mylisp::ast {
         break;
       }
       case 2: {
-        auto &value = *rte::strings.insert(wstring(sv)).first;
+        auto &value = *rte::strings.insert(string(sv)).first;
         dest.reset(new StringAtom(pos, &value));
         break;
       }
       default: {
-        throw PreprocBad(L"illegal token");
+        throw PreprocBad("illegal token");
       }
     }
     return dest->next;
   }
 
-  int toString(wchar_t &dest, const wstring *&dest1, wstring_view &dest2, const UNode &src) noexcept {
+  int toString(char &dest, const string *&dest1, string_view &dest2, const UNode &src) noexcept {
     if (!src) [[unlikely]] {
       return {};
     }
@@ -361,7 +361,7 @@ namespace zlt::mylisp::ast {
   UNode &ppd_undef(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
     auto id = dynamic_cast<const IDAtom *>(src.get());
     if (!id) {
-      throw PreprocBad(L"required macro name", pos);
+      throw PreprocBad("required macro name", pos);
     }
     ast.macros.erase(id->name);
     return dest;

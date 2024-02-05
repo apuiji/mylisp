@@ -3,7 +3,7 @@
 using namespace std;
 
 namespace zlt::mylisp::ast {
-  using Indefs = set<const wstring *>;
+  using Indefs = set<const string *>;
 
   static int trans(const Indefs &indefs, UNode &src);
 
@@ -141,11 +141,11 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
-  using ItClosure = map<const wstring *, Reference>::const_iterator;
+  using ItClosure = map<const string *, Reference>::const_iterator;
 
   static int makeInputClosure(UNode &dest, ItClosure it, ItClosure end);
 
-  using ItPtrDef = set<const wstring *>::const_iterator;
+  using ItPtrDef = set<const string *>::const_iterator;
 
   static UNode &makeIndirect(UNode &dest, ItPtrDef it, ItPtrDef end);
 

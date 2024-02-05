@@ -3,34 +3,33 @@
 #include"object.hh"
 
 namespace zlt::mylisp {
-  template<class C>
-  struct BasicStringViewObj: virtual Object {
+  struct CastStringViewObj: virtual Object {
     // cast operations begin
-    virtual operator std::basic_string_view<C>() const noexcept = 0;
-    bool objDynamicast(std::basic_string_view<C> &dest) const noexcept override {
-      dest = operator std::basic_string_view<C>();
+    virtual std::string_view view() const noexcept = 0;
+    bool objDynamicast(std::string_view &dest) const noexcept override {
+      dest = view();
       return true;
     }
     // cast operations end
     // comparisons begin
     bool operator ==(const Value &v) const noexcept override {
-      std::basic_string_view<C> sv;
-      return dynamicast(sv, v) && operator std::basic_string_view<C>() == sv;
+      std::string_view sv;
+      return dynamicast(sv, v) && view() == sv;
     }
     bool compare(int &dest, const Value &v) const noexcept override {
-      std::basic_string_view<C> sv;
+      std::string_view sv;
       if (dynamicast(sv, v)) {
-        dest = operator std::basic_string_view<C>().compare(sv);
+        dest = view().compare(sv);
         return true;
       } else {
         return false;
       }
     }
-    bool operator ==(std::basic_string_view<C> sv) const noexcept override {
-      return operator std::basic_string_view<C>() == sv;
+    bool operator ==(std::string_view sv) const noexcept override {
+      return view() == sv;
     }
-    bool compare(int &dest, std::basic_string_view<C> sv) const noexcept override {
-      dest = operator std::basic_string_view<C>().compare(sv);
+    bool compare(int &dest, std::string_view sv) const noexcept override {
+      dest = view().compare(sv);
       return true;
     }
     // comparisons end
@@ -39,49 +38,27 @@ namespace zlt::mylisp {
     // member operations end
   };
 
-  template<class C>
-  struct BasicStringObj final: BasicStringViewObj<C> {
-    std::basic_string<C> value;
-    BasicStringObj(const std::basic_string<C> &value) noexcept: value(value) {}
-    BasicStringObj(std::basic_string<C> &&value) noexcept: value(std::move(value)) {}
-    operator std::basic_string_view<C>() const noexcept override {
-      return (std::basic_string_view<C>) value;
+  struct StringObj final: CastStringViewObj {
+    std::string value;
+    StringObj(const std::string &value) noexcept: value(value) {}
+    StringObj(std::string &&value) noexcept: value(std::move(value)) {}
+    std::string_view view() const noexcept override {
+      return (std::string_view) value;
     }
   };
 
-  using StringObj = BasicStringObj<wchar_t>;
-  using Latin1Obj = BasicStringObj<char>;
-
-  template<class C>
-  struct BasicStringViewObj1 final: BasicStringViewObj<C> {
+  struct StringViewObj final: CastStringViewObj {
     Value string;
-    std::basic_string_view<C> view;
-    BasicStringViewObj1(const Value &string, std::basic_string_view<C> view) noexcept: string(string), view(view) {}
+    std::string_view value;
+    StringViewObj(const Value &string, std::string_view value) noexcept: string(string), value(value) {}
     int graySubjs() noexcept override {
       gc::grayValue(string);
       return 0;
     }
-    operator std::basic_string_view<C>() const noexcept override {
-      return view;
+    std::string_view view() const noexcept override {
+      return value;
     }
   };
-
-  using StringViewObj = BasicStringViewObj1<wchar_t>;
-  using Latin1ViewObj = BasicStringViewObj1<char>;
-
-  template<class C>
-  Value BasicStringViewObj<C>::objGetMemb(const Value &memb) const noexcept {
-    int i;
-    if (!dynamicast(i, memb)) {
-      return Null();
-    }
-    auto sv = operator std::basic_string_view<C>();
-    if (i >= 0 && i < sv.size()) {
-      return sv[i];
-    } else {
-      return Null();
-    }
-  }
 
   NativeFunction natfn_charcode;
   NativeFunction natfn_charcodes;

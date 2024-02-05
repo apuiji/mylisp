@@ -47,7 +47,7 @@ namespace zlt::mylisp {
     std::unique_ptr<ValueStack> valuek;
     Value *valuekBottom;
     Value *valuekTop;
-    std::list<std::map<const std::wstring *, Value>> localDefsk;
+    std::list<std::map<const std::string *, Value>> localDefsk;
     std::list<Value> deferk;
     std::list<Frame> framek;
     bool alive;

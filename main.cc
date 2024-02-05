@@ -18,15 +18,15 @@ static size_t mainCoroutineValuekSize = 1 << 21;
 static int parseOptions(const char **it, const char **end);
 
 struct ParseOptionBad {
-  wstring what;
-  ParseOptionBad(wstring &&what) noexcept: what(std::move(what)) {}
+  string what;
+  ParseOptionBad(string &&what) noexcept: what(std::move(what)) {}
 };
 
 int main(int argc, char **argv, char **envp) {
   try {
     parseOptions(const_cast<const char **>(argv + 1), const_cast<const char **>(argv + argc));
   } catch (ParseOptionBad bad) {
-    wcerr << bad.what;
+    cerr << bad.what;
     return 0;
   }
   rte::init();
@@ -35,7 +35,7 @@ int main(int argc, char **argv, char **envp) {
     try {
       ast::Ast {}(a, filesystem::path(indexFile));
     } catch (ast::AstBad bad) {
-      wcerr << bad.what;
+      cerr << bad.what;
       return 0;
     }
     string s;

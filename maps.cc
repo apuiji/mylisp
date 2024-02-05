@@ -14,7 +14,7 @@ namespace zlt::mylisp {
     }
   }
 
-  static Value strPoolGetMemb(const MapObj::StrPool &sp, std::wstring_view sv) noexcept {
+  static Value strPoolGetMemb(const MapObj::StrPool &sp, std::string_view sv) noexcept {
     auto node = find(sp, sv);
     if (node) {
       return node->second;
@@ -46,19 +46,19 @@ namespace zlt::mylisp {
         }
       }
       case Value::CHAR_INDEX: {
-        wstring_view sv;
+        string_view sv;
         staticast<Value::CHAR_INDEX>(sv, memb);
         return strPoolGetMemb(strPool, sv);
       }
       case Value::STR_INDEX: {
-        wstring_view sv;
+        string_view sv;
         staticast<Value::STR_INDEX>(sv, memb);
         return strPoolGetMemb(strPool, sv);
       }
       case Value::OBJ_INDEX: {
         Object *o;
         staticast(o, memb);
-        if (wstring_view sv; o->objDynamicast(sv)) {
+        if (string_view sv; o->objDynamicast(sv)) {
           return strPoolGetMemb(strPool, sv);
         }
         return poolGetMemb(objPool, o);
@@ -91,12 +91,12 @@ namespace zlt::mylisp {
         return isnan(d) ? m->nanPool.second : m->numPool[d];
       }
       case Value::CHAR_INDEX: {
-        wstring_view sv;
+        string_view sv;
         staticast<Value::CHAR_INDEX>(sv, memb);
         return insert(m->strPool, sv, memb)->second;
       }
       case Value::STR_INDEX: {
-        wstring_view sv;
+        string_view sv;
         staticast<Value::STR_INDEX>(sv, memb);
         return insert(m->strPool, sv, memb)->second;
       }
@@ -104,7 +104,7 @@ namespace zlt::mylisp {
         Object *o;
         staticast(o, memb);
         gc::iwb(m, o);
-        if (wstring_view sv; o->objDynamicast(sv)) {
+        if (string_view sv; o->objDynamicast(sv)) {
           return insert(m->strPool, sv, memb)->second;
         }
         return m->objPool[o];

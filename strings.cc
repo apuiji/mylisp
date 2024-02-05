@@ -1,6 +1,6 @@
 #include<algorithm>
+#include<cctype>
 #include<cmath>
-#include<cwctype>
 #include<sstream>
 #include"io.hh"
 #include"lists.hh"
@@ -10,8 +10,21 @@
 using namespace std;
 
 namespace zlt::mylisp {
+  Value CastStringViewObj::objGetMemb(const Value &memb) const noexcept {
+    int i;
+    if (!dynamicast(i, memb)) {
+      return Null();
+    }
+    auto sv = view();
+    if (i >= 0 && i < sv.size()) {
+      return sv[i];
+    } else {
+      return Null();
+    }
+  }
+
   Value natfn_charcode(const Value *it, const Value *end) {
-    wstring_view s;
+    string_view s;
     if (!dynamicast(s, it, end) || !s.size()) [[unlikely]] {
       return Null();
     }
@@ -19,7 +32,7 @@ namespace zlt::mylisp {
   }
 
   Value natfn_charcodes(const Value *it, const Value *end) {
-    wstring_view s;
+    string_view s;
     if (!dynamicast(s, it, end)) [[unlikely]] {
       return Null();
     }
@@ -29,7 +42,7 @@ namespace zlt::mylisp {
   }
 
   Value natfn_chars(const Value *it, const Value *end) {
-    wstring_view s;
+    string_view s;
     if (!dynamicast(s, it, end)) [[unlikely]] {
       return Null();
     }
@@ -38,63 +51,63 @@ namespace zlt::mylisp {
     return neobj<ListObj>(std::move(a));
   }
 
-  static int fromcharcode1(wstringstream &dest, const Value *it, const Value *end);
+  static int fromcharcode1(stringstream &dest, const Value *it, const Value *end);
 
   Value natfn_fromcharcode(const Value *it, const Value *end) {
     if (it == end) [[unlikely]] {
       return constring<>;
     }
-    wstringstream ss;
+    stringstream ss;
     fromcharcode1(ss, it, end);
     return ss.str();
   }
 
-  int fromcharcode1(wstringstream &dest, const Value *it, const Value *end) {
+  int fromcharcode1(stringstream &dest, const Value *it, const Value *end) {
     if (int c; dynamicast(c, *it) && c > 0) {
       dest.put(c);
     }
     return it + 1 != end ? fromcharcode1(dest, it + 1, end) : 0;
   }
 
-  static int strcat1(wstringstream &dest, const Value *it, const Value *end);
+  static int strcat1(stringstream &dest, const Value *it, const Value *end);
 
   Value natfn_strcat(const Value *it, const Value *end) {
     if (it == end) [[unlikely]] {
       return constring<>;
     }
-    wstringstream ss;
+    stringstream ss;
     strcat1(ss, it, end);
     return ss.str();
   }
 
-  int strcat1(wstringstream &dest, const Value *it, const Value *end) {
-    wstring_view s;
+  int strcat1(stringstream &dest, const Value *it, const Value *end) {
+    string_view s;
     if (dynamicast(s, *it)) {
       dest << s;
     }
     return it + 1 != end ? strcat1(dest, it + 1, end) : 0;
   }
 
-  static int strjoin1(wstringstream &dest, wstring_view sepa, ListObj::ConstIterator it, ListObj::ConstIterator end);
+  static int strjoin1(stringstream &dest, string_view sepa, ListObj::ConstIterator it, ListObj::ConstIterator end);
 
   Value natfn_strjoin(const Value *it, const Value *end) {
     ListObj *lso;
     if (!dynamicast(lso, it, end)) [[unlikely]] {
-      if (wstring_view sv; dynamicast(sv, *it)) {
+      if (string_view sv; dynamicast(sv, *it)) {
         return *it;
       } else {
         return constring<>;
       }
     }
-    wstring_view sepa;
+    string_view sepa;
     dynamicast(sepa, it + 1, end);
-    wstringstream ss;
+    stringstream ss;
     strjoin1(ss, sepa, lso->list.begin(), lso->list.end());
     return ss.str();
   }
 
-  int strjoin1(wstringstream &dest, wstring_view sepa, ListObj::ConstIterator it, ListObj::ConstIterator end) {
-    wstring_view s;
+  int strjoin1(stringstream &dest, string_view sepa, ListObj::ConstIterator it, ListObj::ConstIterator end) {
+    string_view s;
     if (dynamicast(s, *it)) {
       dest << s;
     }
@@ -107,7 +120,7 @@ namespace zlt::mylisp {
 
   template<bool Slice>
   static inline Value sliceOrView(const Value *it, const Value *end) {
-    wstring_view sv;
+    string_view sv;
     if (!dynamicast(sv, it, end)) [[unlikely]] {
       return Null();
     }
@@ -141,19 +154,19 @@ namespace zlt::mylisp {
   }
 
   Value natfn_strtod(const Value *it, const Value *end) {
-    wstring_view sv;
+    string_view sv;
     if (!dynamicast(sv, it, end)) [[unlikely]] {
       return NAN;
     }
     try {
-      return stod(wstring(sv));
+      return stod(string(sv));
     } catch (...) {
       return NAN;
     }
   }
 
   Value natfn_strtoi(const Value *it, const Value *end) {
-    wstring_view sv;
+    string_view sv;
     if (!dynamicast(sv, it, end)) [[unlikely]] {
       return Null();
     }
@@ -162,7 +175,7 @@ namespace zlt::mylisp {
       base = 10;
     }
     try {
-      return stoi(wstring(sv), nullptr, base);
+      return stoi(string(sv), nullptr, base);
     } catch (...) {
       return Null();
     }
@@ -170,11 +183,11 @@ namespace zlt::mylisp {
 
   template<bool Lower>
   static inline Value strtocase(const Value *it, const Value *end) {
-    wstring_view sv;
+    string_view sv;
     if (!dynamicast(sv, it, end)) [[unlikely]] {
       return Null();
     }
-    wstring s(sv.size(), L'\0');
+    string s(sv.size(), L'\0');
     if constexpr (Lower) {
       transform(sv.begin(), sv.end(), s.begin(), towlower);
     } else {
@@ -192,16 +205,16 @@ namespace zlt::mylisp {
   }
 
   template<bool L, bool R>
-  static inline wstring_view trim1(wstring_view src) noexcept {
+  static inline string_view trim1(string_view src) noexcept {
     int start;
     if constexpr (L) {
-      start = find_if_not(src.begin(), src.end(), iswspace) - src.begin();
+      start = find_if_not(src.begin(), src.end(), [] (char c) { return isspace(c); }) - src.begin();
     } else {
       start = 0;
     }
     int end;
     if constexpr (R) {
-      end = src.size() - (find_if_not(src.rbegin(), src.rend(), iswspace) - src.rbegin());
+      end = src.size() - (find_if_not(src.rbegin(), src.rend(), [] (char c) { return isspace(c); }) - src.rbegin());
     } else {
       end = src.size();
     }
@@ -210,7 +223,7 @@ namespace zlt::mylisp {
 
   template<bool L, bool R>
   static inline Value trim(const Value *it, const Value *end) {
-    wstring_view sv;
+    string_view sv;
     if (dynamicast(sv, it, end)) {
       return neobj<StringViewObj>(*it, trim1<L, R>(sv));
     } else {

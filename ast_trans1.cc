@@ -15,10 +15,10 @@ namespace zlt::mylisp::ast {
 
   struct FunctionScope: Scope {
     Scope &parent;
-    const set<const wstring *> &defs;
-    set<const wstring *> indefs;
-    map<const wstring *, Reference> closureDefs;
-    FunctionScope(Scope &parent, const set<const wstring *> &defs) noexcept:
+    const set<const string *> &defs;
+    set<const string *> indefs;
+    map<const string *, Reference> closureDefs;
+    FunctionScope(Scope &parent, const set<const string *> &defs) noexcept:
     Scope(FUNCTION_SCOPE_CLASS), parent(parent), defs(defs) {}
   };
 
@@ -28,9 +28,9 @@ namespace zlt::mylisp::ast {
     return trans(rtol(Scope(Scope::GLOBAL_SCOPE_CLASS)), src);
   }
 
-  static Reference findDef(FunctionScope &scope, const wstring *name, bool cross);
+  static Reference findDef(FunctionScope &scope, const string *name, bool cross);
 
-  static Reference findDef(Scope &scope, const wstring *name, bool cross) {
+  static Reference findDef(Scope &scope, const string *name, bool cross) {
     if (scope.clazz == Scope::GLOBAL_SCOPE_CLASS) {
       return Reference(Reference::GLOBAL_SCOPE, name);
     } else {
@@ -38,7 +38,7 @@ namespace zlt::mylisp::ast {
     }
   }
 
-  Reference findDef(FunctionScope &scope, const wstring *name, bool cross) {
+  Reference findDef(FunctionScope &scope, const string *name, bool cross) {
     if (scope.defs.find(name) != scope.defs.end()) {
       if (cross) {
         scope.indefs.insert(name);
@@ -141,7 +141,7 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
-  using ItParam = vector<const wstring *>::const_iterator;
+  using ItParam = vector<const string *>::const_iterator;
 
   static UNode &transParams(UNode &dest, size_t i, ItParam it, ItParam end);
 

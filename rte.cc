@@ -22,9 +22,9 @@ namespace zlt::mylisp::rte {
   map<string, Value> mods;
   set<string> fnBodies;
   ItCoroutine itCoroutine;
-  set<wstring> strings;
+  set<string> strings;
 
-  mymap::Map<const wstring *, Value, GlobalDefsComp> globalDefs;
+  mymap::Map<const string *, Value, GlobalDefsComp> globalDefs;
 
   static Value natfn_import(const Value *it, const Value *end);
 
@@ -46,22 +46,12 @@ namespace zlt::mylisp::rte {
     globalDefs[constring<'r', 'e', 'g', 'c', 'o', 'm', 'p'>] = natfn_regcomp;
     globalDefs[constring<'r', 'e', 'g', 'e', 'x', 'e', 'c'>] = natfn_regexec;
     // regex end
-    // iconvs begin
-    defaultIconv<char, wchar_t> = iconv_open("UTF-8", "WCHAR_T");
-    defaultIconv<wchar_t, char> = iconv_open("WCHAR_T", "UTF-8");
-    globalDefs[constring<'i', 'c', 'o', 'n', 'v'>] = natfn_iconv;
-    globalDefs[constring<'i', 'c', 'o', 'n', 'v', '_', 'c', 'l', 'o', 's', 'e'>] = natfn_iconv_close;
-    globalDefs[constring<'i', 'c', 'o', 'n', 'v', '_', 'o', 'p', 'e', 'n'>] = natfn_iconv_open;
-    globalDefs[constring<'s', 't', 'r', 'd', 'e', 'c'>] = natfn_strdec;
-    globalDefs[constring<'s', 't', 'r', 'e', 'n', 'c'>] = natfn_strenc;
-    // iconvs end
     // io begin
     globalDefs[constring<'s', 't', 'd', 'i', 'n'>] = neobj<InputObj>(cin);
     globalDefs[constring<'s', 't', 'd', 'o', 'u', 't'>] = neobj<OutputObj>(cout);
     globalDefs[constring<'s', 't', 'd', 'e', 'r', 'r'>] = neobj<OutputObj>(cerr);
     globalDefs[constring<'g', 'e', 't', 'c'>] = natfn_getc;
     globalDefs[constring<'o', 'u', 't', 'p', 'u', 't'>] = natfn_output;
-    globalDefs[constring<'w', 'r', 'i', 't', 'e'>] = natfn_write;
     // io end
     globalDefs[constring<'i', 'm', 'p', 'o', 'r', 't'>] = natfn_import;
     return 0;
@@ -93,7 +83,7 @@ namespace zlt::mylisp::rte {
   }
 
   bool modCanonicalPath(string &dest, const Value *it, const Value *end) noexcept {
-    wstring_view sv;
+    string_view sv;
     if (!dynamicast(sv, it, end)) {
       return false;
     }

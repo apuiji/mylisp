@@ -7,19 +7,30 @@
 using namespace std;
 
 namespace zlt::mylisp::ast {
-  int pos2str(wstring &dest, const Pos &pos) {
-    wstringstream ss;
-    ss << L"at " << pos.first->wstring();
-    ss.put(':');
-    ss << pos.second;
-    dest = ss.str();
-    return 0;
-  }
-
   UNode shift(UNode &src) noexcept {
     auto a = std::move(src);
     src = std::move(a->next);
     return std::move(a);
+  }
+
+  static ostream &operator <<(ostream &dest, const Pos &pos) {
+    return dest << "at " << pos.first->string() << ':' << pos.second;
+  }
+
+  int pos2str(string &dest, const Pos &pos) {
+    stringstream ss;
+    ss << pos;
+    dest = ss.str();
+    return 0;
+  }
+
+  template<class It>
+  static int posk2str(ostream &dest, It it, It end) {
+    if (it == end) [[unlikely]] {
+      return 0;
+    }
+    dest << *it << endl;
+    return posk2str(dest, ++it, end);
   }
 
   int Ast::operator ()(UNode &dest, const filesystem::path &file) {
@@ -27,16 +38,16 @@ namespace zlt::mylisp::ast {
     try {
       it = load(*this, filesystem::canonical(file));
     } catch (filesystem::filesystem_error) {
-      throw AstBad(L"cannot open file: " + file.wstring());
+      throw AstBad("cannot open file: " + file.string());
     } catch (LoadBad bad) {
       throw AstBad(std::move(bad.what));
     } catch (ParseBad bad) {
-      wstring postr;
-      pos2str(postr, bad.pos);
-      throw AstBad(bad.what + postr);
+      stringstream ss;
+      ss << bad.pos;
+      throw AstBad(bad.what + ss.str());
     } catch (PreprocBad bad) {
-      wstringstream ss;
-      poss2str(ss, bad.posk.rbegin(), bad.posk.rend());
+      stringstream ss;
+      posk2str(ss, bad.posk.rbegin(), bad.posk.rend());
       throw AstBad(bad.what + ss.str());
     }
     {

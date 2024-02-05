@@ -7,7 +7,7 @@ namespace zlt::mylisp::ast {
   Ast::ItLoaded load(Ast &ast, std::filesystem::path &&file);
 
   struct LoadBad {
-    std::wstring what;
-    LoadBad(std::wstring &&what) noexcept: what(std::move(what)) {}
+    std::string what;
+    LoadBad(std::string &&what) noexcept: what(std::move(what)) {}
   };
 }

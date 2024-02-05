@@ -1,7 +1,6 @@
 #include<algorithm>
+#include<cctype>
 #include<cstring>
-#include<cwchar>
-#include<cwctype>
 #include<regex>
 #include<sstream>
 #include"ast_lexer.hh"
@@ -11,18 +10,18 @@
 using namespace std;
 
 namespace zlt::mylisp::ast {
-  using It = const wchar_t *;
+  using It = const char *;
 
   struct LexerStr {
-    wstringstream &dest;
+    stringstream &dest;
     int quot;
-    LexerStr(wstringstream &dest, int quot) noexcept: dest(dest), quot(quot) {}
+    LexerStr(stringstream &dest, int quot) noexcept: dest(dest), quot(quot) {}
     It operator ()(It it, It end);
   };
 
-  static bool notRawChar(wchar_t c) noexcept;
-  static bool isNumber(double &dest, wstring_view src);
-  static bool isToken(uint64_t &dest, wstring_view src) noexcept;
+  static bool notRawChar(char c) noexcept;
+  static bool isNumber(double &dest, string_view src);
+  static bool isToken(uint64_t &dest, string_view src) noexcept;
 
   tuple<uint64_t, It, It> Lexer::operator ()(It it, It end) {
     if (it == end) [[unlikely]] {
@@ -42,10 +41,10 @@ namespace zlt::mylisp::ast {
       return { token::RPAREN, it, it + 1 };
     }
     if (*it == '"' || *it == '\'') {
-      wstringstream ss;
+      stringstream ss;
       It it1 = LexerStr(ss, *it)(it + 1, end);
       if (*it1 != *it) {
-        throw LexerBad(it, L"unterminated string");
+        throw LexerBad(it, "unterminated string");
       }
       strval = ss.str();
       if (strval.size() == 1) {
@@ -56,15 +55,15 @@ namespace zlt::mylisp::ast {
     }
     size_t n = find_if(it, end, notRawChar) - it;
     if (!n) {
-      throw LexerBad(it, L"unrecognized symbol");
+      throw LexerBad(it, "unrecognized symbol");
     }
-    raw = wstring_view(it, n);
+    raw = string_view(it, n);
     try {
       if (isNumber(numval, raw)) {
         return { token::NUMBER, it, it + n };
       }
     } catch (out_of_range) {
-      throw LexerBad(it, L"number literal out of range");
+      throw LexerBad(it, "number literal out of range");
     }
     if (uint64_t t; isToken(t, raw)) {
       return { t, it, it + n };
@@ -79,7 +78,7 @@ namespace zlt::mylisp::ast {
       return end;
     }
     if (It it1 = find_if(it, end, [quot = this->quot] (auto c) { return c == '\\' || c == quot; }); it1 != it) {
-      dest << wstring(it, it1);
+      dest << string(it, it1);
       return operator ()(it1, end);
     }
     if (*it == '\\') {
@@ -136,8 +135,8 @@ namespace zlt::mylisp::ast {
   }
 
   bool esch8(int &dest, size_t &len, It it, It end) {
-    static const wregex re(L"^[0-3][0-7]{0,2}|^[4-7][0-7]?");
-    wcmatch m;
+    static const regex re("^[0-3][0-7]{0,2}|^[4-7][0-7]?");
+    cmatch m;
     if (!regex_search(it, end, m, re)) {
       return false;
     }
@@ -166,31 +165,31 @@ namespace zlt::mylisp::ast {
     }
   }
 
-  bool notRawChar(wchar_t c) noexcept {
-    return strchr("\"'();", c) || iswspace(c);
+  bool notRawChar(char c) noexcept {
+    return strchr("\"'();", c) || isspace(c);
   }
 
-  static bool isBaseInt(double &dest, wstring_view src);
+  static bool isBaseInt(double &dest, string_view src);
 
-  bool isNumber(double &dest, wstring_view src) {
+  bool isNumber(double &dest, string_view src) {
     if (isBaseInt(dest, src)) {
       return true;
     }
     try {
-      dest = stod(wstring(src));
+      dest = stod(string(src));
       return true;
     } catch (invalid_argument) {
       return false;
     }
   }
 
-  static bool isBaseInt(double &dest, const wregex &re, size_t base, wstring_view src);
+  static bool isBaseInt(double &dest, const regex &re, size_t base, string_view src);
 
-  bool isBaseInt(double &dest, wstring_view src) {
-    static const wregex re2(L"([+-]?)0[Bb]([01]+)");
-    static const wregex re4(L"([+-]?)0[Qq]([0-3]+)");
-    static const wregex re8(L"([+-]?)0[Oo]([0-7]+)");
-    static const wregex re16(L"([+-]?)0[Xx]([[:xdigit:]]+)");
+  bool isBaseInt(double &dest, string_view src) {
+    static const regex re2("([+-]?)0[Bb]([01]+)");
+    static const regex re4("([+-]?)0[Qq]([0-3]+)");
+    static const regex re8("([+-]?)0[Oo]([0-7]+)");
+    static const regex re16("([+-]?)0[Xx]([[:xdigit:]]+)");
     return
       isBaseInt(dest, re2, 2, src) ||
       isBaseInt(dest, re4, 4, src) ||
@@ -198,8 +197,8 @@ namespace zlt::mylisp::ast {
       isBaseInt(dest, re16, 16, src);
   }
 
-  bool isBaseInt(double &dest, const wregex &re, size_t base, wstring_view src) {
-    match_results<wstring_view::const_iterator> m;
+  bool isBaseInt(double &dest, const regex &re, size_t base, string_view src) {
+    match_results<string_view::const_iterator> m;
     if (!regex_match(src.begin(), src.end(), m, re)) {
       return false;
     }
@@ -211,9 +210,9 @@ namespace zlt::mylisp::ast {
     }
   }
 
-  bool isToken(uint64_t &dest, wstring_view raw) noexcept {
+  bool isToken(uint64_t &dest, string_view raw) noexcept {
     #define ifKeyword(kwd) \
-    if (raw == L###kwd) { \
+    if (raw == #kwd) { \
       dest = token::KWD_##kwd; \
       return true; \
     }
@@ -228,16 +227,16 @@ namespace zlt::mylisp::ast {
     ifKeyword(try);
     ifKeyword(yield);
     #undef ifKeyword
-    if (raw == L"#") {
+    if (raw == "#") {
       dest = token::PPD_toString;
       return true;
     }
-    if (raw == L"##") {
+    if (raw == "##") {
       dest = token::PPD_idcat;
       return true;
     }
     #define ifPreprocDir(dir) \
-    if (raw == L"#" #dir) { \
+    if (raw == "#" #dir) { \
       dest = token::PPD_##dir; \
       return true; \
     }
@@ -250,7 +249,7 @@ namespace zlt::mylisp::ast {
     ifPreprocDir(undef);
     #undef ifPreprocDir
     #define ifSymbol(symb) \
-    if (raw == L##symb) { \
+    if (raw == symb) { \
       dest = token::symbol(symb); \
       return true; \
     }

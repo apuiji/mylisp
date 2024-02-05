@@ -14,7 +14,7 @@ namespace zlt::mylisp {
   using NativeFunction = Value (const Value *it, const Value *end);
   using Null = std::monostate;
 
-  struct Value: std::variant<Null, double, wchar_t, const std::wstring *, Object *, NativeFunction *> {
+  struct Value: std::variant<Null, double, char, const std::string *, Object *, NativeFunction *> {
     enum {
       NULL_INDEX, NUM_INDEX, CHAR_INDEX, STR_INDEX, OBJ_INDEX, NAT_FN_INDEX
     };
@@ -24,8 +24,8 @@ namespace zlt::mylisp {
     #define baseCons(T) \
     Value(T t) noexcept: variant(t) {}
     baseCons(double);
-    baseCons(wchar_t);
-    baseCons(const std::wstring *);
+    baseCons(char);
+    baseCons(const std::string *);
     baseCons(Object *);
     baseCons(NativeFunction *);
     #undef baseCons
@@ -34,14 +34,14 @@ namespace zlt::mylisp {
     Value(bool b) noexcept {
       operator =(b);
     }
-    Value(const std::wstring &s): Value((std::wstring_view) s) {}
-    Value(std::wstring &&s) {
+    Value(const std::string &s): Value((std::string_view) s) {}
+    Value(std::string &&s) {
       operator =(std::move(s));
     }
-    Value(std::wstring_view sv) {
+    Value(std::string_view sv) {
       operator =(sv);
     }
-    Value(const Value &string, std::wstring_view view);
+    Value(const Value &string, std::string_view view);
     // constructors end
     // assignment operations begin
     #define baseAssign(T) \
@@ -51,8 +51,8 @@ namespace zlt::mylisp {
     }
     baseAssign(Null);
     baseAssign(double);
-    baseAssign(wchar_t);
-    baseAssign(const std::wstring *);
+    baseAssign(char);
+    baseAssign(const std::string *);
     baseAssign(Object *);
     baseAssign(NativeFunction *);
     #undef baseAssign
@@ -72,11 +72,11 @@ namespace zlt::mylisp {
       }
       return *this;
     }
-    Value &operator =(const std::wstring &s) {
-      return operator =((std::wstring_view) s);
+    Value &operator =(const std::string &s) {
+      return operator =((std::string_view) s);
     }
-    Value &operator =(std::wstring &&s);
-    Value &operator =(std::wstring_view sv);
+    Value &operator =(std::string &&s);
+    Value &operator =(std::string_view sv);
     Value &operator =(std::derived_from<Object> auto *o) noexcept {
       variant::operator =(static_cast<Object *>(o));
       return *this;
@@ -97,18 +97,18 @@ namespace zlt::mylisp {
   };
 
   // static cast operations begin
-  template<AnyOf<double, wchar_t, const std::wstring *, NativeFunction *, void *> T>
+  template<AnyOf<double, char, const std::string *, NativeFunction *, void *> T>
   static inline int staticast(T &dest, const Value &src) noexcept {
     dest = *(T *) &src;
     return 0;
   }
 
   template<int I>
-  static inline int staticast(std::wstring_view &dest, const Value &src) noexcept {
+  static inline int staticast(std::string_view &dest, const Value &src) noexcept {
     if constexpr (I == Value::CHAR_INDEX) {
-      dest = std::wstring_view((const wchar_t *) &src, 1);
+      dest = std::string_view((const char *) &src, 1);
     } else if constexpr (I == Value::STR_INDEX) {
-      dest = (std::wstring_view) **(const std::wstring **) &src;
+      dest = (std::string_view) **(const std::string **) &src;
     } else {
       // never
     }
@@ -139,7 +139,7 @@ namespace zlt::mylisp {
   }
 
   baseDynamicast(double);
-  baseDynamicast(wchar_t);
+  baseDynamicast(char);
   baseDynamicast(Object *);
   baseDynamicast(NativeFunction *);
 
@@ -157,7 +157,6 @@ namespace zlt::mylisp {
   }
 
   bool dynamicast(std::string_view &dest, const Value &src) noexcept;
-  bool dynamicast(std::wstring_view &dest, const Value &src) noexcept;
 
   template<std::derived_from<Object> T>
   static inline bool dynamicast(T *&dest, const Value &src) noexcept {
@@ -216,7 +215,7 @@ namespace zlt::mylisp {
 
   compBetween(const Value &);
   compBetween(double);
-  compBetween(std::wstring_view);
+  compBetween(std::string_view);
 
   #undef compBetween
 
@@ -250,7 +249,7 @@ namespace zlt::mylisp {
   }
 
   compBetween1(double);
-  compBetween1(std::wstring_view);
+  compBetween1(std::string_view);
 
   #undef compBetween1
   // comparisons end
@@ -267,13 +266,13 @@ namespace zlt::mylisp {
   // const string * begin
   template<int ...S>
   struct Constring {
-    static const std::wstring value;
+    static const std::string value;
   };
 
   template<int ...S>
-  const std::wstring Constring<S...>::value = { S... };
+  const std::string Constring<S...>::value = { S... };
 
   template<int ...S>
-  static inline const std::wstring *constring = &Constring<S...>::value;
+  static inline const std::string *constring = &Constring<S...>::value;
   // const string * end
 }

@@ -7,13 +7,13 @@
 using namespace std;
 
 namespace zlt::mylisp::ast {
-  using It = const wchar_t *;
+  using It = const char *;
 
   struct Parse {
     // source begin
     const filesystem::path *file;
-    const wchar_t *start;
-    const wchar_t *end;
+    const char *start;
+    const char *end;
     // source end
     Ast &ast;
     Lexer &lexer;
@@ -38,7 +38,7 @@ namespace zlt::mylisp::ast {
     }
     auto [t, start1, end1] = lexer(it, end);
     if (t != token::E0F) {
-      throw ParseBad(makePos(file, start, end, start1), L"unexpected token");
+      throw ParseBad(makePos(file, start, end, start1), "unexpected token");
     }
     return 0;
   }
@@ -74,7 +74,7 @@ namespace zlt::mylisp::ast {
         return operator ()(dest->next, end0);
       }
       case token::ID: {
-        auto &name = *rte::strings.insert((wstring) lexer.raw).first;
+        auto &name = *rte::strings.insert(string(lexer.raw)).first;
         dest.reset(new IDAtom(makePos1(ast, file, start, end, start0), &name));
         return operator ()(dest->next, end0);
       }
@@ -83,7 +83,7 @@ namespace zlt::mylisp::ast {
         It end1 = operator ()(first, end0);
         auto [t2, start2, end2] = lexer(end1, end);
         if (t2 != token::RPAREN) {
-          throw ParseBad(makePos(file, start, end, start0), L"unterminated list");
+          throw ParseBad(makePos(file, start, end, start0), "unterminated list");
         }
         dest.reset(new List(makePos1(ast, file, start, end, start0), std::move(first)));
         return operator ()(dest->next, end2);

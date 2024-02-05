@@ -46,7 +46,6 @@ namespace zlt::mylisp::direction {
     SET_CHAR,
     SET_GLOBAL,
     SET_INDIRECT,
-    SET_LATIN1,
     SET_LOCAL,
     SET_MEMB,
     SET_NULL,

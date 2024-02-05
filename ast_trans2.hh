@@ -17,9 +17,9 @@ namespace zlt::mylisp::ast {
   };
 
   struct InputClosure final: Node {
-    const std::wstring *name;
+    const std::string *name;
     Reference ref;
-    InputClosure(const std::wstring *name, const Reference &ref) noexcept: name(name), ref(ref) {}
+    InputClosure(const std::string *name, const Reference &ref) noexcept: name(name), ref(ref) {}
   };
 
   struct MakeIndirect final: Node {

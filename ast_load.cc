@@ -7,10 +7,10 @@
 using namespace std;
 
 namespace zlt::mylisp::ast {
-  static int readAll(wstring &dest, const filesystem::path &file);
+  static int readAll(string &dest, const filesystem::path &file);
 
   Ast::ItLoaded load(Ast &ast, filesystem::path &&file) {
-    wstring src;
+    string src;
     readAll(src, file);
     auto file1 = &*ast.files.insert(std::move(file)).first;
     auto &src1 = ast.sources[file1] = std::move(src);
@@ -19,15 +19,15 @@ namespace zlt::mylisp::ast {
     return ast.loadeds.insert(make_pair(file1, std::move(a))).first;
   }
 
-  int readAll(wstring &dest, const filesystem::path &file) {
-    wifstream ifs;
+  int readAll(string &dest, const filesystem::path &file) {
+    ifstream ifs;
     try {
-      ifs = wifstream(file);
+      ifs = ifstream(file);
     } catch (...) {
-      throw LoadBad(L"cannot open file: " + file.wstring());
+      throw LoadBad("cannot open file: " + file.string());
     }
-    wstringstream ss;
-    copy(istreambuf_iterator<wchar_t>(ifs), istreambuf_iterator<wchar_t>(), ostreambuf_iterator<wchar_t>(ss));
+    stringstream ss;
+    copy(istreambuf_iterator<char>(ifs), istreambuf_iterator<char>(), ostreambuf_iterator<char>(ss));
     ifs.close();
     dest = ss.str();
     return 0;

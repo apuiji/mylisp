@@ -61,7 +61,7 @@ namespace zlt::mylisp::gc {
     return whiteBlacks(next);
   }
 
-  static int grayLocalDefs(map<const wstring *, Value> &defs) noexcept {
+  static int grayLocalDefs(map<const string *, Value> &defs) noexcept {
     for (auto &p : defs) {
       grayValue(p.second);
     }

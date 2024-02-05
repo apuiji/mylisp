@@ -16,7 +16,7 @@ namespace zlt::mylisp::ast {
   };
 
   struct FunctionScope: Scope {
-    set<const wstring *> defs;
+    set<const string *> defs;
     FunctionScope() noexcept: Scope(FUNCTION_SCOPE_CLASS) {}
   };
 
@@ -65,7 +65,7 @@ namespace zlt::mylisp::ast {
           return 0;
         }
         default: {
-          throw TransBad(src->pos, L"unexpected token");
+          throw TransBad(src->pos, "unexpected token");
         }
       }
     }
@@ -210,7 +210,7 @@ namespace zlt::mylisp::ast {
   int transKWD_def(UNode &dest, Scope &scope, const Pos *pos, UNode &src) {
     auto id = dynamic_cast<const IDAtom *>(src.get());
     if (!id) {
-      throw TransBad(pos, L"required definition name");
+      throw TransBad(pos, "required definition name");
     }
     if (scope.clazz == Scope::FUNCTION_SCOPE_CLASS) {
       static_cast<FunctionScope &>(scope).defs.insert(id->name);
@@ -234,7 +234,7 @@ namespace zlt::mylisp::ast {
 
   static inline int noGlobal(const Scope &scope, const Pos *pos) {
     if (scope.clazz == Scope::GLOBAL_SCOPE_CLASS) {
-      throw TransBad(pos, L"should not in global scope");
+      throw TransBad(pos, "should not in global scope");
     }
     return 0;
   }
@@ -478,7 +478,7 @@ namespace zlt::mylisp::ast {
     if (src) {
       trans1(a, scope, src);
     } else {
-      throw TransBad(pos, L"nothing assign");
+      throw TransBad(pos, "nothing assign");
     }
     if (dynamic_cast<const IDAtom *>(a.get())) {
       dest.reset(new AssignOper(pos, { std::move(a), std::move(b) }));
@@ -491,7 +491,7 @@ namespace zlt::mylisp::ast {
         dest.reset(new SetMemberOper(pos, { std::move(a), std::move(d), std::move(b) }));
       }
     } else {
-      throw TransBad(pos, L"illegal assign");
+      throw TransBad(pos, "illegal assign");
     }
     return 0;
   }
@@ -516,16 +516,16 @@ namespace zlt::mylisp::ast {
     return trans5<CmpGtOper>(dest, scope, pos, src);
   }
 
-  static int fnParams(vector<const wstring *> &dest, Scope &scope, const UNode &src);
+  static int fnParams(vector<const string *> &dest, Scope &scope, const UNode &src);
 
   template<>
   int transSymbol<token::symbol("@")>(UNode &dest, Scope &scope, const Pos *pos, UNode &src) {
     auto ls = dynamic_cast<const List *>(src.get());
     if (!ls) {
-      throw TransBad(pos, L"required function parameter list");
+      throw TransBad(pos, "required function parameter list");
     }
     FunctionScope fnScope;
-    vector<const wstring *> params;
+    vector<const string *> params;
     fnParams(params, fnScope, src);
     UNode body;
     trans(body, fnScope, src->next);
@@ -534,7 +534,7 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
-  int fnParams(vector<const wstring *> &dest, Scope &scope, const UNode &src) {
+  int fnParams(vector<const string *> &dest, Scope &scope, const UNode &src) {
     if (!src) [[unlikely]] {
       return 0;
     }
@@ -547,7 +547,7 @@ namespace zlt::mylisp::ast {
       dest.push_back(nullptr);
       return fnParams(dest, scope, src->next);
     }
-    throw TransBad(src->pos, L"illegal function parameter");
+    throw TransBad(src->pos, "illegal function parameter");
   }
 
   template<>

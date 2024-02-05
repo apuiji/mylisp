@@ -56,7 +56,6 @@ namespace zlt::mylisp {
   declEval(SET_CALLEE);
   declEval(SET_CHAR);
   declEval(SET_GLOBAL);
-  declEval(SET_LATIN1);
   declEval(SET_LOCAL);
   declEval(SET_MEMB);
   declEval(SET_NULL);
@@ -126,7 +125,6 @@ namespace zlt::mylisp {
       ifDir(SET_CALLEE);
       ifDir(SET_CHAR);
       ifDir(SET_GLOBAL);
-      ifDir(SET_LATIN1);
       ifDir(SET_LOCAL);
       ifDir(SET_MEMB);
       ifDir(SET_NULL);
@@ -149,7 +147,7 @@ namespace zlt::mylisp {
   static int push() {
     auto &top = itCoroutine->valuekTop;
     if (top + 1 == itCoroutine->valuek->end()) {
-      throw EvalBad(L"out of stack");
+      throw EvalBad("out of stack");
     }
     *top = itCoroutine->value;
     ++top;
@@ -481,7 +479,7 @@ namespace zlt::mylisp {
   }
 
   int evalGET_CLOSURE(const char *it, const char *end) {
-    auto name = *(const wstring **) it;
+    auto name = *(const string **) it;
     FunctionObj *fo;
     staticast(fo, *itCoroutine->valuekBottom);
     itCoroutine->value = fo->closures[name];
@@ -489,13 +487,13 @@ namespace zlt::mylisp {
   }
 
   int evalGET_GLOBAL(const char *it, const char *end) {
-    auto name = *(const wstring **) it;
+    auto name = *(const string **) it;
     itCoroutine->value = rte::globalDefs[name];
     return eval(it + sizeof(void *), end);
   }
 
   int evalGET_LOCAL(const char *it, const char *end) {
-    auto name = *(const wstring **) it;
+    auto name = *(const string **) it;
     itCoroutine->value = itCoroutine->localDefsk.back()[name];
     return eval(it + sizeof(void *), end);
   }
@@ -527,7 +525,7 @@ namespace zlt::mylisp {
   }
 
   int evalINPUT_CLOSURE(const char *it, const char *end) {
-    auto name = *(const wstring **) it;
+    auto name = *(const string **) it;
     FunctionObj *fo;
     staticast(fo, itCoroutine->valuekTop[-1]);
     fo->closures[name] = itCoroutine->value;
@@ -590,25 +588,19 @@ namespace zlt::mylisp {
   }
 
   int evalSET_CHAR(const char *it, const char *end) {
-    wchar_t c = *(const wchar_t *) it;
+    char c = *(const char *) it;
     itCoroutine->value = c;
-    return eval(it + sizeof(wchar_t), end);
+    return eval(it + 1, end);
   }
 
   int evalSET_GLOBAL(const char *it, const char *end) {
-    auto name = *(const wstring **) it;
+    auto name = *(const string **) it;
     rte::globalDefs[name] = itCoroutine->value;
     return eval(it + sizeof(void *), end);
   }
 
-  int evalSET_LATIN1(const char *it, const char *end) {
-    auto s = *(const string **) it;
-    itCoroutine->value = s;
-    return eval(it + sizeof(void *), end);
-  }
-
   int evalSET_LOCAL(const char *it, const char *end) {
-    auto name = *(const wstring **) it;
+    auto name = *(const string **) it;
     itCoroutine->localDefsk.back()[name] = itCoroutine->value;
     return eval(it + sizeof(void *), end);
   }
@@ -640,7 +632,7 @@ namespace zlt::mylisp {
   }
 
   int evalSET_STR(const char *it, const char *end) {
-    auto s = *(const wstring **) it;
+    auto s = *(const string **) it;
     itCoroutine->value = s;
     return eval(it + sizeof(void *), end);
   }

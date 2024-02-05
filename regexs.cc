@@ -5,18 +5,18 @@ using namespace std;
 
 namespace zlt::mylisp {
   Value natfn_regcomp(const Value *it, const Value *end) {
-    wstring_view sv;
+    string_view sv;
     if (!dynamicast(sv, it, end)) [[unlikely]] {
       return Null();
     }
-    wstring_view sv1;
+    string_view sv1;
     dynamicast(sv1, it + 1, end);
     auto flags = regex_constants::ECMAScript;
     if (find(sv1.begin(), sv1.end(), 'i') != sv1.end()) {
       flags = flags | regex_constants::icase;
     }
     try {
-      return neobj<RegexObj>(wregex(sv.begin(), sv.end(), flags));
+      return neobj<RegexObj>(regex(sv.begin(), sv.end(), flags));
     } catch (...) {
       return Null();
     }
@@ -24,11 +24,11 @@ namespace zlt::mylisp {
 
   Value natfn_regexec(const Value *it, const Value *end) {
     RegexObj *ro;
-    wstring_view sv;
+    string_view sv;
     if (!dynamicasts(make_tuple(&ro, &sv), it, end)) [[unlikely]] {
       return Null();
     }
-    using Match = match_results<wstring_view::iterator>;
+    using Match = match_results<string_view::const_iterator>;
     Match m;
     if (!regex_search(sv.begin(), sv.end(), m, ro->regex)) {
       return neobj<ListObj>();

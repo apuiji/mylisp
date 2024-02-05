@@ -4,7 +4,7 @@
 using namespace std;
 
 namespace zlt::mylisp {
-  Value::Value(const Value &string, std::wstring_view view) {
+  Value::Value(const Value &string, std::string_view view) {
     switch (view.size()) {
       case 0: {
         operator =(constring<>);
@@ -20,7 +20,7 @@ namespace zlt::mylisp {
     }
   }
 
-  Value &Value::operator =(wstring &&s) {
+  Value &Value::operator =(string &&s) {
     switch (s.size()) {
       case 0: {
         return operator =(constring<>);
@@ -34,7 +34,7 @@ namespace zlt::mylisp {
     }
   }
 
-  Value &Value::operator =(wstring_view sv) {
+  Value &Value::operator =(string_view sv) {
     switch (sv.size()) {
       case 0: {
         return operator =(constring<>);
@@ -43,26 +43,13 @@ namespace zlt::mylisp {
         return operator =(sv[0]);
       }
       default: {
-        return operator =(neobj<StringObj>(wstring(sv)));
+        return operator =(neobj<StringObj>(string(sv)));
       }
     }
   }
 
   // cast operations begin
   bool dynamicast(string_view &dest, const Value &src) noexcept {
-    switch (src.index()) {
-      case Value::OBJ_INDEX: {
-        Object *o;
-        staticast(o, src);
-        return o->objDynamicast(dest);
-      }
-      default: {
-        return false;
-      }
-    }
-  }
-
-  bool dynamicast(wstring_view &dest, const Value &src) noexcept {
     switch (src.index()) {
       case Value::CHAR_INDEX: {
         staticast<Value::CHAR_INDEX>(dest, src);
@@ -96,12 +83,12 @@ namespace zlt::mylisp {
         return x == b;
       }
       case Value::CHAR_INDEX: {
-        wstring_view x;
+        string_view x;
         staticast<Value::CHAR_INDEX>(x, a);
         return x == b;
       }
       case Value::STR_INDEX: {
-        wstring_view x;
+        string_view x;
         staticast<Value::STR_INDEX>(x, a);
         return x == b;
       }
@@ -143,12 +130,12 @@ namespace zlt::mylisp {
         return compare(dest, x, b);
       }
       case Value::CHAR_INDEX: {
-        wstring_view x;
+        string_view x;
         staticast<Value::CHAR_INDEX>(x, a);
         return compare(dest, x, b);
       }
       case Value::STR_INDEX: {
-        wstring_view x;
+        string_view x;
         staticast<Value::STR_INDEX>(x, a);
         return compare(dest, x, b);
       }
@@ -205,20 +192,20 @@ namespace zlt::mylisp {
     }
   }
 
-  bool operator ==(const Value &a, wstring_view b) noexcept {
+  bool operator ==(const Value &a, string_view b) noexcept {
     switch (a.index()) {
       case Value::CHAR_INDEX: {
-        wstring_view x;
+        string_view x;
         staticast<Value::CHAR_INDEX>(x, a);
         return x == b;
       }
       case Value::STR_INDEX: {
-        wstring_view x;
+        string_view x;
         staticast<Value::STR_INDEX>(x, a);
         return x == b;
       }
       case Value::OBJ_INDEX: {
-        wstring_view x;
+        string_view x;
         return dynamicast(x, a) && x == b;
       }
       default: {
@@ -227,16 +214,16 @@ namespace zlt::mylisp {
     }
   }
 
-  bool compare(int &dest, const Value &a, wstring_view b) noexcept {
+  bool compare(int &dest, const Value &a, string_view b) noexcept {
     switch (a.index()) {
       case Value::CHAR_INDEX: {
-        wstring_view x;
+        string_view x;
         staticast<Value::CHAR_INDEX>(x, a);
         dest = x.compare(b);
         return true;
       }
       case Value::STR_INDEX: {
-        wstring_view x;
+        string_view x;
         staticast<Value::STR_INDEX>(x, a);
         dest = x.compare(b);
         return true;
@@ -253,17 +240,17 @@ namespace zlt::mylisp {
   }
   // comparisons end
 
-  static Value getMemb(wstring_view s, const Value &memb);
+  static Value getMemb(string_view s, const Value &memb);
 
   Value getMemb(const Value &v, const Value &memb) noexcept {
     switch (v.index()) {
       case Value::CHAR_INDEX: {
-        wstring_view s;
+        string_view s;
         staticast<Value::CHAR_INDEX>(s, v);
         return getMemb(s, memb);
       }
       case Value::STR_INDEX: {
-        wstring_view s;
+        string_view s;
         staticast<Value::STR_INDEX>(s, v);
         return getMemb(s, memb);
       }
@@ -278,7 +265,7 @@ namespace zlt::mylisp {
     }
   }
 
-  Value getMemb(wstring_view s, const Value &memb) {
+  Value getMemb(string_view s, const Value &memb) {
     int i;
     if (dynamicast(i, memb) && i >= 0 && i < s.size()) {
       return s[i];
