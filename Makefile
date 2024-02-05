@@ -1,6 +1,7 @@
 HHS = \
 	../myccutils/dl \
 	../myccutils/mymap \
+	../myccutils/myset \
 	../myccutils/rbtree \
 	../myccutils/xyz \
 	ast \
@@ -19,7 +20,6 @@ HHS = \
 	eval \
 	gc \
 	gc_wb \
-	iconvs \
 	io \
 	lists \
 	maps \
@@ -42,7 +42,6 @@ OBJS = \
 	coroutine \
 	eval \
 	gc \
-	iconvs \
 	io \
 	lists \
 	maps \

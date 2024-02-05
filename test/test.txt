@@ -1,4 +1,5 @@
 (= OGL (import '../../mylispopengl/linuxdbg/opengl.so'))
+(if OGL (output stdout "fuck") (output stdout "shit"))
 (= window ((. OGL "openWindow") 800 600 "test"))
 (if window (output stdout "fuck") (output stdout "shit"))
 (getc stdin)
