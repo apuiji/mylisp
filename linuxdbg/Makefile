@@ -1,16 +1,17 @@
 include ../Makefile
 
+PROD = libmylisp.so
 LIBS = dl myccutils stdc++fs
 
-mylisp: $(addsuffix .o, ${OBJS})
+${PROD}: $(addsuffix .o, ${OBJS})
 	make -C ../../myccutils/linuxdbg
-	clang++ -o $@ $^ -L ../../myccutils/linuxdbg $(addprefix -l, ${LIBS}) -g
+	clang++ -o $@ $^ -L ../../myccutils/linuxdbg $(addprefix -l, ${LIBS}) -shared -g
 
 %.o: ../%.cc $(addprefix ../, $(addsuffix .hh, ${HHS}))
-	clang++ -o $@ $< -I .. -I ../.. -std=c++2b -c -g
+	clang++ -o $@ $< -I .. -I ../.. -fPIC -std=c++2b -c -g
 
 clean:
-	touch mylisp
-	rm mylisp *.o
+	touch ${PROD}
+	rm ${PROD} *.o
 
 .PHONY: clean

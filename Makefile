@@ -45,7 +45,6 @@ OBJS = \
 	io \
 	lists \
 	maps \
-	main \
 	object \
 	regexs \
 	rte \

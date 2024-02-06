@@ -26,7 +26,8 @@ namespace zlt::mylisp::rte {
 
   mymap::Map<const string *, Value, GlobalDefsComp> globalDefs;
 
-  static Value natfn_import(const Value *it, const Value *end);
+  static NativeFunction natfn_dlopen;
+  static NativeFunction natfn_dlerror;
 
   int init() {
     // strings begin
@@ -53,7 +54,8 @@ namespace zlt::mylisp::rte {
     globalDefs[constring<'g', 'e', 't', 'c'>] = natfn_getc;
     globalDefs[constring<'o', 'u', 't', 'p', 'u', 't'>] = natfn_output;
     // io end
-    globalDefs[constring<'i', 'm', 'p', 'o', 'r', 't'>] = natfn_import;
+    globalDefs[constring<'d', 'l', 'o', 'p', 'e', 'n'>] = natfn_dlopen;
+    globalDefs[constring<'d', 'l', 'e', 'r', 'r', 'o', 'r'>] = natfn_dlerror;
     return 0;
   }
 
@@ -74,7 +76,7 @@ namespace zlt::mylisp::rte {
   static bool modCanonicalPath(string &dest, const Value *it, const Value *end) noexcept;
   static Value loadMod(string &path);
 
-  Value natfn_import(const Value *it, const Value *end) {
+  Value natfn_dlopen(const Value *it, const Value *end) {
     string path;
     if (!modCanonicalPath(path, it, end)) {
       return Null();
@@ -116,6 +118,16 @@ namespace zlt::mylisp::rte {
     exp0rt(mod);
     mods[std::move(path)] = mod;
     no = false;
+    staticast(aaa, mod);
     return mod;
+  }
+
+  Value natfn_dlerror(const Value *it, const Value *end) {
+    auto what = dlerror();
+    if (what) {
+      return string(what);
+    } else {
+      return Null();
+    }
   }
 }
