@@ -98,10 +98,9 @@ namespace zlt::mylisp::ast {
   static bool esch1(int &dest, size_t &len, It it, It end) noexcept;
   static bool esch8(int &dest, size_t &len, It it, It end);
   static bool eschx(int &dest, size_t &len, It it, It end) noexcept;
-  static bool eschu(int &dest, size_t &len, It it, It end) noexcept;
 
   bool esch(int &dest, size_t &len, It it, It end) {
-    return esch1(dest, len, it, end) || esch8(dest, len, it, end) || eschx(dest, len, it, end) || eschu(dest, len, it, end);
+    return esch1(dest, len, it, end) || esch8(dest, len, it, end) || eschx(dest, len, it, end);
   }
 
   bool esch1(int &dest, size_t &len, It it, It end) noexcept {
@@ -149,16 +148,6 @@ namespace zlt::mylisp::ast {
     if (*it == 'x' && isxdigit(it[1]) && isxdigit(it[2])) {
       dest = (it[1] << 4) | it[2];
       len = 3;
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  bool eschu(int &dest, size_t &len, It it, It end) noexcept {
-    if (*it == 'u' && all_of(it + 1, it + 5, ofr<int, int>(isxdigit))) {
-      dest = (it[1] << 12) | (it[2] << 8) | (it[3] << 4) | it[4];
-      len = 5;
       return true;
     } else {
       return false;

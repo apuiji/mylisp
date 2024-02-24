@@ -13,24 +13,8 @@ namespace zlt::mylisp::ast {
     return std::move(a);
   }
 
-  static ostream &operator <<(ostream &dest, const Pos &pos) {
+  ostream &operator <<(ostream &dest, const Pos &pos) {
     return dest << "at " << pos.first->string() << ':' << pos.second;
-  }
-
-  int pos2str(string &dest, const Pos &pos) {
-    stringstream ss;
-    ss << pos;
-    dest = ss.str();
-    return 0;
-  }
-
-  template<class It>
-  static int posk2str(ostream &dest, It it, It end) {
-    if (it == end) [[unlikely]] {
-      return 0;
-    }
-    dest << *it << endl;
-    return posk2str(dest, ++it, end);
   }
 
   int Ast::operator ()(UNode &dest, const filesystem::path &file) {
@@ -43,12 +27,12 @@ namespace zlt::mylisp::ast {
       throw AstBad(std::move(bad.what));
     } catch (ParseBad bad) {
       stringstream ss;
-      ss << bad.pos;
-      throw AstBad(bad.what + ss.str());
+      ss << bad.what << bad.pos;
+      throw AstBad(ss.str());
     } catch (PreprocBad bad) {
       stringstream ss;
-      posk2str(ss, bad.posk.rbegin(), bad.posk.rend());
-      throw AstBad(bad.what + ss.str());
+      ss << bad.what << Range(bad.posk.rbegin(), bad.posk.rend());
+      throw AstBad(ss.str());
     }
     {
       UNode a;

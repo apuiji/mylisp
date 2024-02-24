@@ -4,15 +4,23 @@
 #include<filesystem>
 #include<map>
 #include<memory>
+#include<ostream>
 #include<set>
-#include<string>
 #include<utility>
 #include<vector>
 
 namespace zlt::mylisp::ast {
   using Pos = std::pair<const std::filesystem::path *, int>;
 
-  int pos2str(std::string &dest, const Pos &pos);
+  std::ostream &operator <<(std::ostream &dest, const Pos &pos);
+
+  template<RangeOf<Pos> T>
+  std::ostream &operator <<(std::ostream &dest, const T &t) {
+    for (const Pos &pos : r) {
+      dest << pos << std::endl;
+    }
+    return dest;
+  }
 
   struct Node;
 
