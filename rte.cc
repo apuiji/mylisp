@@ -26,6 +26,10 @@ namespace zlt::mylisp::rte {
 
   mymap::Map<const string *, Value, GlobalDefsComp> globalDefs;
 
+  int globalDefsComp(const std::string *a, const std::string *b) noexcept {
+    return a->compare(*b);
+  }
+
   static NativeFunction natfn_dlopen;
   static NativeFunction natfn_dlerror;
 

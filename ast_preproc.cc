@@ -275,9 +275,9 @@ namespace zlt::mylisp::ast {
     } catch (LoadBad bad) {
       throw PreprocBad(std::move(bad.what), pos);
     } catch (ParseBad bad) {
-      string postr;
-      pos2str(postr, bad.pos);
-      throw PreprocBad(std::move(bad.what) + postr, pos);
+      stringstream ss;
+      ss << bad.what << bad.pos;
+      throw PreprocBad(ss.str(), pos);
     } catch (PreprocBad bad) {
       throw PreprocBad(std::move(bad), pos);
     }

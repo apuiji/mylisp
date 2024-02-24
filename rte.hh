@@ -12,13 +12,11 @@ namespace zlt::mylisp::rte {
   extern ItCoroutine itCoroutine;
   extern std::set<std::string> strings;
 
-  struct GlobalDefsComp {
-    int operator ()(const std::string *a, const std::string *b) const noexcept {
-      return a->compare(*b);
-    }
-  };
+  using GlobalDef = mymap::Node<const std::string *, Value>;
 
-  extern mymap::Map<const std::string *, Value, GlobalDefsComp> globalDefs;
+  extern GlobalDef *globalDefs;
+
+  int globalDefsComp(const std::string *a, const std::string *b) noexcept;
 
   int init();
   int yield();

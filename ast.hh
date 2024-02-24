@@ -8,15 +8,16 @@
 #include<set>
 #include<utility>
 #include<vector>
+#include"myccutils/myiter.hh"
 
 namespace zlt::mylisp::ast {
   using Pos = std::pair<const std::filesystem::path *, int>;
 
   std::ostream &operator <<(std::ostream &dest, const Pos &pos);
 
-  template<RangeOf<Pos> T>
+  template<myiter::RangeOf<Pos> T>
   std::ostream &operator <<(std::ostream &dest, const T &t) {
-    for (const Pos &pos : r) {
+    for (Pos pos : t) {
       dest << pos << std::endl;
     }
     return dest;

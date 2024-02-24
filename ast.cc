@@ -1,3 +1,4 @@
+#include<ranges>
 #include<sstream>
 #include"ast_load.hh"
 #include"ast_optimize.hh"
@@ -31,7 +32,7 @@ namespace zlt::mylisp::ast {
       throw AstBad(ss.str());
     } catch (PreprocBad bad) {
       stringstream ss;
-      ss << bad.what << Range(bad.posk.rbegin(), bad.posk.rend());
+      ss << bad.what << myiter::makePointerToRange(bad.posk.rbegin(), bad.posk.rend());
       throw AstBad(ss.str());
     }
     {
