@@ -263,7 +263,7 @@ namespace zlt::mylisp {
     return v.index() == Value::NULL_INDEX;
   }
 
-  // const string * begin
+  // const string begin
   template<int ...S>
   struct Constring {
     static const std::string value;
@@ -273,6 +273,6 @@ namespace zlt::mylisp {
   const std::string Constring<S...>::value = { S... };
 
   template<int ...S>
-  static inline const std::string *constring = &Constring<S...>::value;
-  // const string * end
+  static inline const std::string &constring = Constring<S...>::value;
+  // const string end
 }

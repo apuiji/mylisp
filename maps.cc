@@ -4,6 +4,12 @@
 using namespace std;
 
 namespace zlt::mylisp {
+  int strPoolComp(string_view a, const Value &b) noexcept {
+    string_view s;
+    dynamicast(s, b);
+    return a.compare(s);
+  }
+
   template<class K, class Comp>
   static Value poolGetMemb(const map<K, Value, Comp> &m, const K &k) noexcept {
     auto it = m.find(k);
@@ -14,10 +20,10 @@ namespace zlt::mylisp {
     }
   }
 
-  static Value strPoolGetMemb(const MapObj::StrPool &sp, std::string_view sv) noexcept {
-    auto node = find(sp, sv);
+  static Value strPoolGetMemb(const MapObj::StrPool *const &sp, std::string_view sv) noexcept {
+    auto node = mymap::find(sp, sv, strPoolComp);
     if (node) {
-      return node->second;
+      return node->value.second;
     } else {
       return Null();
     }
@@ -79,6 +85,8 @@ namespace zlt::mylisp {
     return 0;
   }
 
+  static Value &strPoolGetMemb4set(MapObj::StrPool *&sp, const Value &memb, string_view s);
+
   Value &mapGetMemb4set(MapObj *m, const Value &memb) {
     switch (memb.index()) {
       case Value::NULL_INDEX: {
@@ -93,19 +101,19 @@ namespace zlt::mylisp {
       case Value::CHAR_INDEX: {
         string_view sv;
         staticast<Value::CHAR_INDEX>(sv, memb);
-        return insert(m->strPool, sv, memb)->second;
+        return strPoolGetMemb4set(m->strPool, memb, sv);
       }
       case Value::STR_INDEX: {
         string_view sv;
         staticast<Value::STR_INDEX>(sv, memb);
-        return insert(m->strPool, sv, memb)->second;
+        return strPoolGetMemb4set(m->strPool, memb, sv);
       }
       case Value::OBJ_INDEX: {
         Object *o;
         staticast(o, memb);
         gc::iwb(m, o);
         if (string_view sv; o->objDynamicast(sv)) {
-          return insert(m->strPool, sv, memb)->second;
+          return strPoolGetMemb4set(m->strPool, memb, sv);
         }
         return m->objPool[o];
       }
@@ -115,6 +123,15 @@ namespace zlt::mylisp {
         return m->ptrPool[p];
       }
     }
+  }
+
+  Value &strPoolGetMemb4set(MapObj::StrPool *&sp, const Value &memb, string_view s) {
+    auto [slot, parent] = mymap::findToInsert(sp, s, strPoolComp);
+    if (!*slot) {
+      *slot = new MapObj::StrPool(MapObj::StrPool::Value(memb, Null()));
+      (**slot).parent = parent;
+    }
+    return (**slot).value.second;
   }
 
   int MapObj::graySubjs() noexcept {
@@ -127,9 +144,9 @@ namespace zlt::mylisp {
     for (auto &p : numPool) {
       gc::grayValue(p.second);
     }
-    for (auto &p : strPool) {
-      gc::grayValue(p.first);
-      gc::grayValue(p.second);
+    for (auto &a : rbtree::makeRange(strPool)) {
+      gc::grayValue(a.value.first);
+      gc::grayValue(a.value.second);
     }
     for (auto &p : objPool) {
       gc::grayObj(p.first);

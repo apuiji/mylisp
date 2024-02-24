@@ -24,7 +24,7 @@ namespace zlt::mylisp::rte {
   ItCoroutine itCoroutine;
   set<string> strings;
 
-  mymap::Map<const string *, Value, GlobalDefsComp> globalDefs;
+  GlobalDef *globalDefs;
 
   int globalDefsComp(const std::string *a, const std::string *b) noexcept {
     return a->compare(*b);
@@ -33,33 +33,42 @@ namespace zlt::mylisp::rte {
   static NativeFunction natfn_dlopen;
   static NativeFunction natfn_dlerror;
 
+  static int setGlobalDef(const string &name, const Value &value) {
+    auto [slot, parent] = mymap::findToInsert(globalDefs, &name, globalDefsComp);
+    if (!*slot) {
+      *slot = new GlobalDef(GlobalDef::Value(&name, value));
+      (**slot).parent = parent;
+    }
+    return 0;
+  }
+
   int init() {
     // strings begin
-    globalDefs[constring<'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e'>] = natfn_charcode;
-    globalDefs[constring<'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e', 's'>] = natfn_charcodes;
-    globalDefs[constring<'f', 'r', 'o', 'm', 'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e'>] = natfn_fromcharcode;
-    globalDefs[constring<'s', 't', 'r', 'c', 'a', 't'>] = natfn_strcat;
-    globalDefs[constring<'s', 't', 'r', 'j', 'o', 'i', 'n'>] = natfn_strjoin;
-    globalDefs[constring<'s', 't', 'r', 's', 'l', 'i', 'c', 'e'>] = natfn_strslice;
-    globalDefs[constring<'s', 't', 'r', 't', 'o', 'd'>] = natfn_strtod;
-    globalDefs[constring<'s', 't', 'r', 't', 'o', 'i'>] = natfn_strtoi;
-    globalDefs[constring<'s', 't', 'r', 't', 'o', 'l', 'o', 'w', 'e', 'r'>] = natfn_strtolower;
-    globalDefs[constring<'s', 't', 'r', 't', 'o', 'u', 'p', 'p', 'e', 'r'>] = natfn_strtoupper;
-    globalDefs[constring<'s', 't', 'r', 'v', 'i', 'e', 'w'>] = natfn_strview;
+    setGlobalDef(constring<'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e'>, natfn_charcode);
+    setGlobalDef(constring<'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e', 's'>, natfn_charcodes);
+    setGlobalDef(constring<'f', 'r', 'o', 'm', 'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e'>, natfn_fromcharcode);
+    setGlobalDef(constring<'s', 't', 'r', 'c', 'a', 't'>, natfn_strcat);
+    setGlobalDef(constring<'s', 't', 'r', 'j', 'o', 'i', 'n'>, natfn_strjoin);
+    setGlobalDef(constring<'s', 't', 'r', 's', 'l', 'i', 'c', 'e'>, natfn_strslice);
+    setGlobalDef(constring<'s', 't', 'r', 't', 'o', 'd'>, natfn_strtod);
+    setGlobalDef(constring<'s', 't', 'r', 't', 'o', 'i'>, natfn_strtoi);
+    setGlobalDef(constring<'s', 't', 'r', 't', 'o', 'l', 'o', 'w', 'e', 'r'>, natfn_strtolower);
+    setGlobalDef(constring<'s', 't', 'r', 't', 'o', 'u', 'p', 'p', 'e', 'r'>, natfn_strtoupper);
+    setGlobalDef(constring<'s', 't', 'r', 'v', 'i', 'e', 'w'>, natfn_strview);
     // strings end
     // regex begin
-    globalDefs[constring<'r', 'e', 'g', 'c', 'o', 'm', 'p'>] = natfn_regcomp;
-    globalDefs[constring<'r', 'e', 'g', 'e', 'x', 'e', 'c'>] = natfn_regexec;
+    setGlobalDef(constring<'r', 'e', 'g', 'c', 'o', 'm', 'p'>, natfn_regcomp);
+    setGlobalDef(constring<'r', 'e', 'g', 'e', 'x', 'e', 'c'>, natfn_regexec);
     // regex end
     // io begin
-    globalDefs[constring<'s', 't', 'd', 'i', 'n'>] = neobj<InputObj>(cin);
-    globalDefs[constring<'s', 't', 'd', 'o', 'u', 't'>] = neobj<OutputObj>(cout);
-    globalDefs[constring<'s', 't', 'd', 'e', 'r', 'r'>] = neobj<OutputObj>(cerr);
-    globalDefs[constring<'g', 'e', 't', 'c'>] = natfn_getc;
-    globalDefs[constring<'o', 'u', 't', 'p', 'u', 't'>] = natfn_output;
+    setGlobalDef(constring<'s', 't', 'd', 'i', 'n'>, neobj<InputObj>(cin));
+    setGlobalDef(constring<'s', 't', 'd', 'o', 'u', 't'>, neobj<OutputObj>(cout));
+    setGlobalDef(constring<'s', 't', 'd', 'e', 'r', 'r'>, neobj<OutputObj>(cerr));
+    setGlobalDef(constring<'g', 'e', 't', 'c'>, natfn_getc);
+    setGlobalDef(constring<'o', 'u', 't', 'p', 'u', 't'>, natfn_output);
     // io end
-    globalDefs[constring<'d', 'l', 'o', 'p', 'e', 'n'>] = natfn_dlopen;
-    globalDefs[constring<'d', 'l', 'e', 'r', 'r', 'o', 'r'>] = natfn_dlerror;
+    setGlobalDef(constring<'d', 'l', 'o', 'p', 'e', 'n'>, natfn_dlopen);
+    setGlobalDef(constring<'d', 'l', 'e', 'r', 'r', 'o', 'r'>, natfn_dlerror);
     return 0;
   }
 
@@ -122,12 +131,11 @@ namespace zlt::mylisp::rte {
     exp0rt(mod);
     mods[std::move(path)] = mod;
     no = false;
-    staticast(aaa, mod);
     return mod;
   }
 
   Value natfn_dlerror(const Value *it, const Value *end) {
-    auto what = dlerror();
+    auto what = dl::error();
     if (what) {
       return string(what);
     } else {

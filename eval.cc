@@ -600,9 +600,13 @@ namespace zlt::mylisp {
 
   int evalSET_GLOBAL(const char *it, const char *end) {
     auto name = *(const string **) it;
-    auto a = mymap::insert(rte::globalDefs, name, rte::globalDefsComp, [] () { return new rte::GlobalDef(); });
-    a->value.first = name;
-    a->value.second = itCoroutine->value;
+    auto [slot, parent] = mymap::findToInsert(rte::globalDefs, name, rte::globalDefsComp);
+    if (*slot) {
+      (**slot).value.second = itCoroutine->value;
+    } else {
+      *slot = new rte::GlobalDef(rte::GlobalDef::Value(name, itCoroutine->value));
+      (**slot).parent = parent;
+    }
     return eval(it + sizeof(void *), end);
   }
 
