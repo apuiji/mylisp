@@ -549,9 +549,7 @@ namespace zlt::mylisp::ast {
 
   template<int N>
   int optimize(UNode &dest, Operation<N> &src) {
-    for (auto &item : src.items) {
-      optimize(item);
-    }
+    optimize(src.items.begin(), src.items.end());
     return optimize(dest->next);
   }
   // operations end

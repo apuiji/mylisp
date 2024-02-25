@@ -1,4 +1,5 @@
 HHS = \
+	../myccutils/constr \
 	../myccutils/dl \
 	../myccutils/myiter \
 	../myccutils/mymap \

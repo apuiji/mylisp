@@ -4,6 +4,7 @@
 #include"eval.hh"
 #include"gc.hh"
 #include"io.hh"
+#include"myccutils/constr.hh"
 #include"myccutils/dl.hh"
 #include"regexs.hh"
 #include"rte.hh"
@@ -44,7 +45,8 @@ namespace zlt::mylisp::rte {
 
   int init() {
     // strings begin
-    setGlobalDef(constring<'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e'>, natfn_charcode);
+    // setGlobalDef(constring<'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e'>, natfn_charcode);
+    setGlobalDef(constr("charcode"), natfn_charcode);
     setGlobalDef(constring<'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e', 's'>, natfn_charcodes);
     setGlobalDef(constring<'f', 'r', 'o', 'm', 'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e'>, natfn_fromcharcode);
     setGlobalDef(constring<'s', 't', 'r', 'c', 'a', 't'>, natfn_strcat);

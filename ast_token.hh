@@ -39,14 +39,14 @@ namespace zlt::mylisp::ast::token {
 
   template<size_t N, size_t ...I>
   requires (N <= 8)
-  static inline constexpr uint64_t symbol(const char (&s)[N], std::index_sequence<I...>) noexcept {
+  static consteval uint64_t symbol(const char (&s)[N], std::index_sequence<I...>) {
     uint64_t u = 0;
     ((u = (u << 8) | s[I]), ...);
     return 0x80'00'00'00'00'00'00'00UL | u;
   }
 
   template<size_t N>
-  static inline constexpr uint64_t symbol(const char (&s)[N]) noexcept {
+  static consteval uint64_t symbol(const char (&s)[N]) {
     return symbol(s, std::make_index_sequence<N - 1>());
   }
 }
