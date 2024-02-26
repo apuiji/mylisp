@@ -1,4 +1,5 @@
 #include"gc.hh"
+#include"myccutils/constr.hh"
 #include"strings.hh"
 
 using namespace std;
@@ -7,7 +8,7 @@ namespace zlt::mylisp {
   Value::Value(const Value &string, std::string_view view) {
     switch (view.size()) {
       case 0: {
-        operator =(constring<>);
+        operator =(constString<>);
         break;
       }
       case 1: {
@@ -23,7 +24,7 @@ namespace zlt::mylisp {
   Value &Value::operator =(string &&s) {
     switch (s.size()) {
       case 0: {
-        return operator =(constring<>);
+        return operator =(constString<>);
       }
       case 1: {
         return operator =(s[0]);
@@ -37,7 +38,7 @@ namespace zlt::mylisp {
   Value &Value::operator =(string_view sv) {
     switch (sv.size()) {
       case 0: {
-        return operator =(constring<>);
+        return operator =(constString<>);
       }
       case 1: {
         return operator =(sv[0]);

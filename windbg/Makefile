@@ -1,11 +1,11 @@
 include ../Makefile
 
+DEPS1 := $(addprefix ../, $(addsuffix /windbg, ${DEPS}))
 PROD = libmylisp.so
-LIBS := myccutils
 
 ${PROD}: $(addsuffix .o, ${OBJS})
-	make -C ../../myccutils/windbg
-	clang++ -o $@ $^ -L ../../myccutils/windbg $(addprefix -l, ${LIBS}) -shared -g
+	$(addprefix make -C , $(addsuffix ;, ${DEPS1}))
+	clang++ -o $@ $^ $(addprefix -L, ${DEPS1}) $(addprefix -l, ${LIBS}) -shared -g
 
 %.o: ../%.cc $(addprefix ../, $(addsuffix .hh, ${HHS}))
 	clang++ -o $@ $< -I .. -I ../.. -fPIC -std=c++2b -c -g

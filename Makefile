@@ -1,3 +1,4 @@
+DEPS = ../myccutils
 HHS = \
 	../myccutils/constr \
 	../myccutils/dl \
@@ -30,6 +31,7 @@ HHS = \
 	rte \
 	strings \
 	value
+LIBS = myccutils
 OBJS = \
 	ast \
 	ast_lexer \

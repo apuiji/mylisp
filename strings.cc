@@ -4,6 +4,7 @@
 #include<sstream>
 #include"io.hh"
 #include"lists.hh"
+#include"myccutils/constr.hh"
 #include"myccutils/xyz.hh"
 #include"strings.hh"
 
@@ -55,7 +56,7 @@ namespace zlt::mylisp {
 
   Value natfn_fromcharcode(const Value *it, const Value *end) {
     if (it == end) [[unlikely]] {
-      return constring<>;
+      return constString<>;
     }
     stringstream ss;
     fromcharcode1(ss, it, end);
@@ -73,7 +74,7 @@ namespace zlt::mylisp {
 
   Value natfn_strcat(const Value *it, const Value *end) {
     if (it == end) [[unlikely]] {
-      return constring<>;
+      return constString<>;
     }
     stringstream ss;
     strcat1(ss, it, end);
@@ -96,7 +97,7 @@ namespace zlt::mylisp {
       if (string_view sv; dynamicast(sv, *it)) {
         return *it;
       } else {
-        return constring<>;
+        return constString<>;
       }
     }
     string_view sepa;
@@ -133,7 +134,7 @@ namespace zlt::mylisp {
       end1 = sv.size();
     }
     if (start >= end1) {
-      return constring<>;
+      return constString<>;
     }
     if (start == 0 && end1 == sv.size()) {
       return *it;

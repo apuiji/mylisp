@@ -4,6 +4,7 @@
 #include"eval.hh"
 #include"gc.hh"
 #include"io.hh"
+#include"myccutils/constr.hh"
 #include"myccutils/dl.hh"
 #include"regexs.hh"
 #include"rte.hh"
@@ -44,31 +45,31 @@ namespace zlt::mylisp::rte {
 
   int init() {
     // strings begin
-    setGlobalDef(constring<'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e'>, natfn_charcode);
-    setGlobalDef(constring<'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e', 's'>, natfn_charcodes);
-    setGlobalDef(constring<'f', 'r', 'o', 'm', 'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e'>, natfn_fromcharcode);
-    setGlobalDef(constring<'s', 't', 'r', 'c', 'a', 't'>, natfn_strcat);
-    setGlobalDef(constring<'s', 't', 'r', 'j', 'o', 'i', 'n'>, natfn_strjoin);
-    setGlobalDef(constring<'s', 't', 'r', 's', 'l', 'i', 'c', 'e'>, natfn_strslice);
-    setGlobalDef(constring<'s', 't', 'r', 't', 'o', 'd'>, natfn_strtod);
-    setGlobalDef(constring<'s', 't', 'r', 't', 'o', 'i'>, natfn_strtoi);
-    setGlobalDef(constring<'s', 't', 'r', 't', 'o', 'l', 'o', 'w', 'e', 'r'>, natfn_strtolower);
-    setGlobalDef(constring<'s', 't', 'r', 't', 'o', 'u', 'p', 'p', 'e', 'r'>, natfn_strtoupper);
-    setGlobalDef(constring<'s', 't', 'r', 'v', 'i', 'e', 'w'>, natfn_strview);
+    setGlobalDef(constString<'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e'>, natfn_charcode);
+    setGlobalDef(constString<'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e', 's'>, natfn_charcodes);
+    setGlobalDef(constString<'f', 'r', 'o', 'm', 'c', 'h', 'a', 'r', 'c', 'o', 'd', 'e'>, natfn_fromcharcode);
+    setGlobalDef(constString<'s', 't', 'r', 'c', 'a', 't'>, natfn_strcat);
+    setGlobalDef(constString<'s', 't', 'r', 'j', 'o', 'i', 'n'>, natfn_strjoin);
+    setGlobalDef(constString<'s', 't', 'r', 's', 'l', 'i', 'c', 'e'>, natfn_strslice);
+    setGlobalDef(constString<'s', 't', 'r', 't', 'o', 'd'>, natfn_strtod);
+    setGlobalDef(constString<'s', 't', 'r', 't', 'o', 'i'>, natfn_strtoi);
+    setGlobalDef(constString<'s', 't', 'r', 't', 'o', 'l', 'o', 'w', 'e', 'r'>, natfn_strtolower);
+    setGlobalDef(constString<'s', 't', 'r', 't', 'o', 'u', 'p', 'p', 'e', 'r'>, natfn_strtoupper);
+    setGlobalDef(constString<'s', 't', 'r', 'v', 'i', 'e', 'w'>, natfn_strview);
     // strings end
     // regex begin
-    setGlobalDef(constring<'r', 'e', 'g', 'c', 'o', 'm', 'p'>, natfn_regcomp);
-    setGlobalDef(constring<'r', 'e', 'g', 'e', 'x', 'e', 'c'>, natfn_regexec);
+    setGlobalDef(constString<'r', 'e', 'g', 'c', 'o', 'm', 'p'>, natfn_regcomp);
+    setGlobalDef(constString<'r', 'e', 'g', 'e', 'x', 'e', 'c'>, natfn_regexec);
     // regex end
     // io begin
-    setGlobalDef(constring<'s', 't', 'd', 'i', 'n'>, neobj<InputObj>(cin));
-    setGlobalDef(constring<'s', 't', 'd', 'o', 'u', 't'>, neobj<OutputObj>(cout));
-    setGlobalDef(constring<'s', 't', 'd', 'e', 'r', 'r'>, neobj<OutputObj>(cerr));
-    setGlobalDef(constring<'g', 'e', 't', 'c'>, natfn_getc);
-    setGlobalDef(constring<'o', 'u', 't', 'p', 'u', 't'>, natfn_output);
+    setGlobalDef(constString<'s', 't', 'd', 'i', 'n'>, neobj<InputObj>(cin));
+    setGlobalDef(constString<'s', 't', 'd', 'o', 'u', 't'>, neobj<OutputObj>(cout));
+    setGlobalDef(constString<'s', 't', 'd', 'e', 'r', 'r'>, neobj<OutputObj>(cerr));
+    setGlobalDef(constString<'g', 'e', 't', 'c'>, natfn_getc);
+    setGlobalDef(constString<'o', 'u', 't', 'p', 'u', 't'>, natfn_output);
     // io end
-    setGlobalDef(constring<'d', 'l', 'o', 'p', 'e', 'n'>, natfn_dlopen);
-    setGlobalDef(constring<'d', 'l', 'e', 'r', 'r', 'o', 'r'>, natfn_dlerror);
+    setGlobalDef(constString<'d', 'l', 'o', 'p', 'e', 'n'>, natfn_dlopen);
+    setGlobalDef(constString<'d', 'l', 'e', 'r', 'r', 'o', 'r'>, natfn_dlerror);
     return 0;
   }
 

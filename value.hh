@@ -262,17 +262,4 @@ namespace zlt::mylisp {
   static inline bool operator !(const Value &v) noexcept {
     return v.index() == Value::NULL_INDEX;
   }
-
-  // const string begin
-  template<int ...S>
-  struct Constring {
-    static const std::string value;
-  };
-
-  template<int ...S>
-  const std::string Constring<S...>::value = { S... };
-
-  template<int ...S>
-  static inline const std::string &constring = Constring<S...>::value;
-  // const string end
 }
