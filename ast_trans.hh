@@ -111,39 +111,39 @@ namespace zlt::mylisp::ast {
   };
 
   // arithmetical operations begin
-  using ArithAddOper = Operation1<-1, token::symbol("+")>;
-  using ArithSubOper = Operation1<-1, token::symbol("-")>;
-  using ArithMulOper = Operation1<-1, token::symbol("*")>;
-  using ArithDivOper = Operation1<-1, token::symbol("/")>;
-  using ArithModOper = Operation1<-1, token::symbol("%")>;
-  using ArithPowOper = Operation1<-1, token::symbol("**")>;
+  using ArithAddOper = Operation1<-1, "+"_token>;
+  using ArithSubOper = Operation1<-1, "-"_token>;
+  using ArithMulOper = Operation1<-1, "*"_token>;
+  using ArithDivOper = Operation1<-1, "/"_token>;
+  using ArithModOper = Operation1<-1, "%"_token>;
+  using ArithPowOper = Operation1<-1, "**"_token>;
   // arithmetical operations end
   // logical operations begin
-  using LogicAndOper = Operation1<-1, token::symbol("&&")>;
-  using LogicOrOper = Operation1<-1, token::symbol("||")>;
-  using LogicNotOper = Operation1<1, token::symbol("!")>;
-  using LogicXorOper = Operation1<-1, token::symbol("^^")>;
+  using LogicAndOper = Operation1<-1, "&&"_token>;
+  using LogicOrOper = Operation1<-1, "||"_token>;
+  using LogicNotOper = Operation1<1, "!"_token>;
+  using LogicXorOper = Operation1<-1, "^^"_token>;
   // logical operations end
   // bitwise operations begin
-  using BitwsAndOper = Operation1<-1, token::symbol("&")>;
-  using BitwsOrOper = Operation1<-1, token::symbol("|")>;
-  using BitwsNotOper = Operation1<1, token::symbol("~")>;
-  using BitwsXorOper = Operation1<-1, token::symbol("^")>;
-  using LshOper = Operation1<-1, token::symbol("<<")>;
-  using RshOper = Operation1<-1, token::symbol(">>")>;
-  using UshOper = Operation1<-1, token::symbol(">>>")>;
+  using BitwsAndOper = Operation1<-1, "&"_token>;
+  using BitwsOrOper = Operation1<-1, "|"_token>;
+  using BitwsNotOper = Operation1<1, "~"_token>;
+  using BitwsXorOper = Operation1<-1, "^"_token>;
+  using LshOper = Operation1<-1, "<<"_token>;
+  using RshOper = Operation1<-1, ">>"_token>;
+  using UshOper = Operation1<-1, ">>>"_token>;
   // bitwise operations end
   // compare operations begin
-  using CmpEqOper = Operation1<2, token::symbol("==")>;
-  using CmpLtOper = Operation1<2, token::symbol("<")>;
-  using CmpGtOper = Operation1<2, token::symbol(">")>;
-  using CmpLteqOper = Operation1<2, token::symbol("<=")>;
-  using CmpGteqOper = Operation1<2, token::symbol(">=")>;
-  using CompareOper = Operation1<2, token::symbol("<=>")>;
+  using CmpEqOper = Operation1<2, "=="_token>;
+  using CmpLtOper = Operation1<2, "<"_token>;
+  using CmpGtOper = Operation1<2, ">"_token>;
+  using CmpLteqOper = Operation1<2, "<="_token>;
+  using CmpGteqOper = Operation1<2, ">="_token>;
+  using CompareOper = Operation1<2, "<=>"_token>;
   // compare operations end
-  using AssignOper = Operation1<2, token::symbol("=")>;
-  using GetMemberOper = Operation1<-1, token::symbol(".")>;
-  using LengthOper = Operation1<1, token::KWD_length>;
+  using AssignOper = Operation1<2, "="_token>;
+  using GetMemberOper = Operation1<-1, "."_token>;
+  using LengthOper = Operation1<1, "length"_token>;
 
   struct SetMemberOper final: Operation<3> {
     using Operation<3>::Operation;

@@ -200,11 +200,12 @@ namespace zlt::mylisp::ast {
   }
 
   bool isToken(uint64_t &dest, string_view raw) noexcept {
-    #define ifKeyword(kwd) \
-    if (raw == #kwd) { \
-      dest = token::KWD_##kwd; \
+    #define ifSymbol(symb) \
+    if (raw == symb) { \
+      dest = symb##_token; \
       return true; \
     }
+    #define ifKeyword(kwd) ifSymbol(#kwd)
     ifKeyword(callee);
     ifKeyword(def);
     ifKeyword(defer);
@@ -216,33 +217,17 @@ namespace zlt::mylisp::ast {
     ifKeyword(try);
     ifKeyword(yield);
     #undef ifKeyword
-    if (raw == "#") {
-      dest = token::PPD_toString;
-      return true;
-    }
-    if (raw == "##") {
-      dest = token::PPD_idcat;
-      return true;
-    }
-    #define ifPreprocDir(dir) \
-    if (raw == "#" #dir) { \
-      dest = token::PPD_##dir; \
-      return true; \
-    }
-    ifPreprocDir(def);
-    ifPreprocDir(file);
-    ifPreprocDir(ifdef);
-    ifPreprocDir(ifndef);
-    ifPreprocDir(include);
-    ifPreprocDir(line);
-    ifPreprocDir(undef);
-    #undef ifPreprocDir
-    #define ifSymbol(symb) \
-    if (raw == symb) { \
-      dest = token::symbol(symb); \
-      return true; \
-    }
     ifSymbol("!");
+    ifSymbol("#");
+    ifSymbol("##");
+    ifSymbol("#def");
+    ifSymbol("#def");
+    ifSymbol("#file");
+    ifSymbol("#ifdef");
+    ifSymbol("#ifndef");
+    ifSymbol("#include");
+    ifSymbol("#line");
+    ifSymbol("#undef");
     ifSymbol("%");
     ifSymbol("&&");
     ifSymbol("&");

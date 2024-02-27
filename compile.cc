@@ -249,49 +249,49 @@ namespace zlt::mylisp {
 
   template<uint64_t Op>
   static consteval uint8_t operat0r() {
-    if constexpr (Op == token::symbol("!")) {
+    if constexpr (Op == "!"_token) {
       return direction::NOT;
-    } else if constexpr (Op == token::symbol("%")) {
+    } else if constexpr (Op == "%"_token) {
       return direction::MOD;
-    } else if constexpr (Op == token::symbol("&")) {
+    } else if constexpr (Op == "&"_token) {
       return direction::BIT_AND;
-    } else if constexpr (Op == token::symbol("**")) {
+    } else if constexpr (Op == "**"_token) {
       return direction::POW;
-    } else if constexpr (Op == token::symbol("*")) {
+    } else if constexpr (Op == "*"_token) {
       return direction::MUL;
-    } else if constexpr (Op == token::symbol("+")) {
+    } else if constexpr (Op == "+"_token) {
       return direction::ADD;
-    } else if constexpr (Op == token::symbol("-")) {
+    } else if constexpr (Op == "-"_token) {
       return direction::SUB;
-    } else if constexpr (Op == token::symbol(".")) {
+    } else if constexpr (Op == "."_token) {
       return direction::GET_MEMB;
-    } else if constexpr (Op == token::symbol("/")) {
+    } else if constexpr (Op == "/"_token) {
       return direction::DIV;
-    } else if constexpr (Op == token::symbol("<<")) {
+    } else if constexpr (Op == "<<"_token) {
       return direction::LSH;
-    } else if constexpr (Op == token::symbol("<=>")) {
+    } else if constexpr (Op == "<=>"_token) {
       return direction::CMP;
-    } else if constexpr (Op == token::symbol("<=")) {
+    } else if constexpr (Op == "<="_token) {
       return direction::LTEQ;
-    } else if constexpr (Op == token::symbol("<")) {
+    } else if constexpr (Op == "<"_token) {
       return direction::LT;
-    } else if constexpr (Op == token::symbol("==")) {
+    } else if constexpr (Op == "=="_token) {
       return direction::EQ;
-    } else if constexpr (Op == token::symbol(">=")) {
+    } else if constexpr (Op == ">="_token) {
       return direction::GTEQ;
-    } else if constexpr (Op == token::symbol(">>>")) {
+    } else if constexpr (Op == ">>>"_token) {
       return direction::USH;
-    } else if constexpr (Op == token::symbol(">>")) {
+    } else if constexpr (Op == ">>"_token) {
       return direction::RSH;
-    } else if constexpr (Op == token::symbol(">")) {
+    } else if constexpr (Op == ">"_token) {
       return direction::GT;
-    } else if constexpr (Op == token::symbol("^^")) {
+    } else if constexpr (Op == "^^"_token) {
       return direction::XOR;
-    } else if constexpr (Op == token::symbol("^")) {
+    } else if constexpr (Op == "^"_token) {
       return direction::BIT_XOR;
-    } else if constexpr (Op == token::symbol("|")) {
+    } else if constexpr (Op == "|"_token) {
       return direction::BIT_OR;
-    } else if constexpr (Op == token::symbol("~")) {
+    } else if constexpr (Op == "~"_token) {
       return direction::BIT_NOT;
     } else {
       // never

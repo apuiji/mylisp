@@ -60,32 +60,45 @@ namespace zlt::mylisp::ast {
     return dest->next;
   }
 
-  static PreprocDir ppd_def, ppd_file, ppd_idcat, ppd_ifdef, ppd_ifndef, ppd_include, ppd_line, ppd_toString, ppd_undef;
+  template<uint64_t T>
+  PreprocDir preprocDir;
+
+  #define declPreprocDir(symb) \
+  template<> \
+  PreprocDir preprocDir<symb##_token>
+
+  declPreprocDir("#");
+  declPreprocDir("##");
+  declPreprocDir("#def");
+  declPreprocDir("#file");
+  declPreprocDir("#ifdef");
+  declPreprocDir("#ifndef");
+  declPreprocDir("#include");
+  declPreprocDir("#line");
+  declPreprocDir("#undef");
+
+  #undef declPreprocDir
 
   PreprocDir *isPreprocDir(const UNode &src) noexcept {
     auto a = dynamic_cast<const TokenAtom *>(src.get());
     if (!a) {
       return nullptr;
     }
-    switch (a->token) {
-      #define casePPD(name) \
-      case token::PPD_##name: { \
-        return ppd_##name; \
-      }
-      casePPD(def);
-      casePPD(file);
-      casePPD(idcat);
-      casePPD(ifdef);
-      casePPD(ifndef);
-      casePPD(include);
-      casePPD(line);
-      casePPD(toString);
-      casePPD(undef);
-      #undef casePPD
-      default: {
-        return nullptr;
-      }
+    #define ifPreprocDir(symb) \
+    if (a->token == symb##_token) { \
+      return preprocDir<symb##_token>; \
     }
+    ifPreprocDir("#");
+    ifPreprocDir("##");
+    ifPreprocDir("#def");
+    ifPreprocDir("#file");
+    ifPreprocDir("#ifdef");
+    ifPreprocDir("#ifndef");
+    ifPreprocDir("#include");
+    ifPreprocDir("#line");
+    ifPreprocDir("#undef");
+    #undef ifPreprocDir
+    return nullptr;
   }
 
   const Macro *findMacro(const Ast &ast, const UNode &src) noexcept {
@@ -157,7 +170,8 @@ namespace zlt::mylisp::ast {
 
   static int makeMacroParams(Macro::Params &dest, const UNode &src);
 
-  UNode &ppd_def(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
+  template<>
+  UNode &preprocDir<"#def"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
     auto id = dynamic_cast<const IDAtom *>(src.get());
     if (!id) {
       throw PreprocBad("required macro name", pos);
@@ -196,7 +210,8 @@ namespace zlt::mylisp::ast {
     throw PreprocBad("illegal macro parameter", src->pos);
   }
 
-  UNode &ppd_file(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
+  template<>
+  UNode &preprocDir<"#file"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
     auto &file = *rte::strings.insert(pos->first->string()).first;
     dest.reset(new StringAtom(pos, &file));
     return dest->next;
@@ -204,7 +219,8 @@ namespace zlt::mylisp::ast {
 
   static int idcat(ostream &dest, const UNode &src);
 
-  UNode &ppd_idcat(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
+  template<>
+  UNode &preprocDir<"#"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
     stringstream ss;
     idcat(ss, src);
     auto &name = *rte::strings.insert(ss.str()).first;
@@ -229,11 +245,13 @@ namespace zlt::mylisp::ast {
 
   static bool ifdef(const Ast &ast, const Pos *pos, const UNode &src);
 
-  UNode &ppd_ifdef(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
+  template<>
+  UNode &preprocDir<"#ifdef"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
     return ifdef(ast, pos, src) ? preproc(dest, ast, src->next) : dest;
   }
 
-  UNode &ppd_ifndef(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
+  template<>
+  UNode &preprocDir<"#ifndef"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
     return ifdef(ast, pos, src) ? dest : preproc(dest, ast, src->next);
   }
 
@@ -247,7 +265,8 @@ namespace zlt::mylisp::ast {
 
   static const UNode &include(Ast &ast, const Pos *pos, const UNode &src);
 
-  UNode &ppd_include(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
+  template<>
+  UNode &preprocDir<"#include"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
     auto &a = include(ast, pos, src);
     return preproc(dest, ast, a);
   }
@@ -300,7 +319,8 @@ namespace zlt::mylisp::ast {
     return false;
   }
 
-  UNode &ppd_line(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
+  template<>
+  UNode &preprocDir<"#line"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
     static const char *raw = "#line";
     dest.reset(new NumberAtom(pos, string_view(raw, 5), pos->second));
     return dest->next;
@@ -308,7 +328,8 @@ namespace zlt::mylisp::ast {
 
   static int toString(char &dest, const string *&dest1, string_view &dest2, const UNode &src) noexcept;
 
-  UNode &ppd_toString(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
+  template<>
+  UNode &preprocDir<"##"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
     char c;
     const string *s;
     string_view sv;
@@ -358,7 +379,8 @@ namespace zlt::mylisp::ast {
     return -1;
   }
 
-  UNode &ppd_undef(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
+  template<>
+  UNode &preprocDir<"#undef"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
     auto id = dynamic_cast<const IDAtom *>(src.get());
     if (!id) {
       throw PreprocBad("required macro name", pos);
