@@ -1,5 +1,5 @@
-#include<algorithm>
 #include"gc.hh"
+#include"myccutils/myiter.hh"
 #include"object.hh"
 #include"rte.hh"
 
@@ -29,9 +29,7 @@ namespace zlt::mylisp::gc {
         whiteBlacks(blacks);
         whites = exchange(blacks, nullptr);
         firstGrays(rte::coroutines.begin(), rte::coroutines.end());
-        for (auto &m : rte::mods) {
-          grayValue(m.second);
-        }
+        myiter::forEach(myiter::makeElementAtRange<1>(rte::mods), grayValue);
         step = NEXT_GRAYS_STEP;
         return 0;
       }
@@ -62,9 +60,7 @@ namespace zlt::mylisp::gc {
   }
 
   static int grayLocalDefs(map<const string *, Value> &defs) noexcept {
-    for (auto &p : defs) {
-      grayValue(p.second);
-    }
+    myiter::forEach(myiter::makeElementAtRange<1>(defs), grayValue);
     return 0;
   }
 

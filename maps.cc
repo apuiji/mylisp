@@ -1,5 +1,6 @@
 #include"gc_wb.hh"
 #include"maps.hh"
+#include"myccutils/myiter.hh"
 
 using namespace std;
 
@@ -141,9 +142,7 @@ namespace zlt::mylisp {
     if (nanPool.first) {
       gc::grayValue(nanPool.second);
     }
-    for (auto &p : numPool) {
-      gc::grayValue(p.second);
-    }
+    myiter::forEach(myiter::makeElementAtRange<1>(numPool), gc::grayValue);
     for (auto &a : rbtree::makeRange(strPool)) {
       gc::grayValue(a.value.first);
       gc::grayValue(a.value.second);
@@ -152,9 +151,7 @@ namespace zlt::mylisp {
       gc::grayObj(p.first);
       gc::grayValue(p.second);
     }
-    for (auto &p : ptrPool) {
-      gc::grayValue(p.second);
-    }
+    myiter::forEach(myiter::makeElementAtRange<1>(ptrPool), gc::grayValue);
     return 0;
   }
 }

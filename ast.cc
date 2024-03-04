@@ -31,7 +31,8 @@ namespace zlt::mylisp::ast {
       throw AstBad(ss.str());
     } catch (PreprocBad bad) {
       stringstream ss;
-      ss << bad.what << myiter::makePointerToRange(bad.posk.rbegin(), bad.posk.rend());
+      auto range = myiter::makeCastRange<Pos>(myiter::makePointerToRange(bad.posk.rbegin(), bad.posk.rend()));
+      ss << bad.what << makePosStackTrace(range);
       throw AstBad(ss.str());
     }
     {

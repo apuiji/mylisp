@@ -1,14 +1,13 @@
 #include<algorithm>
 #include<cmath>
 #include"gc_wb.hh"
+#include"myccutils/myiter.hh"
 
 using namespace std;
 
 namespace zlt::mylisp {
   int FunctionObj::graySubjs() noexcept {
-    for (auto &p : closures) {
-      gc::grayValue(p.second);
-    }
+    myiter::forEach(myiter::makeElementAtRange<1>(closures), gc::grayValue);
     return 0;
   }
 
