@@ -15,28 +15,10 @@ namespace zlt::mylisp::ast {
 
   std::ostream &operator <<(std::ostream &dest, const Pos &pos);
 
-  template<myiter::IteratorOf<Pos> It>
-  struct PosStackTrace: std::pair<It, It> {
-    using std::pair<It, It>::pair;
-  };
-
-  template<myiter::IteratorOf<Pos> It>
-  static inline auto makePosStackTrace(const It &it, const It &end) {
-    return PosStackTrace<It>(it, end);
-  }
-
   template<myiter::RangeOf<Pos> T>
-  static inline auto makePosStackTrace(const T &t) {
-    return makePosStackTrace(t.begin(), t.end());
-  }
-
-  template<myiter::IteratorOf<Pos> It>
-  std::ostream &operator <<(std::ostream &dest, const PosStackTrace<It> &pst) {
-    auto [it, end] = pst;
-    if (it == end) [[unlikely]] {
-      return dest;
-    }
-    return dest << *it << std::endl << makePosStackTrace(++it, end);
+  int writeStackTrace(std::ostream &dest, const T &t) {
+    myiter::forEach(t, [&dest] (const Pos &pos) { dest << pos << std::endl; });
+    return 0;
   }
 
   struct Node;

@@ -7,7 +7,7 @@ using namespace std;
 
 namespace zlt::mylisp {
   int FunctionObj::graySubjs() noexcept {
-    myiter::forEach(myiter::makeElementAtRange<1>(closures), gc::grayValue);
+    myiter::forEach(myiter::elementsView<1>(closures), gc::grayValue);
     return 0;
   }
 

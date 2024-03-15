@@ -29,7 +29,7 @@ namespace zlt::mylisp::gc {
         whiteBlacks(blacks);
         whites = exchange(blacks, nullptr);
         firstGrays(rte::coroutines.begin(), rte::coroutines.end());
-        myiter::forEach(myiter::makeElementAtRange<1>(rte::mods), grayValue);
+        myiter::forEach(myiter::elementsView<1>(rte::mods), grayValue);
         step = NEXT_GRAYS_STEP;
         return 0;
       }
@@ -60,7 +60,7 @@ namespace zlt::mylisp::gc {
   }
 
   static int grayLocalDefs(map<const string *, Value> &defs) noexcept {
-    myiter::forEach(myiter::makeElementAtRange<1>(defs), grayValue);
+    myiter::forEach(myiter::elementsView<1>(defs), grayValue);
     return 0;
   }
 
