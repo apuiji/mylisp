@@ -4,17 +4,20 @@
 #include<utility>
 
 namespace zlt::mylisp::ast {
+  const char *hit(const char *it, const char *end) noexcept;
+
   struct Lexer {
     double numval;
     char charval;
     std::string strval;
     std::string_view raw;
-    std::tuple<uint64_t, const char *, const char *> operator ()(const char *it, const char *end);
+    /// @return [token, end]
+    std::tuple<uint64_t, const char *> operator ()(const char *it, const char *end);
   };
 
   struct LexerBad {
+    int code;
     const char *start;
-    std::string what;
-    LexerBad(const char *start, std::string &&what) noexcept: start(start), what(std::move(what)) {}
+    LexerBad(int code, const char *start) noexcept: code(code), start(start) {}
   };
 }

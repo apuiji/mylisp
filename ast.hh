@@ -67,8 +67,12 @@ namespace zlt::mylisp::ast {
     int operator ()(UNode &dest, const std::filesystem::path &src);
   };
 
-  struct AstBad {
-    std::string what;
-    AstBad(std::string &&what) noexcept: what(std::move(what)) {}
-  };
+  namespace bad {
+    enum {
+      NUMBER_LITERAL_OOR,
+      UNEXPECTED_TOKEN,
+      UNRECOGNIZED_SYMBOL,
+      UNTERMINATED_STRING
+    };
+  }
 }
