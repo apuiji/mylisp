@@ -3,7 +3,7 @@
 #include<cstring>
 #include<regex>
 #include<sstream>
-#include"ast_parse.hh"
+#include"ast_lexer.hh"
 #include"ast_token.hh"
 #include"myccutils/xyz.hh"
 
@@ -12,20 +12,6 @@ using namespace std;
 namespace zlt::mylisp::ast {
   using It = const char *;
 
-  It hit(It it, It end) noexcept {
-    if (it >= end) [[unlikely]] {
-      return it;
-    }
-    if (isspace(*it)) {
-      return hit(it + 1, end);
-    }
-    if (*it == ';') {
-      It it1 = find(it + 1, end, '\n');
-      return hit(it1, end);
-    }
-    return it;
-  }
-
   struct LexerStr {
     stringstream &dest;
     int quot;
@@ -33,67 +19,78 @@ namespace zlt::mylisp::ast {
     It operator ()(It it, It end);
   };
 
-  static inline bool notRawChar(char c) noexcept {
-    return strchr("\"'();", c) || isspace(c);
-  }
-
+  static bool notRawChar(char c) noexcept;
+  static bool isNumber(double &dest, string_view src);
   static bool isToken(uint64_t &dest, string_view src) noexcept;
 
-  tuple<uint64_t, It> Lexer::operator ()(It it, It end) {
-    if (it >= end) [[unlikely]] {
-      return { token::E0F, end };
+  tuple<uint64_t, It, It> Lexer::operator ()(It it, It end) {
+    if (it == end) [[unlikely]] {
+      return { token::E0F, end, end };
+    }
+    if (It it1 = find_if_not(it, end, iswspace); it1 != it) {
+      return operator ()(it1, end);
+    }
+    if (*it == ';') {
+      It it1 = find(it + 1, end, '\n');
+      return operator ()(it1, end);
     }
     if (*it == '(') {
-      return { "("_token, it + 1 };
+      return { token::LPAREN, it, it + 1 };
     }
     if (*it == ')') {
-      return { ")"_token, it + 1 };
+      return { token::RPAREN, it, it + 1 };
     }
     if (*it == '"' || *it == '\'') {
       stringstream ss;
       It it1 = LexerStr(ss, *it)(it + 1, end);
-      if (!(it1 < end && *it1 == *it)) {
-        throw AstBad(bad::UNTERMINATED_STRING, it);
+      if (*it1 != *it) {
+        throw LexerBad(it, "unterminated string");
       }
       strval = ss.str();
       if (strval.size() == 1) {
         charval = strval[0];
-        return { token::CHAR, it1 + 1 };
+        return { token::CHAR, it, it1 + 1 };
       }
-      return { token::STRING, it1 + 1 };
+      return { token::STRING, it, it1 + 1 };
     }
     size_t n = find_if(it, end, notRawChar) - it;
     if (!n) {
-      throw AstBad(bad::UNRECOGNIZED_SYMBOL, it);
+      throw LexerBad(it, "unrecognized symbol");
     }
     raw = string_view(it, n);
     try {
       if (isNumber(numval, raw)) {
-        return { token::NUMBER, it + n };
+        return { token::NUMBER, it, it + n };
       }
     } catch (out_of_range) {
-      throw AstBad(bad::NUMBER_LITERAL_OOR, it);
+      throw LexerBad(it, "number literal out of range");
     }
     if (uint64_t t; isToken(t, raw)) {
-      return { t, it + n };
+      return { t, it, it + n };
     }
-    return { token::ID, it + n };
+    return { token::ID, it, it + n };
   }
 
-  static pair<int, size_t> esch(It it, It end);
+  static bool esch(int &dest, size_t &len, It it, It end);
 
   It LexerStr::operator ()(It it, It end) {
-    if (it >= end) [[unlikely]] {
+    if (it == end) [[unlikely]] {
       return end;
     }
-    if (It it1 = find_if(it, end, [q = this->quot] (auto c) { return c == '\\' || c == q; }); it1 != it) {
-      dest.write(it, it1 - it);
+    if (It it1 = find_if(it, end, [quot = this->quot] (auto c) { return c == '\\' || c == quot; }); it1 != it) {
+      dest << string(it, it1);
       return operator ()(it1, end);
     }
     if (*it == '\\') {
-      auto [c, n] = esch(it + 1, end);
-      dest.put(c);
-      return operator ()(it + 1 + n, end);
+      int c;
+      size_t len;
+      if (esch(c, len, it + 1, end)) {
+        dest.put(c);
+        return operator ()(it + 1 + len, end);
+      } else {
+        dest.put('\\');
+        return operator ()(it + 1, end);
+      }
     }
     return it;
   }
@@ -102,11 +99,8 @@ namespace zlt::mylisp::ast {
   static bool esch8(int &dest, size_t &len, It it, It end);
   static bool eschx(int &dest, size_t &len, It it, It end) noexcept;
 
-  pair<int, size_t> esch(It it, It end) {
-    int c;
-    size_t n;
-    esch1(c, n, it, end) || esch8(c, n, it, end) || eschx(c, n, it, end) || (c = '\\', n = 0);
-    return { c, n };
+  bool esch(int &dest, size_t &len, It it, It end) {
+    return esch1(dest, len, it, end) || esch8(dest, len, it, end) || eschx(dest, len, it, end);
   }
 
   bool esch1(int &dest, size_t &len, It it, It end) noexcept {
@@ -158,6 +152,10 @@ namespace zlt::mylisp::ast {
     } else {
       return false;
     }
+  }
+
+  bool notRawChar(char c) noexcept {
+    return strchr("\"'();", c) || isspace(c);
   }
 
   static bool isBaseInt(double &dest, string_view src);
@@ -223,9 +221,12 @@ namespace zlt::mylisp::ast {
     ifSymbol("#");
     ifSymbol("##");
     ifSymbol("#def");
+    ifSymbol("#def");
+    ifSymbol("#file");
     ifSymbol("#ifdef");
     ifSymbol("#ifndef");
     ifSymbol("#include");
+    ifSymbol("#line");
     ifSymbol("#undef");
     ifSymbol("%");
     ifSymbol("&&");

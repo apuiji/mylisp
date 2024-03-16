@@ -10,6 +10,8 @@ namespace zlt::mylisp::ast {
       CHAR,
       STRING,
       ID,
+      LPAREN,
+      RPAREN,
       E0F
     };
 

@@ -7,12 +7,32 @@
 using namespace std;
 
 namespace zlt::mylisp::ast {
+  UNode shift(UNode &src) noexcept {
+    auto a = std::move(src);
+    src = std::move(a->next);
+    return std::move(a);
+  }
+
+  ostream &operator <<(ostream &dest, const Pos &pos) {
+    return dest << "at " << pos.first->string() << ':' << pos.second;
+  }
+
   int Ast::operator ()(UNode &dest, const filesystem::path &file) {
-    ItLoaded it;
+    Ast::ItLoaded it;
     try {
       it = load(*this, filesystem::canonical(file));
     } catch (filesystem::filesystem_error) {
-      throw AstBad(bad::SRC_FILE_OPEN_FAILED);
+      throw AstBad("cannot open file: " + file.string());
+    } catch (LoadBad bad) {
+      throw AstBad(std::move(bad.what));
+    } catch (ParseBad bad) {
+      stringstream ss;
+      ss << bad.what << bad.pos;
+      throw AstBad(ss.str());
+    } catch (PreprocBad bad) {
+      stringstream ss;
+      ss << bad.what << myiter::makePointerToRange(bad.posk.rbegin(), bad.posk.rend());
+      throw AstBad(ss.str());
     }
     {
       UNode a;
