@@ -31,7 +31,9 @@ namespace zlt::mylisp::ast {
       throw AstBad(ss.str());
     } catch (PreprocBad bad) {
       stringstream ss;
-      ss << bad.what << myiter::makePointerToRange(bad.posk.rbegin(), bad.posk.rend());
+      auto a = myiter::reverseView(bad.posk);
+      auto b = myiter::transformView(a, [] (auto p) { return *p; });
+      ss << bad.what << b;
       throw AstBad(ss.str());
     }
     {

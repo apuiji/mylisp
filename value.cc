@@ -185,7 +185,20 @@ namespace zlt::mylisp {
       case Value::NUM_INDEX: {
         double x;
         staticast(x, a);
-        return Compare {}(dest, x, b);
+        auto diff = x <=> b;
+        if (diff == partial_ordering::less) {
+          dest = -1;
+          return true;
+        }
+        if (diff == partial_ordering::equivalent) {
+          dest = 0;
+          return true;
+        }
+        if (diff == partial_ordering::greater) {
+          dest = 1;
+          return true;
+        }
+        return false;
       }
       default: {
         return false;
