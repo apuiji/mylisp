@@ -2,74 +2,61 @@
 
 #include<concepts>
 #include<filesystem>
+#include<list>
 #include<map>
 #include<memory>
-#include<ostream>
 #include<set>
 #include<utility>
 #include<vector>
-#include"myccutils/myiter.hh"
 
 namespace zlt::mylisp::ast {
-  using Pos = std::pair<const std::filesystem::path *, int>;
-
-  std::ostream &operator <<(std::ostream &dest, const Pos &pos);
-
-  template<myiter::RangeOf<Pos> T>
-  int writeStackTrace(std::ostream &dest, const T &t) {
-    myiter::forEach(t, [&dest] (const Pos &pos) { dest << pos << std::endl; });
-    return 0;
-  }
-
-  struct Node;
-
-  using UNode = std::unique_ptr<Node>;
-  using UNodes = std::vector<UNode>;
-
   struct Node {
-    const Pos *pos;
-    UNode next;
-    Node(const Pos *pos = nullptr) noexcept: pos(pos) {}
+    const char *start;
+    Node(const char *start = nullptr) noexcept: start(start) {}
     virtual ~Node() = default;
   };
 
-  static inline int replace(UNode &dest, UNode &src) noexcept {
-    src->next = std::move(dest->next);
-    dest = std::move(src);
-    return 0;
-  }
-
-  static inline int replace(UNode &dest, UNode &&src) noexcept {
-    return replace(dest, src);
-  }
-
-  UNode shift(UNode &src) noexcept;
+  using UNode = std::unique_ptr<Node>;
+  using UNodes = std::list<UNode>;
 
   struct Macro {
     using Params = std::vector<const std::string *>;
     using ItParam = Params::const_iterator;
     Params params;
-    UNode body;
+    UNodes body;
     Macro() = default;
-    Macro(Params &&params, UNode &&body) noexcept: params(std::move(params)), body(std::move(body)) {}
+    Macro(Params &&params, UNodes &&body) noexcept: params(std::move(params)), body(std::move(body)) {}
   };
 
+  using Sources = std::map<const std::filesystem::path *, std::string>;
+  using Loadeds = std::map<const std::filesystem::path *, UNodes>;
+  using ItSource = Sources::const_iterator;
+  using ItLoaded = Loadeds::const_iterator;
+
   struct Ast {
-    using Sources = std::map<const std::filesystem::path *, std::string>;
-    using Loadeds = std::map<const std::filesystem::path *, UNode>;
-    using ItSource = Sources::const_iterator;
-    using ItLoaded = Loadeds::const_iterator;
     std::set<std::filesystem::path> files;
     std::map<const std::filesystem::path *, std::string> sources;
     Loadeds loadeds;
-    std::set<Pos> positions;
     std::map<const std::string *, Macro> macros;
-    int operator ()(UNode &dest, const std::filesystem::path &src);
+    int operator ()(UNodes &dest, const std::filesystem::path &src);
+  };
+
+  const std::filesystem::path *whichFile(const Ast &ast, const char *start) noexcept;
+
+  struct AstBad {
+    int code;
+    const char *start;
+    AstBad(int code, const char *start) noexcept: code(code), start(start) {}
   };
 
   namespace bad {
     enum {
+      ILLEGAL_MACRO_PARAM,
+      MACRO_ALREADY_DEFINED,
       NUMBER_LITERAL_OOR,
+      REQUIRED_PREPROC_ARGS,
+      REST_MACRO_PARAM_MUST_BE_LAST,
+      SRC_FILE_OPEN_FAILED,
       UNEXPECTED_TOKEN,
       UNRECOGNIZED_SYMBOL,
       UNTERMINATED_STRING

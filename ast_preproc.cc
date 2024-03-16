@@ -10,54 +10,57 @@
 using namespace std;
 
 namespace zlt::mylisp::ast {
-  static UNode &preprocList(UNode &dest, Ast &ast, const Pos *pos, const UNode &first);
+  using It = UNodes::const_iterator;
+  using Posk = vector<const char *>;
 
-  UNode &preproc(UNode &dest, Ast &ast, const UNode &src) {
-    if (!src) [[unlikely]] {
-      return dest;
+  static int preprocList(UNodes &dest, Ast &ast, Posk &posk, const char *start, It it, It end);
+  static int clone(UNode &dest, const UNode &src);
+  static int clones(UNodes &dest, It it, It end);
+
+  int preproc(UNodes &dest, Ast &ast, Posk &posk, It it, It end) {
+    if (it == end) [[unlikely]] {
+      return 0;
     }
-    if (auto ls = dynamic_cast<const List*>(src.get()); ls) {
-      if (ls->first) {
-        auto &next = preprocList(dest, ast, ls->pos, ls->first);
-        return preproc(next, ast, src->next);
-      } else {
-        dest.reset(new List(ls->pos));
-        return preproc(dest->next, ast, src->next);
-      }
+    if (auto ls = dynamic_cast<const List*>(it->get()); ls && ls->items.size()) {
+      preprocList(dest, ast, posk, ls->start, ls->items.begin(), ls->items.end());
+    } else {
+      UNode a;
+      clone(a, *it);
+      dest.push_back(std::move(a));
     }
-    clone(dest, src);
-    return preproc(dest->next, ast, src->next);
+    return preproc(dest, ast, posk, it + 1, end);
   }
 
-  using PreprocDir = UNode &(UNode &dest, Ast &ast, const Pos *pos, const UNode &src);
+  using PreprocDir = int(UNodes &dest, Ast &ast, Posk &posk, const char *start, It it, It end);
 
   static PreprocDir *isPreprocDir(const UNode &src) noexcept;
-  static const Macro *findMacro(const Ast &ast, const UNode &src) noexcept;
+  static const Macro *isMacro(const Ast &ast, const UNode &src) noexcept;
+  static int macroExpand(UNodes &dest, const Macro *macro, It it, It end);
 
-  struct MacroExpand {
-    map<const string *, const UNode *> map;
-    UNode &operator ()(UNode &dest, const UNode &src);
+  struct PopPoskGuard {
+    Posk &posk;
+    PopPoskGuard(Posk &posk) noexcept: posk(posk) {}
+    ~PopPoskGuard() {
+      posk.pop_back();
+    }
   };
 
-  static int makeMacroExpand(MacroExpand &dest, Macro::ItParam itParam, Macro::ItParam endParam, const UNode &src);
-
-  UNode &preprocList(UNode &dest, Ast &ast, const Pos *pos, const UNode &first) {
-    if (auto dir = isPreprocDir(first); dir) {
-      return dir(dest, ast, pos, first->next);
+  int preprocList(UNodes &dest, Ast &ast, Posk &posk, const char *start, It it, It end) {
+    if (auto pd = isPreprocDir(*it); pd) {
+      return pd(dest, ast, posk, start, it + 1, end);
     }
-    if (auto m = findMacro(ast, first); m) {
-      UNode a;
-      {
-        MacroExpand me;
-        makeMacroExpand(me, m->params.begin(), m->params.end(), first->next);
-        me(a, m->body);
-      }
-      return preproc(dest, ast, a);
+    if (auto m = isMacro(ast, *it); m) {
+      UNodes a;
+      macroExpand(a, m, it + 1, end);
+      posk.push_back(start);
+      PopPoskGuard g(posk);
+      return preproc(dest, ast, posk, a.begin(), a.end());
     }
-    UNode first1;
-    preproc(first1, ast, first);
-    dest.reset(new List(pos, std::move(first1)));
-    return dest->next;
+    UNodes items;
+    preproc(items, ast, posk, it, end);
+    UNode a(new List(start, std::move(items)));
+    dest.push_back(std::move(a));
+    return 0;
   }
 
   template<uint64_t T>
@@ -70,11 +73,9 @@ namespace zlt::mylisp::ast {
   declPreprocDir("#");
   declPreprocDir("##");
   declPreprocDir("#def");
-  declPreprocDir("#file");
   declPreprocDir("#ifdef");
   declPreprocDir("#ifndef");
   declPreprocDir("#include");
-  declPreprocDir("#line");
   declPreprocDir("#undef");
 
   #undef declPreprocDir
@@ -91,15 +92,200 @@ namespace zlt::mylisp::ast {
     ifPreprocDir("#");
     ifPreprocDir("##");
     ifPreprocDir("#def");
-    ifPreprocDir("#file");
     ifPreprocDir("#ifdef");
     ifPreprocDir("#ifndef");
     ifPreprocDir("#include");
-    ifPreprocDir("#line");
     ifPreprocDir("#undef");
     #undef ifPreprocDir
     return nullptr;
   }
+
+  static int addStringAtom(UNodes &dest, const char *start, string &&s) {
+    auto &value = *rte::strings.insert(std::move(s)).first;
+    UNode a(new StringAtom(start, &value));
+    dest.push_back(std::move(a));
+    return 0;
+  }
+
+  template<>
+  int preprocDir<"#"_token>(UNodes &dest, Ast &ast, Posk &posk, const char *start, It it, It end) {
+    if (it == end) [[unlikely]] {
+      return addStringAtom(dest, start, "");
+    }
+    if (auto a = dynamic_cast<const RawAtom *>(it->get()); a) {
+      return addStringAtom(dest, start, a->raw);
+    }
+    throw AstBad(bad::UNEXPECTED_TOKEN, (**it).start);
+  }
+
+  static int rawCat(stringstream &dest, It it, It end) {
+    if (it == end) [[unlikely]] {
+      return 0;
+    }
+    if (auto a = dynamic_cast<const RawAtom *>(it->get()); a) {
+      dest << a->raw;
+      return rawCat(dest, it + 1, end);
+    }
+    throw AstBad(bad::UNEXPECTED_TOKEN, (**it).start);
+  }
+
+  template<>
+  int preprocDir<"##"_token>(UNodes &dest, Ast &ast, Posk &posk, const char *start, It it, It end) {
+    stringstream ss;
+    rawCat(ss, it, end);
+    auto &s = *rte::strings.insert(ss.str()).first;
+    remove(ss);
+    UNode a;
+    if (double d; isNumber(d, s)) {
+      a.reset(new NumberAtom(start, s, d));
+    } else {
+      a.reset(new StringAtom(start, &s));
+    }
+    dest.push_back(std::move(a));
+    return 0;
+  }
+
+  static int makeMacroParams(Macro::Params &dest, It it, It end);
+
+  template<>
+  int preprocDir<"#def"_token>(UNodes &dest, Ast &ast, Posk &posk, const char *start, It it, It end) {
+    if (it == end) [[unlikely]] {
+      return 0;
+    }
+    auto id = dynamic_cast<const IDAtom *>(it->get());
+    if (!id) {
+      throw AstBad(bad::UNEXPECTED_TOKEN, (**it).start);
+    }
+    if (ast.macros.find(id->name) != ast.macros.end()) {
+      throw AstBad(bad::MACRO_ALREADY_DEFINED, start);
+    }
+    It it1 = it + 1;
+    if (it1 == end) {
+      ast.macros[id->name] = Macro();
+      return 0;
+    }
+    auto ls = dynamic_cast<const List *>(it1->get());
+    if (!ls) {
+      throw AstBad(bad::UNEXPECTED_TOKEN, (**it1).start);
+    }
+    Macro::Params params;
+    makeMacroParams(params, ls->items.begin(), ls->items.end());
+    params.shrink_to_fit();
+    UNodes body;
+    clones(body, it1 + 1, end);
+    ast.macros[id->name] = Macro(std::move(params), std::move(body));
+    return 0;
+  }
+
+  int makeMacroParams(Macro::Params &dest, It it, It end) {
+    if (it == end) [[unlikely]] {
+      return 0;
+    }
+    if (auto id = dynamic_cast<const IDAtom *>(it->get()); id) {
+      dest.push_back(id->name);
+      if (!strncmp(id->name->data(), "...", 3) && (it + 1 != end)) {
+        throw AstBad(bad::REST_MACRO_PARAM_MUST_BE_LAST, id->start);
+      }
+      return makeMacroParams(dest, it + 1, end);
+    }
+    if (auto ls = dynamic_cast<const List *>(it->get()); ls && ls->items.empty()) {
+      dest.push_back(nullptr);
+      return makeMacroParams(dest, it + 1, end);
+    }
+    throw PreprocBad(bad::ILLEGAL_MACRO_PARAM, (**it).start);
+  }
+
+  static bool ifdef(const Ast &ast, const char *start, It it, It end);
+
+  template<>
+  int preprocDir<"#ifdef"_token>(UNodes &dest, Ast &ast, Posk &posk, const char *start, It it, It end) {
+    return ifdef(ast, start, it, end) ? preproc(dest, ast, posk, it + 1, end) : 0;
+  }
+
+  template<>
+  int preprocDir<"#ifndef"_token>(UNodes &dest, Ast &ast, Posk &posk, const char *start, It it, It end) {
+    return ifdef(ast, start, it, end) ? 0 : preproc(dest, ast, posk, it + 1, end);
+  }
+
+  bool ifdef(const Ast &ast, const char *start, It it, It end) {
+    if (it == end) [[unlikely]] {
+      return false;
+    }
+    auto id = dynamic_cast<const IDAtom *>(it->get());
+    if (!id) {
+      throw AstBad(bad::UNEXPECTED_TOKEN, (**it).start);
+    }
+    return ast.macros.find(id->name) != ast.macros.end();
+  }
+
+  static ItLoader include(Ast &ast, const char *start, const UNode &src);
+
+  template<>
+  int preprocDir<"#include"_token>(UNodes &dest, Ast &ast, Posk &posk, const char *start, It it, It end) {
+    if (it == end) [[unlikely]] {
+      return 0;
+    }
+    auto &a = include(ast, pos, *it).second;
+    posk.push_back(start);
+    PopPoskGuard g(posk);
+    return preproc(dest, ast, posk, a.begin(), a.end());
+  }
+
+  static bool getFile(filesystem::path &dest, const UNode &src);
+
+  ItLoader include(Ast &ast, const char *start, const UNode &src) {
+    filesystem::path file;
+    if (!getFile(file, src)) {
+      throw AstBad(bad::UNEXPECTED_TOKEN, src->start);
+    }
+    if (auto file1 = whichFile(ast, start); file1) {
+      file = *file1 / file;
+    }
+    try {
+      file = filesystem::canonical(file);
+    } catch (filesystem::filesystem_error) {
+      throw AstBad(bad::SRC_FILE_OPEN_FAILED, start);
+    }
+    auto it = find_if(ast.loadeds.begin(), ast.loadeds.end(), [&file] (auto &p) { return *p.first == file; });
+    if (it != ast.loadeds.end()) {
+      return it;
+    }
+    try {
+      it = load(ast, std::move(file));
+    } catch (LoadBad bad) {
+      throw PreprocBad(std::move(bad.what), pos);
+    } catch (ParseBad bad) {
+      stringstream ss;
+      ss << bad.what << bad.pos;
+      throw PreprocBad(ss.str(), pos);
+    } catch (PreprocBad bad) {
+      throw PreprocBad(std::move(bad), pos);
+    }
+    return itLoaded->second;
+  }
+
+  bool getFile(filesystem::path &dest, const UNode &src) {
+    if (auto a = dynamic_cast<const CharAtom *>(src.get()); a) {
+      dest = filesystem::path(string(1, a->value));
+      return true;
+    }
+    if (auto a = dynamic_cast<const StringAtom *>(src.get()); a) {
+      dest = filesystem::path(*a->value);
+      return true;
+    }
+    if (auto a = dynamic_cast<const IDAtom *>(src.get()); a) {
+      dest = filesystem::path(*a->name);
+      return true;
+    }
+    return false;
+  }
+
+  struct MacroExpand {
+    map<const string *, const UNode *> map;
+    UNode &operator ()(UNodes &dest, const UNode &src);
+  };
+
+  static int makeMacroExpand(MacroExpand &dest, Macro::ItParam itParam, Macro::ItParam endParam, const UNode &src);
 
   const Macro *findMacro(const Ast &ast, const UNode &src) noexcept {
     auto id = dynamic_cast<const IDAtom *>(src.get());
@@ -166,217 +352,6 @@ namespace zlt::mylisp::ast {
     }
     clone(dest, src);
     return operator ()(dest->next, src->next);
-  }
-
-  static int makeMacroParams(Macro::Params &dest, const UNode &src);
-
-  template<>
-  UNode &preprocDir<"#def"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
-    auto id = dynamic_cast<const IDAtom *>(src.get());
-    if (!id) {
-      throw PreprocBad("required macro name", pos);
-    }
-    if (ast.macros.find(id->name) != ast.macros.end()) {
-      throw PreprocBad("macro already defined", pos);
-    }
-    auto ls = dynamic_cast<const List *>(src->next.get());
-    if (!ls) {
-      throw PreprocBad("required macro parameter list", pos);
-    }
-    Macro::Params params;
-    makeMacroParams(params, ls->first);
-    params.shrink_to_fit();
-    UNode body;
-    clones(body, src->next->next);
-    ast.macros[id->name] = Macro(std::move(params), std::move(body));
-    return dest;
-  }
-
-  int makeMacroParams(Macro::Params &dest, const UNode &src) {
-    if (!src) [[unlikely]] {
-      return 0;
-    }
-    if (auto id = dynamic_cast<const IDAtom *>(src.get()); id) {
-      dest.push_back(id->name);
-      if (!strncmp(id->name->data(), "...", 3) && src->next) {
-        throw PreprocBad("rest parameter must be last", id->pos);
-      }
-      return makeMacroParams(dest, src->next);
-    }
-    if (auto ls = dynamic_cast<const List *>(src.get()); ls && !ls->first) {
-      dest.push_back(nullptr);
-      return makeMacroParams(dest, src->next);
-    }
-    throw PreprocBad("illegal macro parameter", src->pos);
-  }
-
-  template<>
-  UNode &preprocDir<"#file"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
-    auto &file = *rte::strings.insert(pos->first->string()).first;
-    dest.reset(new StringAtom(pos, &file));
-    return dest->next;
-  }
-
-  static int idcat(ostream &dest, const UNode &src);
-
-  template<>
-  UNode &preprocDir<"#"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
-    stringstream ss;
-    idcat(ss, src);
-    auto &name = *rte::strings.insert(ss.str()).first;
-    dest.reset(new IDAtom(pos, &name));
-    return dest->next;
-  }
-
-  int idcat(ostream &dest, const UNode &src) {
-    if (!src) [[unlikely]] {
-      return 0;
-    }
-    if (auto id = dynamic_cast<const IDAtom *>(src.get()); id) {
-      dest << *id->name;
-      return idcat(dest, src->next);
-    }
-    if (auto r = dynamic_cast<const RawAtom *>(src.get()); r) {
-      dest << r->raw;
-      return idcat(dest, src->next);
-    }
-    throw PreprocBad("illegal identifier concat token", src->pos);
-  }
-
-  static bool ifdef(const Ast &ast, const Pos *pos, const UNode &src);
-
-  template<>
-  UNode &preprocDir<"#ifdef"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
-    return ifdef(ast, pos, src) ? preproc(dest, ast, src->next) : dest;
-  }
-
-  template<>
-  UNode &preprocDir<"#ifndef"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
-    return ifdef(ast, pos, src) ? dest : preproc(dest, ast, src->next);
-  }
-
-  bool ifdef(const Ast &ast, const Pos *pos, const UNode &src) {
-    auto id = dynamic_cast<const IDAtom *>(src.get());
-    if (!id) {
-      throw PreprocBad("required macro name", pos);
-    }
-    return ast.macros.find(id->name) != ast.macros.end();
-  }
-
-  static const UNode &include(Ast &ast, const Pos *pos, const UNode &src);
-
-  template<>
-  UNode &preprocDir<"#include"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
-    auto &a = include(ast, pos, src);
-    return preproc(dest, ast, a);
-  }
-
-  static bool getFile(filesystem::path &dest, const UNode &src);
-
-  const UNode &include(Ast &ast, const Pos *pos, const UNode &src) {
-    filesystem::path file;
-    if (!getFile(file, src)) {
-      throw PreprocBad("required include path", pos);
-    }
-    file = *pos->first / file;
-    try {
-      file = filesystem::canonical(file);
-    } catch (filesystem::filesystem_error) {
-      throw PreprocBad("cannot open file: " + file.string());
-    }
-    auto it = find_if(ast.loadeds.begin(), ast.loadeds.end(), [&file] (auto &p) { return *p.first == file; });
-    if (it != ast.loadeds.end()) {
-      return it->second;
-    }
-    Ast::ItLoaded itLoaded;
-    try {
-      itLoaded = load(ast, std::move(file));
-    } catch (LoadBad bad) {
-      throw PreprocBad(std::move(bad.what), pos);
-    } catch (ParseBad bad) {
-      stringstream ss;
-      ss << bad.what << bad.pos;
-      throw PreprocBad(ss.str(), pos);
-    } catch (PreprocBad bad) {
-      throw PreprocBad(std::move(bad), pos);
-    }
-    return itLoaded->second;
-  }
-
-  bool getFile(filesystem::path &dest, const UNode &src) {
-    if (auto a = dynamic_cast<const CharAtom *>(src.get()); a) {
-      dest = filesystem::path(string(1, a->value));
-      return true;
-    }
-    if (auto a = dynamic_cast<const StringAtom *>(src.get()); a) {
-      dest = filesystem::path(*a->value);
-      return true;
-    }
-    if (auto a = dynamic_cast<const IDAtom *>(src.get()); a) {
-      dest = filesystem::path(*a->name);
-      return true;
-    }
-    return false;
-  }
-
-  template<>
-  UNode &preprocDir<"#line"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
-    static const char *raw = "#line";
-    dest.reset(new NumberAtom(pos, string_view(raw, 5), pos->second));
-    return dest->next;
-  }
-
-  static int toString(char &dest, const string *&dest1, string_view &dest2, const UNode &src) noexcept;
-
-  template<>
-  UNode &preprocDir<"##"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
-    char c;
-    const string *s;
-    string_view sv;
-    switch (toString(c, s, sv, src)) {
-      case 0: {
-        dest.reset(new CharAtom(pos, c));
-        break;
-      }
-      case 1: {
-        dest.reset(new StringAtom(pos, s));
-        break;
-      }
-      case 2: {
-        auto &value = *rte::strings.insert(string(sv)).first;
-        dest.reset(new StringAtom(pos, &value));
-        break;
-      }
-      default: {
-        throw PreprocBad("illegal token");
-      }
-    }
-    return dest->next;
-  }
-
-  int toString(char &dest, const string *&dest1, string_view &dest2, const UNode &src) noexcept {
-    if (!src) [[unlikely]] {
-      return {};
-    }
-    if (auto a = dynamic_cast<const RawAtom *>(src.get()); a) {
-      if (a->raw.size() == 1) {
-        dest = a->raw[0];
-        return 0;
-      } else {
-        dest2 = a->raw;
-        return 2;
-      }
-    }
-    if (auto a = dynamic_cast<const IDAtom *>(src.get()); a) {
-      if (a->name->size() == 1) {
-        dest = a->name->front();
-        return 0;
-      } else {
-        dest1 = a->name;
-        return 1;
-      }
-    }
-    return -1;
   }
 
   template<>

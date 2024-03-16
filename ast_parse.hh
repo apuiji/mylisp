@@ -3,37 +3,43 @@
 #include"ast.hh"
 
 namespace zlt::mylisp::ast {
-  int parse(UNode &dest, Ast &ast, const std::filesystem::path *file, const char *start, const char *end);
+  const char *hit(const char *it, const char *end) noexcept;
 
-  struct ParseBad {
-    Pos pos;
-    std::string what;
-    ParseBad(const Pos &pos, std::string &&what) noexcept: pos(pos), what(std::move(what)) {}
+  struct Lexer {
+    double numval;
+    char charval;
+    std::string strval;
+    std::string_view raw;
+    /// @return [token, end]
+    std::tuple<uint64_t, const char *> operator ()(const char *it, const char *end);
   };
+
+  bool isNumber(double &dest, std::string_view src);
+
+  int parse(UNodes &dest, const char *start, const char *end);
 
   struct RawAtom: Node {
     std::string_view raw;
-    RawAtom(const Pos *pos, std::string_view raw) noexcept: Node(pos), raw(raw) {}
+    RawAtom(const char *start, std::string_view raw) noexcept: Node(start), raw(raw) {}
   };
 
   struct NumberAtom final: RawAtom {
     double value;
-    NumberAtom(const Pos *pos, std::string_view raw, double value) noexcept: RawAtom(pos, raw), value(value) {}
+    NumberAtom(const char *start, std::string_view raw, double value) noexcept: RawAtom(start, raw), value(value) {}
   };
 
   struct CharAtom final: Node {
     wchar_t value;
-    CharAtom(const Pos *pos, char value) noexcept: Node(pos), value(value) {}
+    CharAtom(const char *start, char value) noexcept: Node(start), value(value) {}
   };
 
   struct StringAtom final: Node {
     const std::string *value;
-    StringAtom(const Pos *pos, const std::string *value) noexcept: Node(pos), value(value) {}
+    StringAtom(const char *start, const std::string *value) noexcept: Node(start), value(value) {}
   };
 
-  struct IDAtom final: Node {
-    const std::string *name;
-    IDAtom(const Pos *pos, const std::string *name) noexcept: Node(pos), name(name) {}
+  struct IDAtom final: RawAtom {
+    using RawAtom::RawAtom
   };
 
   struct TokenAtom final: RawAtom {
@@ -45,7 +51,4 @@ namespace zlt::mylisp::ast {
     UNode first;
     List(const Pos *pos, UNode &&first = {}) noexcept: Node(pos), first(std::move(first)) {}
   };
-
-  int clone(UNode &dest, const UNode &src);
-  UNode &clones(UNode &dest, const UNode &src);
 }

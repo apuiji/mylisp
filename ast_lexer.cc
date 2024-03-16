@@ -3,7 +3,7 @@
 #include<cstring>
 #include<regex>
 #include<sstream>
-#include"ast_lexer.hh"
+#include"ast_parse.hh"
 #include"ast_token.hh"
 #include"myccutils/xyz.hh"
 
@@ -33,12 +33,10 @@ namespace zlt::mylisp::ast {
     It operator ()(It it, It end);
   };
 
-  static bool notRawChar(char c) noexcept {
+  static inline bool notRawChar(char c) noexcept {
     return strchr("\"'();", c) || isspace(c);
   }
 
-  static bool notRawChar(char c) noexcept;
-  static bool isNumber(double &dest, string_view src);
   static bool isToken(uint64_t &dest, string_view src) noexcept;
 
   tuple<uint64_t, It> Lexer::operator ()(It it, It end) {
@@ -46,16 +44,16 @@ namespace zlt::mylisp::ast {
       return { token::E0F, end };
     }
     if (*it == '(') {
-      return { token::LPAREN, it + 1 };
+      return { "("_token, it + 1 };
     }
     if (*it == ')') {
-      return { token::RPAREN, it + 1 };
+      return { ")"_token, it + 1 };
     }
     if (*it == '"' || *it == '\'') {
       stringstream ss;
       It it1 = LexerStr(ss, *it)(it + 1, end);
       if (!(it1 < end && *it1 == *it)) {
-        throw LexerBad(bad::UNTERMINATED_STRING, it);
+        throw AstBad(bad::UNTERMINATED_STRING, it);
       }
       strval = ss.str();
       if (strval.size() == 1) {
@@ -66,7 +64,7 @@ namespace zlt::mylisp::ast {
     }
     size_t n = find_if(it, end, notRawChar) - it;
     if (!n) {
-      throw LexerBad(bad::UNRECOGNIZED_SYMBOL, it);
+      throw AstBad(bad::UNRECOGNIZED_SYMBOL, it);
     }
     raw = string_view(it, n);
     try {
@@ -74,7 +72,7 @@ namespace zlt::mylisp::ast {
         return { token::NUMBER, it + n };
       }
     } catch (out_of_range) {
-      throw LexerBad(bad::NUMBER_LITERAL_OOR, it);
+      throw AstBad(bad::NUMBER_LITERAL_OOR, it);
     }
     if (uint64_t t; isToken(t, raw)) {
       return { t, it + n };
@@ -107,10 +105,7 @@ namespace zlt::mylisp::ast {
   pair<int, size_t> esch(It it, It end) {
     int c;
     size_t n;
-    if (!(esch1(c, n, it, end) || esch8(c, n, it, end) || eschx(c, n, it, end))) {
-      c = '\\';
-      n = 0;
-    }
+    esch1(c, n, it, end) || esch8(c, n, it, end) || eschx(c, n, it, end) || (c = '\\', n = 0);
     return { c, n };
   }
 
@@ -228,12 +223,9 @@ namespace zlt::mylisp::ast {
     ifSymbol("#");
     ifSymbol("##");
     ifSymbol("#def");
-    ifSymbol("#def");
-    ifSymbol("#file");
     ifSymbol("#ifdef");
     ifSymbol("#ifndef");
     ifSymbol("#include");
-    ifSymbol("#line");
     ifSymbol("#undef");
     ifSymbol("%");
     ifSymbol("&&");
