@@ -1,4 +1,3 @@
-DEPS = ../myccutils
 HHS = \
 	../myccutils/constr \
 	../myccutils/dl \
