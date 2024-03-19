@@ -3,47 +3,41 @@
 #include"ast.hh"
 
 namespace zlt::mylisp::ast {
-  int parse(UNode &dest, Ast &ast, const std::filesystem::path *file, const char *start, const char *end);
-
-  struct ParseBad {
-    Pos pos;
-    std::string what;
-    ParseBad(const Pos &pos, std::string &&what) noexcept: pos(pos), what(std::move(what)) {}
-  };
+  int parse(UNode &dest, const char *it, const char *end);
 
   struct RawAtom: Node {
     std::string_view raw;
-    RawAtom(const Pos *pos, std::string_view raw) noexcept: Node(pos), raw(raw) {}
+    RawAtom(const char *start, std::string_view raw) noexcept: Node(start), raw(raw) {}
   };
 
   struct NumberAtom final: RawAtom {
     double value;
-    NumberAtom(const Pos *pos, std::string_view raw, double value) noexcept: RawAtom(pos, raw), value(value) {}
+    NumberAtom(const char *start, std::string_view raw, double value) noexcept: RawAtom(start, raw), value(value) {}
   };
 
   struct CharAtom final: Node {
     wchar_t value;
-    CharAtom(const Pos *pos, char value) noexcept: Node(pos), value(value) {}
+    CharAtom(const char *start, char value) noexcept: Node(start), value(value) {}
   };
 
   struct StringAtom final: Node {
     const std::string *value;
-    StringAtom(const Pos *pos, const std::string *value) noexcept: Node(pos), value(value) {}
+    StringAtom(const char *start, const std::string *value) noexcept: Node(start), value(value) {}
   };
 
   struct IDAtom final: Node {
     const std::string *name;
-    IDAtom(const Pos *pos, const std::string *name) noexcept: Node(pos), name(name) {}
+    IDAtom(const char *start, const std::string *name) noexcept: Node(start), name(name) {}
   };
 
   struct TokenAtom final: RawAtom {
     uint64_t token;
-    TokenAtom(const Pos *pos, std::string_view raw, uint64_t token) noexcept: RawAtom(pos, raw), token(token) {}
+    TokenAtom(const char *start, std::string_view raw, uint64_t token) noexcept: RawAtom(start, raw), token(token) {}
   };
 
   struct List final: Node {
     UNode first;
-    List(const Pos *pos, UNode &&first = {}) noexcept: Node(pos), first(std::move(first)) {}
+    List(const char *start, UNode &&first = {}) noexcept: Node(start), first(std::move(first)) {}
   };
 
   int clone(UNode &dest, const UNode &src);

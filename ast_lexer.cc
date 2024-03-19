@@ -3,6 +3,7 @@
 #include<cstring>
 #include<regex>
 #include<sstream>
+#include"ast.hh"
 #include"ast_lexer.hh"
 #include"ast_token.hh"
 #include"myccutils/xyz.hh"
@@ -35,16 +36,16 @@ namespace zlt::mylisp::ast {
       return operator ()(it1, end);
     }
     if (*it == '(') {
-      return { token::LPAREN, it, it + 1 };
+      return { "("_token, it, it + 1 };
     }
     if (*it == ')') {
-      return { token::RPAREN, it, it + 1 };
+      return { ")"_token, it, it + 1 };
     }
     if (*it == '"' || *it == '\'') {
       stringstream ss;
       It it1 = LexerStr(ss, *it)(it + 1, end);
       if (*it1 != *it) {
-        throw LexerBad(it, "unterminated string");
+        throw AstBad(bad::UNTERMINATED_STRING, it);
       }
       strval = ss.str();
       if (strval.size() == 1) {
@@ -55,7 +56,7 @@ namespace zlt::mylisp::ast {
     }
     size_t n = find_if(it, end, notRawChar) - it;
     if (!n) {
-      throw LexerBad(it, "unrecognized symbol");
+      throw AstBad(bad::UNRECOGNIZED_SYMBOL, it);
     }
     raw = string_view(it, n);
     try {
@@ -63,7 +64,7 @@ namespace zlt::mylisp::ast {
         return { token::NUMBER, it, it + n };
       }
     } catch (out_of_range) {
-      throw LexerBad(it, "number literal out of range");
+      throw AstBad(bad::NUMBER_LITERAL_OOR, it);
     }
     if (uint64_t t; isToken(t, raw)) {
       return { t, it, it + n };

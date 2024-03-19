@@ -20,4 +20,10 @@ namespace zlt::mylisp::rte {
 
   int init();
   int yield();
+
+  const std::string *addString(std::string &&s);
+
+  static inline const std::string *addString(std::string_view s) {
+    return addString(std::string(s));
+  }
 }

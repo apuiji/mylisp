@@ -4,34 +4,21 @@
 #include<filesystem>
 #include<map>
 #include<memory>
-#include<ostream>
 #include<set>
 #include<utility>
 #include<vector>
 #include"myccutils/myiter.hh"
 
 namespace zlt::mylisp::ast {
-  using Pos = std::pair<const std::filesystem::path *, int>;
-
-  std::ostream &operator <<(std::ostream &dest, const Pos &pos);
-
-  template<myiter::RangeOf<Pos> T>
-  std::ostream &operator <<(std::ostream &dest, const T &t) {
-    for (Pos pos : t) {
-      dest << pos << std::endl;
-    }
-    return dest;
-  }
-
   struct Node;
 
   using UNode = std::unique_ptr<Node>;
   using UNodes = std::vector<UNode>;
 
   struct Node {
-    const Pos *pos;
+    const char *start;
     UNode next;
-    Node(const Pos *pos = nullptr) noexcept: pos(pos) {}
+    Node(const char *start = nullptr) noexcept: start(start) {}
     virtual ~Node() = default;
   };
 
@@ -64,13 +51,26 @@ namespace zlt::mylisp::ast {
     std::set<std::filesystem::path> files;
     std::map<const std::filesystem::path *, std::string> sources;
     Loadeds loadeds;
-    std::set<Pos> positions;
     std::map<const std::string *, Macro> macros;
     int operator ()(UNode &dest, const std::filesystem::path &src);
   };
 
   struct AstBad {
-    std::string what;
-    AstBad(std::string &&what) noexcept: what(std::move(what)) {}
+    int code;
+    const char *start;
+    AstBad(int code, const char *start) noexcept: code(code), start(start) {}
   };
+
+  namespace bad {
+    enum {
+      CANNOT_OPEN_SRC_FILE,
+      ILLEGAL_PREPROC_ARG,
+      MACRO_ALREADY_EXISTS,
+      NUMBER_LITERAL_OOR,
+      UNEXPECTED_TOKEN,
+      UNRECOGNIZED_SYMBOL,
+      UNTERMINATED_LIST,
+      UNTERMINATED_STRING
+    };
+  }
 }

@@ -10,7 +10,7 @@
 using namespace std;
 
 namespace zlt::mylisp::ast {
-  static UNode &preprocList(UNode &dest, Ast &ast, const Pos *pos, const UNode &first);
+  static UNode &preprocList(UNode &dest, Ast &ast, const char *start, const UNode &first);
 
   UNode &preproc(UNode &dest, Ast &ast, const UNode &src) {
     if (!src) [[unlikely]] {
@@ -18,10 +18,10 @@ namespace zlt::mylisp::ast {
     }
     if (auto ls = dynamic_cast<const List*>(src.get()); ls) {
       if (ls->first) {
-        auto &next = preprocList(dest, ast, ls->pos, ls->first);
+        auto &next = preprocList(dest, ast, ls->start, ls->first);
         return preproc(next, ast, src->next);
       } else {
-        dest.reset(new List(ls->pos));
+        dest.reset(new List(ls->start));
         return preproc(dest->next, ast, src->next);
       }
     }
@@ -29,7 +29,7 @@ namespace zlt::mylisp::ast {
     return preproc(dest->next, ast, src->next);
   }
 
-  using PreprocDir = UNode &(UNode &dest, Ast &ast, const Pos *pos, const UNode &src);
+  using PreprocDir = UNode &(UNode &dest, Ast &ast, const char *start, const UNode &src);
 
   static PreprocDir *isPreprocDir(const UNode &src) noexcept;
   static const Macro *findMacro(const Ast &ast, const UNode &src) noexcept;
@@ -41,9 +41,9 @@ namespace zlt::mylisp::ast {
 
   static int makeMacroExpand(MacroExpand &dest, Macro::ItParam itParam, Macro::ItParam endParam, const UNode &src);
 
-  UNode &preprocList(UNode &dest, Ast &ast, const Pos *pos, const UNode &first) {
+  UNode &preprocList(UNode &dest, Ast &ast, const char *start, const UNode &first) {
     if (auto dir = isPreprocDir(first); dir) {
-      return dir(dest, ast, pos, first->next);
+      return dir(dest, ast, start, first->next);
     }
     if (auto m = findMacro(ast, first); m) {
       UNode a;
@@ -56,7 +56,7 @@ namespace zlt::mylisp::ast {
     }
     UNode first1;
     preproc(first1, ast, first);
-    dest.reset(new List(pos, std::move(first1)));
+    dest.reset(new List(start, std::move(first1)));
     return dest->next;
   }
 
@@ -70,11 +70,9 @@ namespace zlt::mylisp::ast {
   declPreprocDir("#");
   declPreprocDir("##");
   declPreprocDir("#def");
-  declPreprocDir("#file");
   declPreprocDir("#ifdef");
   declPreprocDir("#ifndef");
   declPreprocDir("#include");
-  declPreprocDir("#line");
   declPreprocDir("#undef");
 
   #undef declPreprocDir
@@ -91,11 +89,9 @@ namespace zlt::mylisp::ast {
     ifPreprocDir("#");
     ifPreprocDir("##");
     ifPreprocDir("#def");
-    ifPreprocDir("#file");
     ifPreprocDir("#ifdef");
     ifPreprocDir("#ifndef");
     ifPreprocDir("#include");
-    ifPreprocDir("#line");
     ifPreprocDir("#undef");
     #undef ifPreprocDir
     return nullptr;
@@ -145,7 +141,7 @@ namespace zlt::mylisp::ast {
     if (auto id = dynamic_cast<const IDAtom *>(src.get()); id) {
       auto it = map.find(id->name);
       if (it == map.end()) {
-        dest.reset(new IDAtom(id->pos, id->name));
+        dest.reset(new IDAtom(id->start, id->name));
         return operator ()(dest->next, src->next);
       }
       if (!it->second) {
@@ -161,7 +157,7 @@ namespace zlt::mylisp::ast {
     if (auto ls = dynamic_cast<const List *>(src.get()); ls) {
       UNode first;
       operator ()(first, ls->first);
-      dest.reset(new List(ls->pos, std::move(first)));
+      dest.reset(new List(ls->start, std::move(first)));
       return operator ()(dest->next, src->next);
     }
     clone(dest, src);
@@ -171,17 +167,20 @@ namespace zlt::mylisp::ast {
   static int makeMacroParams(Macro::Params &dest, const UNode &src);
 
   template<>
-  UNode &preprocDir<"#def"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
+  UNode &preprocDir<"#def"_token>(UNode &dest, Ast &ast, const char *start, const UNode &src) {
+    if (!src) {
+      return dest;
+    }
     auto id = dynamic_cast<const IDAtom *>(src.get());
     if (!id) {
-      throw PreprocBad("required macro name", pos);
+      throw AstBad(bad::ILLEGAL_PREPROC_ARG, start);
     }
     if (ast.macros.find(id->name) != ast.macros.end()) {
-      throw PreprocBad("macro already defined", pos);
+      throw AstBad(bad::MACRO_ALREADY_EXISTS, start);
     }
     auto ls = dynamic_cast<const List *>(src->next.get());
     if (!ls) {
-      throw PreprocBad("required macro parameter list", pos);
+      throw PreprocBad("required macro parameter list", start);
     }
     Macro::Params params;
     makeMacroParams(params, ls->first);
@@ -199,7 +198,7 @@ namespace zlt::mylisp::ast {
     if (auto id = dynamic_cast<const IDAtom *>(src.get()); id) {
       dest.push_back(id->name);
       if (!strncmp(id->name->data(), "...", 3) && src->next) {
-        throw PreprocBad("rest parameter must be last", id->pos);
+        throw PreprocBad("rest parameter must be last", id->start);
       }
       return makeMacroParams(dest, src->next);
     }
@@ -207,24 +206,17 @@ namespace zlt::mylisp::ast {
       dest.push_back(nullptr);
       return makeMacroParams(dest, src->next);
     }
-    throw PreprocBad("illegal macro parameter", src->pos);
-  }
-
-  template<>
-  UNode &preprocDir<"#file"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
-    auto &file = *rte::strings.insert(pos->first->string()).first;
-    dest.reset(new StringAtom(pos, &file));
-    return dest->next;
+    throw PreprocBad("illegal macro parameter", src->start);
   }
 
   static int idcat(ostream &dest, const UNode &src);
 
   template<>
-  UNode &preprocDir<"#"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
+  UNode &preprocDir<"#"_token>(UNode &dest, Ast &ast, const char *start, const UNode &src) {
     stringstream ss;
     idcat(ss, src);
     auto &name = *rte::strings.insert(ss.str()).first;
-    dest.reset(new IDAtom(pos, &name));
+    dest.reset(new IDAtom(start, &name));
     return dest->next;
   }
 
@@ -240,43 +232,43 @@ namespace zlt::mylisp::ast {
       dest << r->raw;
       return idcat(dest, src->next);
     }
-    throw PreprocBad("illegal identifier concat token", src->pos);
+    throw PreprocBad("illegal identifier concat token", src->start);
   }
 
-  static bool ifdef(const Ast &ast, const Pos *pos, const UNode &src);
+  static bool ifdef(const Ast &ast, const char *start, const UNode &src);
 
   template<>
-  UNode &preprocDir<"#ifdef"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
-    return ifdef(ast, pos, src) ? preproc(dest, ast, src->next) : dest;
+  UNode &preprocDir<"#ifdef"_token>(UNode &dest, Ast &ast, const char *start, const UNode &src) {
+    return ifdef(ast, start, src) ? preproc(dest, ast, src->next) : dest;
   }
 
   template<>
-  UNode &preprocDir<"#ifndef"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
-    return ifdef(ast, pos, src) ? dest : preproc(dest, ast, src->next);
+  UNode &preprocDir<"#ifndef"_token>(UNode &dest, Ast &ast, const char *start, const UNode &src) {
+    return ifdef(ast, start, src) ? dest : preproc(dest, ast, src->next);
   }
 
-  bool ifdef(const Ast &ast, const Pos *pos, const UNode &src) {
+  bool ifdef(const Ast &ast, const char *start, const UNode &src) {
     auto id = dynamic_cast<const IDAtom *>(src.get());
     if (!id) {
-      throw PreprocBad("required macro name", pos);
+      throw PreprocBad("required macro name", start);
     }
     return ast.macros.find(id->name) != ast.macros.end();
   }
 
-  static const UNode &include(Ast &ast, const Pos *pos, const UNode &src);
+  static const UNode &include(Ast &ast, const char *start, const UNode &src);
 
   template<>
-  UNode &preprocDir<"#include"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
-    auto &a = include(ast, pos, src);
+  UNode &preprocDir<"#include"_token>(UNode &dest, Ast &ast, const char *start, const UNode &src) {
+    auto &a = include(ast, start, src);
     return preproc(dest, ast, a);
   }
 
   static bool getFile(filesystem::path &dest, const UNode &src);
 
-  const UNode &include(Ast &ast, const Pos *pos, const UNode &src) {
+  const UNode &include(Ast &ast, const char *start, const UNode &src) {
     filesystem::path file;
     if (!getFile(file, src)) {
-      throw PreprocBad("required include path", pos);
+      throw PreprocBad("required include path", start);
     }
     file = *pos->first / file;
     try {
@@ -292,13 +284,13 @@ namespace zlt::mylisp::ast {
     try {
       itLoaded = load(ast, std::move(file));
     } catch (LoadBad bad) {
-      throw PreprocBad(std::move(bad.what), pos);
+      throw PreprocBad(std::move(bad.what), start);
     } catch (ParseBad bad) {
       stringstream ss;
-      ss << bad.what << bad.pos;
-      throw PreprocBad(ss.str(), pos);
+      ss << bad.what << bad.start;
+      throw PreprocBad(ss.str(), start);
     } catch (PreprocBad bad) {
-      throw PreprocBad(std::move(bad), pos);
+      throw PreprocBad(std::move(bad), start);
     }
     return itLoaded->second;
   }
@@ -319,32 +311,25 @@ namespace zlt::mylisp::ast {
     return false;
   }
 
-  template<>
-  UNode &preprocDir<"#line"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
-    static const char *raw = "#line";
-    dest.reset(new NumberAtom(pos, string_view(raw, 5), pos->second));
-    return dest->next;
-  }
-
   static int toString(char &dest, const string *&dest1, string_view &dest2, const UNode &src) noexcept;
 
   template<>
-  UNode &preprocDir<"##"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
+  UNode &preprocDir<"##"_token>(UNode &dest, Ast &ast, const char *start, const UNode &src) {
     char c;
     const string *s;
     string_view sv;
     switch (toString(c, s, sv, src)) {
       case 0: {
-        dest.reset(new CharAtom(pos, c));
+        dest.reset(new CharAtom(start, c));
         break;
       }
       case 1: {
-        dest.reset(new StringAtom(pos, s));
+        dest.reset(new StringAtom(start, s));
         break;
       }
       case 2: {
         auto &value = *rte::strings.insert(string(sv)).first;
-        dest.reset(new StringAtom(pos, &value));
+        dest.reset(new StringAtom(start, &value));
         break;
       }
       default: {
@@ -380,10 +365,10 @@ namespace zlt::mylisp::ast {
   }
 
   template<>
-  UNode &preprocDir<"#undef"_token>(UNode &dest, Ast &ast, const Pos *pos, const UNode &src) {
+  UNode &preprocDir<"#undef"_token>(UNode &dest, Ast &ast, const char *start, const UNode &src) {
     auto id = dynamic_cast<const IDAtom *>(src.get());
     if (!id) {
-      throw PreprocBad("required macro name", pos);
+      throw PreprocBad("required macro name", start);
     }
     ast.macros.erase(id->name);
     return dest;

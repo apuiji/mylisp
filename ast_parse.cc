@@ -9,117 +9,86 @@ using namespace std;
 namespace zlt::mylisp::ast {
   using It = const char *;
 
-  struct Parse {
-    // source begin
-    const filesystem::path *file;
-    const char *start;
-    const char *end;
-    // source end
-    Ast &ast;
-    Lexer &lexer;
-    Parse(const filesystem::path *file, It start, It end, Ast &ast, Lexer &lexer) noexcept:
-    file(file), start(start), end(end), ast(ast), lexer(lexer) {}
-    It operator ()(UNode &dest, It it);
-  };
+  static It parse(UNode &dest, Lexer &lexer, It it, It end);
 
-  static int getPosLi(int li, It line, It end, It it) noexcept;
-
-  static inline Pos makePos(const filesystem::path *file, It start, It end, It it) noexcept {
-    return Pos(file, getPosLi(0, start, end, it));
-  }
-
-  int parse(UNode &dest, Ast &ast, const filesystem::path *file, It start, It end) {
+  int parse(UNode &dest, It it, It end) {
     Lexer lexer;
-    It it;
-    try {
-      it = Parse(file, start, end, ast, lexer)(dest, start);
-    } catch (LexerBad bad) {
-      throw ParseBad(makePos(file, start, end, bad.start), std::move(bad.what));
-    }
-    auto [t, start1, end1] = lexer(it, end);
-    if (t != token::E0F) {
-      throw ParseBad(makePos(file, start, end, start1), "unexpected token");
+    It end0 = parse(dest, lexer, it, end);
+    auto [_1, start1, end1] = lexer(end0, end);
+    if (_1 == token::E0F) {
+      throw AstBad(bad::UNEXPECTED_TOKEN, start1);
     }
     return 0;
   }
 
-  int getPosLi(int li, It line, It end, It it) noexcept {
-    It eol = find(line, end, '\n');
-    return eol > it ? li : getPosLi(li + 1, eol + 1, end, it);
-  }
-
-  const Pos *makePos1(Ast &ast, const filesystem::path *file, It start, It end, It it) noexcept {
-    return &*ast.positions.insert(makePos(file, start, end, it)).first;
-  }
-
-  It Parse::operator ()(UNode &dest, It it) {
+  It parse(UNode &dest, Lexer &lexer, It it, It end) {
     auto [t0, start0, end0] = lexer(it, end);
     switch (t0) {
-      case token::RPAREN:
+      case ")"_token:
         [[fallthrough]];
       [[unlikely]] case token::E0F: {
         return start0;
       }
       case token::NUMBER: {
-        dest.reset(new NumberAtom(makePos1(ast, file, start, end, start0), lexer.raw, lexer.numval));
-        return operator ()(dest->next, end0);
+        dest.reset(new NumberAtom(start0, lexer.raw, lexer.numval));
+        return parse(dest->next, lexer, end0, end);
       }
       case token::CHAR: {
-        dest.reset(new CharAtom(makePos1(ast, file, start, end, start0), lexer.charval));
-        return operator ()(dest->next, end0);
+        dest.reset(new CharAtom(start0, lexer.charval));
+        return parse(dest->next, lexer, end0, end);
       }
       case token::STRING: {
-        auto &value = *rte::strings.insert(std::move(lexer.strval)).first;
-        dest.reset(new StringAtom(makePos1(ast, file, start, end, start0), &value));
-        return operator ()(dest->next, end0);
+        auto value = rte::addString(std::move(lexer.strval));
+        dest.reset(new StringAtom(start0, value));
+        return parse(dest->next, lexer, end0, end);
       }
       case token::ID: {
-        auto &name = *rte::strings.insert(string(lexer.raw)).first;
-        dest.reset(new IDAtom(makePos1(ast, file, start, end, start0), &name));
-        return operator ()(dest->next, end0);
+        auto name = rte::addString(lexer.raw);
+        dest.reset(new IDAtom(start0, name));
+        return parse(dest->next, lexer, end0, end);
       }
-      case token::LPAREN: {
+      case "("_token: {
         UNode first;
-        It end1 = operator ()(first, end0);
+        It end1 = parse(first, lexer, end0, end);
         auto [t2, start2, end2] = lexer(end1, end);
-        if (t2 != token::RPAREN) {
-          throw ParseBad(makePos(file, start, end, start0), "unterminated list");
+        if (t2 != ")"_token) {
+          throw AstBad(bad::UNTERMINATED_LIST, start0);
         }
-        dest.reset(new List(makePos1(ast, file, start, end, start0), std::move(first)));
-        return operator ()(dest->next, end2);
+        dest.reset(new List(start0, std::move(first)));
+        return parse(dest->next, lexer, end2, end);
       }
       default: {
-        dest.reset(new TokenAtom(makePos1(ast, file, start, end, start0), lexer.raw, t0));
-        return operator ()(dest->next, end0);
+        dest.reset(new TokenAtom(start0, lexer.raw, t0));
+        return parse(dest->next, lexer, end0, end);
       }
     }
   }
 
   int clone(UNode &dest, const UNode &src) {
     if (auto a = dynamic_cast<const NumberAtom *>(src.get()); a) {
-      dest.reset(new NumberAtom(a->pos, a->raw, a->value));
+      dest.reset(new NumberAtom(a->start, a->raw, a->value));
       return 0;
     }
     if (auto a = dynamic_cast<const CharAtom *>(src.get()); a) {
-      dest.reset(new CharAtom(a->pos, a->value));
+      dest.reset(new CharAtom(a->start, a->value));
       return 0;
     }
     if (auto a = dynamic_cast<const StringAtom *>(src.get()); a) {
-      dest.reset(new StringAtom(a->pos, a->value));
+      dest.reset(new StringAtom(a->start, a->value));
       return 0;
     }
     if (auto a = dynamic_cast<const IDAtom *>(src.get()); a) {
-      dest.reset(new IDAtom(a->pos, a->name));
+      dest.reset(new IDAtom(a->start, a->name));
       return 0;
     }
     if (auto a = dynamic_cast<const TokenAtom *>(src.get()); a) {
-      dest.reset(new TokenAtom(a->pos, a->raw, a->token));
+      dest.reset(new TokenAtom(a->start, a->raw, a->token));
       return 0;
     }
     auto ls = static_cast<const List *>(src.get());
     UNode first;
     clones(first, ls->first);
-    dest.reset(new List(ls->pos, std::move(first)));
+    dest.reset(new List(ls->start, std::move(first)));
     return 0;
   }
 
