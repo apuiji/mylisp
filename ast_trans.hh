@@ -12,17 +12,11 @@ namespace zlt::mylisp::ast {
     return trans(dest, src);
   }
 
-  struct TransBad {
-    const Pos *pos;
-    std::string what;
-    TransBad(const Pos *pos, std::string &&what) noexcept: pos(pos), what(std::move(what)) {}
-  };
-
   struct Call final: Node {
     UNode callee;
     UNodes args;
-    Call(const Pos *pos, UNode &&callee, UNodes &&args) noexcept: Node(pos), callee(std::move(callee)), args(std::move(args)) {
-    }
+    Call(const char *start, UNode &&callee, UNodes &&args) noexcept:
+    Node(start), callee(std::move(callee)), args(std::move(args)) {}
   };
 
   struct Callee final: Node {
@@ -31,30 +25,32 @@ namespace zlt::mylisp::ast {
 
   struct Defer final: Node {
     UNode item;
-    Defer(const Pos *pos, UNode &&item) noexcept: Node(pos), item(std::move(item)) {}
+    Defer(const char *start, UNode &&item) noexcept: Node(start), item(std::move(item)) {}
   };
 
   struct Forward final: Node {
     UNode callee;
     UNodes args;
-    Forward(const Pos *pos, UNode &&callee, UNodes &&args) noexcept:
-    Node(pos), callee(std::move(callee)), args(std::move(args)) {}
+    Forward(const char *start, UNode &&callee, UNodes &&args) noexcept:
+    Node(start), callee(std::move(callee)), args(std::move(args)) {}
   };
 
   struct Function final: Node {
-    std::set<const std::string *> defs;
-    std::vector<const std::string *> params;
+    using Defs = std::set<const std::string *>;
+    using Params = std::vector<const std::vector<const std::string *>>;
+    Defs defs;
+    Params params;
     UNode body;
-    Function(const Pos *pos, std::set<const std::string *> &&defs, std::vector<const std::string *> &&params, UNode &&body)
-    noexcept: Node(pos), defs(std::move(defs)), params(std::move(params)), body(std::move(body)) {}
+    Function(const char *start, Defs &&defs, Params &&params, UNode &&body) noexcept:
+    Node(start), defs(std::move(defs)), params(std::move(params)), body(std::move(body)) {}
   };
 
   struct If final: Node {
     UNode cond;
     UNode then;
     UNode elze;
-    If(const Pos *pos, UNode &&cond, UNode &&then, UNode &&elze) noexcept:
-    Node(pos), cond(std::move(cond)), then(std::move(then)), elze(std::move(elze)) {}
+    If(const char *start, UNode &&cond, UNode &&then, UNode &&elze) noexcept:
+    Node(start), cond(std::move(cond)), then(std::move(then)), elze(std::move(elze)) {}
   };
 
   struct Null final: Node {
@@ -63,46 +59,46 @@ namespace zlt::mylisp::ast {
 
   struct Number final: Node {
     double value;
-    Number(const Pos *pos, double value) noexcept: Node(pos), value(value) {}
+    Number(const char *start, double value) noexcept: Node(start), value(value) {}
   };
 
   struct Return final: Node {
     UNode value;
-    Return(const Pos *pos, UNode &&value) noexcept: Node(pos), value(std::move(value)) {}
+    Return(const char *start, UNode &&value) noexcept: Node(start), value(std::move(value)) {}
   };
 
   struct Throw final: Node {
     UNode value;
-    Throw(const Pos *pos, UNode &&value) noexcept: Node(pos), value(std::move(value)) {}
+    Throw(const char *start, UNode &&value) noexcept: Node(start), value(std::move(value)) {}
   };
 
   struct Try final: Node {
     UNode body;
-    Try(const Pos *pos, UNode &&body) noexcept: Node(pos), body(std::move(body)) {}
+    Try(const char *start, UNode &&body) noexcept: Node(start), body(std::move(body)) {}
   };
 
   struct Yield final: Node {
     UNode then;
-    Yield(const Pos *pos, UNode &&then) noexcept: Node(pos), then(std::move(then)) {}
+    Yield(const char *start, UNode &&then) noexcept: Node(start), then(std::move(then)) {}
   };
 
   // operations begin
   template<int N>
   struct Operation: Node {
     std::array<UNode, N> items;
-    Operation(const Pos *pos, std::array<UNode, N> &&items) noexcept: Node(pos), items(std::move(items)) {}
+    Operation(const char *start, std::array<UNode, N> &&items) noexcept: Node(start), items(std::move(items)) {}
   };
 
   template<>
   struct Operation<1>: Node {
     UNode item;
-    Operation(const Pos *pos, UNode &&item) noexcept: Node(pos), item(std::move(item)) {}
+    Operation(const char *start, UNode &&item) noexcept: Node(start), item(std::move(item)) {}
   };
 
   template<>
   struct Operation<-1>: Node {
     UNodes items;
-    Operation(const Pos *pos, UNodes &&items) noexcept: Node(pos), items(std::move(items)) {}
+    Operation(const char *start, UNodes &&items) noexcept: Node(start), items(std::move(items)) {}
   };
 
   template<int N, uint64_t Op>
