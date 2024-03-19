@@ -15,6 +15,6 @@ libmyccutils.a:
 clean:
 	touch ${PROD}
 	touch libmyccutils.a
-	rm ${PROD} *.o
+	rm ${PROD} *.o libmyccutils.a
 
 .PHONY: clean

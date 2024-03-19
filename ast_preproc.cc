@@ -164,6 +164,52 @@ namespace zlt::mylisp::ast {
     return operator ()(dest->next, src->next);
   }
 
+  template<>
+  UNode &preprocDir<"#"_token>(UNode &dest, Ast &ast, const char *start, const UNode &src) {
+    string s;
+    if (!src) {
+      s = "";
+    } else if (auto a = dynamic_cast<const RawAtom *>(src.get()); a) {
+      s = a->raw;
+    } else if (auto a = dynamic_cast<const IDAtom *>(src.get()); a) {
+      s = *a->name;
+    } else {
+      throw AstBad(bad::ILLEGAL_PREPROC_ARG, src->start);
+    }
+    auto value = rte::addString(std::move(s));
+    dest.reset(new StringAtom(src->start, value));
+    return dest->next;
+  }
+
+  static int idcat(ostream &dest, const UNode &src);
+
+  template<>
+  UNode &preprocDir<"##"_token>(UNode &dest, Ast &ast, const char *start, const UNode &src) {
+    stringstream ss;
+    idcat(ss, src);
+    auto s = ss.str();
+    if (s.empty()) {
+      return dest;
+    }
+    auto name = rte::addString(std::move(s));
+    dest.reset(new IDAtom(start, name));
+    return dest->next;
+  }
+
+  int idcat(ostream &dest, const UNode &src) {
+    if (!src) [[unlikely]] {
+      return 0;
+    }
+    if (auto a = dynamic_cast<const RawAtom *>(src.get()); a) {
+      dest << a->raw;
+    } else if (auto a = dynamic_cast<const IDAtom *>(src.get()); a) {
+      dest << *a->name;
+    } else {
+      throw AstBad(bad::ILLEGAL_PREPROC_ARG, src->start);
+    }
+    return idcat(dest, src->next);
+  }
+
   static int makeMacroParams(Macro::Params &dest, const UNode &src);
 
   template<>
@@ -178,9 +224,13 @@ namespace zlt::mylisp::ast {
     if (ast.macros.find(id->name) != ast.macros.end()) {
       throw AstBad(bad::MACRO_ALREADY_EXISTS, start);
     }
+    if (!src->next) {
+      ast.macros[id->name] = Macro();
+      return dest;
+    }
     auto ls = dynamic_cast<const List *>(src->next.get());
     if (!ls) {
-      throw PreprocBad("required macro parameter list", start);
+      throw AstBad(bad::ILLEGAL_PREPROC_ARG, start);
     }
     Macro::Params params;
     makeMacroParams(params, ls->first);
@@ -198,7 +248,7 @@ namespace zlt::mylisp::ast {
     if (auto id = dynamic_cast<const IDAtom *>(src.get()); id) {
       dest.push_back(id->name);
       if (!strncmp(id->name->data(), "...", 3) && src->next) {
-        throw PreprocBad("rest parameter must be last", id->start);
+        throw AstBad(bad::MACRO_REST_PARAM_MUST_BE_LAST, id->start);
       }
       return makeMacroParams(dest, src->next);
     }
@@ -206,51 +256,25 @@ namespace zlt::mylisp::ast {
       dest.push_back(nullptr);
       return makeMacroParams(dest, src->next);
     }
-    throw PreprocBad("illegal macro parameter", src->start);
-  }
-
-  static int idcat(ostream &dest, const UNode &src);
-
-  template<>
-  UNode &preprocDir<"#"_token>(UNode &dest, Ast &ast, const char *start, const UNode &src) {
-    stringstream ss;
-    idcat(ss, src);
-    auto &name = *rte::strings.insert(ss.str()).first;
-    dest.reset(new IDAtom(start, &name));
-    return dest->next;
-  }
-
-  int idcat(ostream &dest, const UNode &src) {
-    if (!src) [[unlikely]] {
-      return 0;
-    }
-    if (auto id = dynamic_cast<const IDAtom *>(src.get()); id) {
-      dest << *id->name;
-      return idcat(dest, src->next);
-    }
-    if (auto r = dynamic_cast<const RawAtom *>(src.get()); r) {
-      dest << r->raw;
-      return idcat(dest, src->next);
-    }
-    throw PreprocBad("illegal identifier concat token", src->start);
+    throw AstBad(bad::ILLEGAL_MACRO_PARAM, src->start);
   }
 
   static bool ifdef(const Ast &ast, const char *start, const UNode &src);
 
   template<>
   UNode &preprocDir<"#ifdef"_token>(UNode &dest, Ast &ast, const char *start, const UNode &src) {
-    return ifdef(ast, start, src) ? preproc(dest, ast, src->next) : dest;
+    return src && ifdef(ast, start, src) ? preproc(dest, ast, src->next) : dest;
   }
 
   template<>
   UNode &preprocDir<"#ifndef"_token>(UNode &dest, Ast &ast, const char *start, const UNode &src) {
-    return ifdef(ast, start, src) ? dest : preproc(dest, ast, src->next);
+    return src && !ifdef(ast, start, src) ? preproc(dest, ast, src->next) : dest;
   }
 
   bool ifdef(const Ast &ast, const char *start, const UNode &src) {
     auto id = dynamic_cast<const IDAtom *>(src.get());
     if (!id) {
-      throw PreprocBad("required macro name", start);
+      throw AstBad(bad::ILLEGAL_PREPROC_ARG, start);
     }
     return ast.macros.find(id->name) != ast.macros.end();
   }
@@ -259,6 +283,9 @@ namespace zlt::mylisp::ast {
 
   template<>
   UNode &preprocDir<"#include"_token>(UNode &dest, Ast &ast, const char *start, const UNode &src) {
+    if (!src) [[unlikely]] {
+      return dest;
+    }
     auto &a = include(ast, start, src);
     return preproc(dest, ast, a);
   }

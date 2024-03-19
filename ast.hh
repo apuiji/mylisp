@@ -64,8 +64,10 @@ namespace zlt::mylisp::ast {
   namespace bad {
     enum {
       CANNOT_OPEN_SRC_FILE,
+      ILLEGAL_MACRO_PARAM,
       ILLEGAL_PREPROC_ARG,
       MACRO_ALREADY_EXISTS,
+      MACRO_REST_PARAM_MUST_BE_LAST,
       NUMBER_LITERAL_OOR,
       UNEXPECTED_TOKEN,
       UNRECOGNIZED_SYMBOL,

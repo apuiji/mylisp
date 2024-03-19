@@ -2,11 +2,11 @@ include ../Makefile
 
 PROD = libmylisp.so
 
-${PROD}: $(addsuffix .o, ${OBJS}) libmyccutils.a
-	clang++ -o $@ $^ -L . $(addprefix -l, ${LIBS}) -shared -g
+${PROD}: ${OBJS} libmyccutils.a
+	clang++ -o $@ $^ -L . $(addprefix -l, ${LIBS}) -shared -g -stdlib=libc++
 
-%.o: ../%.cc $(addprefix ../, $(addsuffix .hh, ${HHS}))
-	clang++ -o $@ $< -I .. -I ../.. -fPIC -std=c++2b -c -g
+%.o: ../%.cc $(addprefix ../, ${HHS})
+	clang++ -o $@ $< -I .. -I ../.. -fPIC -std=c++2b -c -g -stdlib=libc++
 
 libmyccutils.a:
 	make -C ../../myccutils/windbg
