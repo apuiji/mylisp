@@ -3,5 +3,5 @@
 #include"ast_parse.hh"
 
 namespace zlt::mylisp::ast {
-  UNode &preproc(UNode &dest, Ast &ast, const UNode &src);
+  int preproc(UNodes &dest, Ast &ast, UNodes::const_iterator it, UNodes::const_iterator end);
 }

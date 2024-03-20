@@ -17,22 +17,9 @@ namespace zlt::mylisp::ast {
 
   struct Node {
     const char *start;
-    UNode next;
     Node(const char *start = nullptr) noexcept: start(start) {}
     virtual ~Node() = default;
   };
-
-  static inline int replace(UNode &dest, UNode &src) noexcept {
-    src->next = std::move(dest->next);
-    dest = std::move(src);
-    return 0;
-  }
-
-  static inline int replace(UNode &dest, UNode &&src) noexcept {
-    return replace(dest, src);
-  }
-
-  UNode shift(UNode &src) noexcept;
 
   struct Macro {
     using Params = std::vector<const std::string *>;
@@ -43,7 +30,8 @@ namespace zlt::mylisp::ast {
     Macro(Params &&params, UNode &&body) noexcept: params(std::move(params)), body(std::move(body)) {}
   };
 
-  using Sources = std::map<std::filesystem::path, std::pair<std::string, UNode>>;
+  using Source = std::pair<std::string, UNode>;
+  using Sources = std::map<std::filesystem::path, Source>;
   using ItSource = Sources::const_iterator;
 
   struct Ast {
