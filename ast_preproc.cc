@@ -279,47 +279,30 @@ namespace zlt::mylisp::ast {
     return ast.macros.find(id->name) != ast.macros.end();
   }
 
-  static const UNode &include(Ast &ast, const char *start, const UNode &src);
+  static bool getFile(filesystem::path &dest, const UNode &src);
 
   template<>
   UNode &preprocDir<"#include"_token>(UNode &dest, Ast &ast, const char *start, const UNode &src) {
     if (!src) [[unlikely]] {
       return dest;
     }
-    auto &a = include(ast, start, src);
-    return preproc(dest, ast, a);
-  }
-
-  static bool getFile(filesystem::path &dest, const UNode &src);
-
-  const UNode &include(Ast &ast, const char *start, const UNode &src) {
     filesystem::path file;
     if (!getFile(file, src)) {
-      throw PreprocBad("required include path", start);
+      throw AstBad(bad::ILLEGAL_PREPROC_ARG, src->start);
     }
-    file = *pos->first / file;
+    if (auto itSrc = whichSource(ast, start); itSrc != ast.sources.end()) {
+      file = itSrc->first / file;
+    }
     try {
       file = filesystem::canonical(file);
     } catch (filesystem::filesystem_error) {
-      throw PreprocBad("cannot open file: " + file.string());
+      throw AstBad(bad::CANNOT_OPEN_SRC_FILE, start);
     }
-    auto it = find_if(ast.loadeds.begin(), ast.loadeds.end(), [&file] (auto &p) { return *p.first == file; });
-    if (it != ast.loadeds.end()) {
-      return it->second;
+    if (auto itSrc = ast.sources.find(file); itSrc != ast.sources.end()) {
+      return itSrc->second.second;
     }
-    Ast::ItLoaded itLoaded;
-    try {
-      itLoaded = load(ast, std::move(file));
-    } catch (LoadBad bad) {
-      throw PreprocBad(std::move(bad.what), start);
-    } catch (ParseBad bad) {
-      stringstream ss;
-      ss << bad.what << bad.start;
-      throw PreprocBad(ss.str(), start);
-    } catch (PreprocBad bad) {
-      throw PreprocBad(std::move(bad), start);
-    }
-    return itLoaded->second;
+    auto itSrc = load(ast, start, std::move(file));
+    return preproc(dest, ast, itSrc->second.second);
   }
 
   bool getFile(filesystem::path &dest, const UNode &src) {
@@ -338,64 +321,14 @@ namespace zlt::mylisp::ast {
     return false;
   }
 
-  static int toString(char &dest, const string *&dest1, string_view &dest2, const UNode &src) noexcept;
-
-  template<>
-  UNode &preprocDir<"##"_token>(UNode &dest, Ast &ast, const char *start, const UNode &src) {
-    char c;
-    const string *s;
-    string_view sv;
-    switch (toString(c, s, sv, src)) {
-      case 0: {
-        dest.reset(new CharAtom(start, c));
-        break;
-      }
-      case 1: {
-        dest.reset(new StringAtom(start, s));
-        break;
-      }
-      case 2: {
-        auto &value = *rte::strings.insert(string(sv)).first;
-        dest.reset(new StringAtom(start, &value));
-        break;
-      }
-      default: {
-        throw PreprocBad("illegal token");
-      }
-    }
-    return dest->next;
-  }
-
-  int toString(char &dest, const string *&dest1, string_view &dest2, const UNode &src) noexcept {
-    if (!src) [[unlikely]] {
-      return {};
-    }
-    if (auto a = dynamic_cast<const RawAtom *>(src.get()); a) {
-      if (a->raw.size() == 1) {
-        dest = a->raw[0];
-        return 0;
-      } else {
-        dest2 = a->raw;
-        return 2;
-      }
-    }
-    if (auto a = dynamic_cast<const IDAtom *>(src.get()); a) {
-      if (a->name->size() == 1) {
-        dest = a->name->front();
-        return 0;
-      } else {
-        dest1 = a->name;
-        return 1;
-      }
-    }
-    return -1;
-  }
-
   template<>
   UNode &preprocDir<"#undef"_token>(UNode &dest, Ast &ast, const char *start, const UNode &src) {
+    if (!src) [[unlikely]] {
+      return dest;
+    }
     auto id = dynamic_cast<const IDAtom *>(src.get());
     if (!id) {
-      throw PreprocBad("required macro name", start);
+      throw AstBad(bad::ILLEGAL_PREPROC_ARG, src->start);
     }
     ast.macros.erase(id->name);
     return dest;

@@ -3,7 +3,7 @@
 using namespace std;
 
 namespace zlt::mylisp::ast {
-  using Indefs = set<const string *>;
+  using Indefs = Function::Defs;
 
   static int trans(const Indefs &indefs, UNode &src);
 
@@ -125,7 +125,7 @@ namespace zlt::mylisp::ast {
       array<UNode, 2> items;
       items[0] = std::move(a->item);
       items[1] = std::move(src.items[1]);
-      replace(dest, UNode(new SetIndirectOper(src.pos, std::move(items))));
+      replace(dest, UNode(new SetIndirectOper(src.start, std::move(items))));
     }
     return 0;
   }
@@ -153,10 +153,10 @@ namespace zlt::mylisp::ast {
     UNode inputClosure;
     makeInputClosure(inputClosure, src.closureDefs.begin(), src.closureDefs.end());
     UNode body;
-    auto &next = makeIndirect(body, src.indefs.begin(), src.indefs.end());
-    trans(src.indefs, src.body);
+    auto &next = makeIndirect(body, src.defs.begin(), src.defs.end());
+    trans(src.defs, src.body);
     next = std::move(src.body);
-    UNode a(new Function2(src.pos, std::move(body), std::move(inputClosure)));
+    UNode a(new Function2(src.start, std::move(body), std::move(inputClosure)));
     replace(dest, a);
     return 0;
   }
@@ -187,8 +187,8 @@ namespace zlt::mylisp::ast {
 
   int trans(UNode &dest, const Indefs &indefs, Reference1 &src) {
     if (isIndirect(indefs, src)) {
-      UNode a(new Reference1(src.pos, src));
-      a.reset(new GetIndirectOper(src.pos, std::move(a)));
+      UNode a(new Reference1(src.start, src));
+      a.reset(new GetIndirectOper(src.start, std::move(a)));
       replace(dest, a);
     }
     return 0;

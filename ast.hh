@@ -43,17 +43,16 @@ namespace zlt::mylisp::ast {
     Macro(Params &&params, UNode &&body) noexcept: params(std::move(params)), body(std::move(body)) {}
   };
 
+  using Sources = std::map<std::filesystem::path, std::pair<std::string, UNode>>;
+  using ItSource = Sources::const_iterator;
+
   struct Ast {
-    using Sources = std::map<const std::filesystem::path *, std::string>;
-    using Loadeds = std::map<const std::filesystem::path *, UNode>;
-    using ItSource = Sources::const_iterator;
-    using ItLoaded = Loadeds::const_iterator;
-    std::set<std::filesystem::path> files;
-    std::map<const std::filesystem::path *, std::string> sources;
-    Loadeds loadeds;
+    Sources sources;
     std::map<const std::string *, Macro> macros;
     int operator ()(UNode &dest, const std::filesystem::path &src);
   };
+
+  ItSource whichSource(const Ast &ast, const char *start) noexcept;
 
   struct AstBad {
     int code;
@@ -63,12 +62,17 @@ namespace zlt::mylisp::ast {
 
   namespace bad {
     enum {
+      ASSIGN_NOTHING,
       CANNOT_OPEN_SRC_FILE,
+      DEF_NOTHING,
+      ILLEGAL_FN_PARAM,
+      ILLEGAL_LHS,
       ILLEGAL_MACRO_PARAM,
       ILLEGAL_PREPROC_ARG,
       MACRO_ALREADY_EXISTS,
       MACRO_REST_PARAM_MUST_BE_LAST,
       NUMBER_LITERAL_OOR,
+      SHOULD_NOT_IN_GLOBAL,
       UNEXPECTED_TOKEN,
       UNRECOGNIZED_SYMBOL,
       UNTERMINATED_LIST,

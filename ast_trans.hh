@@ -37,7 +37,7 @@ namespace zlt::mylisp::ast {
 
   struct Function final: Node {
     using Defs = std::set<const std::string *>;
-    using Params = std::vector<const std::vector<const std::string *>>;
+    using Params = std::vector<const std::string *>;
     Defs defs;
     Params params;
     UNode body;

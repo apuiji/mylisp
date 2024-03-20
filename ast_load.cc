@@ -9,14 +9,14 @@ using namespace std;
 namespace zlt::mylisp::ast {
   static int readAll(string &dest, const char *start, const filesystem::path &file);
 
-  Ast::ItLoaded load(Ast &ast, const char *start, filesystem::path &&file) {
-    string src;
-    readAll(src, start, file);
-    auto file1 = &*ast.files.insert(std::move(file)).first;
-    auto &src1 = ast.sources[file1] = std::move(src);
-    UNode a;
-    parse(a, src1.data(), src1.data() + src1.size());
-    return ast.loadeds.insert(make_pair(file1, std::move(a))).first;
+  ItSource load(Ast &ast, const char *start, filesystem::path &&file) {
+    if (auto itSrc = ast.sources.find(file); itSrc != ast.sources.end()) {
+      return itSrc;
+    }
+    pair<string, UNode> a;
+    readAll(a.first, start, file);
+    parse(a.second, a.first.data(), a.first.data() + a.first.size());
+    return ast.sources.insert(make_pair(std::move(file), std::move(a))).first;
   }
 
   int readAll(string &dest, const char *start, const filesystem::path &file) {

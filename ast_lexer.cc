@@ -28,8 +28,8 @@ namespace zlt::mylisp::ast {
     if (it == end) [[unlikely]] {
       return { token::E0F, end, end };
     }
-    if (It it1 = find_if_not(it, end, iswspace); it1 != it) {
-      return operator ()(it1, end);
+    if (isspace(*it)) {
+      return operator ()(it + 1, end);
     }
     if (*it == ';') {
       It it1 = find(it + 1, end, '\n');

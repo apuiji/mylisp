@@ -15,7 +15,7 @@ namespace zlt::mylisp::ast {
     Lexer lexer;
     It end0 = parse(dest, lexer, it, end);
     auto [_1, start1, end1] = lexer(end0, end);
-    if (_1 == token::E0F) {
+    if (_1 != token::E0F) {
       throw AstBad(bad::UNEXPECTED_TOKEN, start1);
     }
     return 0;

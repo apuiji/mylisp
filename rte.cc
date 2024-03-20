@@ -87,6 +87,10 @@ namespace zlt::mylisp::rte {
     return eval(f.prevNext, f.prevEnd);
   }
 
+  const string *addString(string &&s) {
+    return &*strings.insert(std::move(s)).first;
+  }
+
   static bool modCanonicalPath(string &dest, const Value *it, const Value *end) noexcept;
   static Value loadMod(string &path);
 
