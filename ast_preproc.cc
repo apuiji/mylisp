@@ -60,7 +60,7 @@ namespace zlt::mylisp::ast {
     return dest->next;
   }
 
-  template<uint64_t T>
+  template<int T>
   PreprocDir preprocDir;
 
   #define declPreprocDir(symb) \

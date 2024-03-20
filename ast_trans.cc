@@ -90,7 +90,7 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
-  template<uint64_t>
+  template<int>
   static Trans transSymbol;
 
   #define declTransSymbol(symb) \

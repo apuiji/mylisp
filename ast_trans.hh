@@ -101,7 +101,7 @@ namespace zlt::mylisp::ast {
     Operation(const char *start, UNodes &&items) noexcept: Node(start), items(std::move(items)) {}
   };
 
-  template<int N, uint64_t Op>
+  template<int N, int Op>
   struct Operation1 final: Operation<N> {
     using Operation<N>::Operation;
   };

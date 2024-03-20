@@ -3,6 +3,14 @@
 #include"ast.hh"
 
 namespace zlt::mylisp::ast {
+  struct Lexer {
+    double numval;
+    char charval;
+    std::string strval;
+    std::string_view raw;
+    std::tuple<int, const char *, const char *> operator ()(const char *it, const char *end);
+  };
+
   int parse(UNode &dest, const char *it, const char *end);
 
   struct RawAtom: Node {
@@ -31,8 +39,8 @@ namespace zlt::mylisp::ast {
   };
 
   struct TokenAtom final: RawAtom {
-    uint64_t token;
-    TokenAtom(const char *start, std::string_view raw, uint64_t token) noexcept: RawAtom(start, raw), token(token) {}
+    int token;
+    TokenAtom(const char *start, std::string_view raw, int token) noexcept: RawAtom(start, raw), token(token) {}
   };
 
   struct List final: Node {

@@ -1,35 +1,83 @@
 #pragma once
 
-#include<cstdint>
-#include<utility>
+#include<string>
 
 namespace zlt::mylisp::ast {
   namespace token {
-    enum: uint64_t {
+    enum {
       NUMBER = 1,
       CHAR,
       STRING,
       ID,
-      E0F
+      E0F,
+      X
     };
 
-    template<size_t ...I>
-    requires (sizeof...(I) <= 8)
-    consteval uint64_t symbol(const char *s, std::index_sequence<I...>) {
-      uint64_t u = 0;
-      ((u = (u << 8) | s[I]), ...);
-      return 0x80'00'00'00'00'00'00'00UL | u;
+    consteval int symbol(std::string_view s, auto ...s1) {
+      int i = 0;
+      ((++i, s == s1) || ... || (i = 0));
+      return i;
     }
 
     template<size_t N>
     struct Symbol {
-      uint64_t value;
-      consteval Symbol(const char (&s)[N]): value(symbol(s, std::make_index_sequence<N - 1>())) {}
+      int value;
+      consteval Symbol(const char (&s)[N]):
+      value(
+        symbol(
+          s,
+          "callee",
+          "def",
+          "defer",
+          "forward",
+          "if",
+          "length",
+          "return",
+          "throw",
+          "try",
+          "yield",
+          "!",
+          "#",
+          "##",
+          "#def",
+          "#ifdef",
+          "#ifndef",
+          "#include",
+          "#undef",
+          "%",
+          "&&",
+          "&",
+          "(",
+          ")",
+          "**",
+          "*",
+          "+",
+          ",",
+          "-",
+          ".",
+          "/",
+          "<<",
+          "<=>",
+          "<=",
+          "<",
+          "==",
+          "=",
+          ">=",
+          ">>>",
+          ">>",
+          ">",
+          "@",
+          "^^",
+          "^",
+          "||",
+          "|",
+          "~")) {}
     };
   }
 
   template<token::Symbol symb>
-  consteval uint64_t operator "" _token() {
+  consteval int operator "" _token() {
+    static_assert(symb.value);
     return symb.value;
   }
 }

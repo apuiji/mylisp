@@ -7,7 +7,6 @@ HHS = \
 	../myccutils/rbtree.hh \
 	../myccutils/xyz.hh \
 	ast.hh \
-	ast_lexer.hh \
 	ast_load.hh \
 	ast_optimize.hh \
 	ast_parse.hh \

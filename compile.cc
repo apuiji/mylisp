@@ -58,13 +58,13 @@ namespace zlt::mylisp {
   declCompile(Yield);
   // operations begin
   #define COMMA ,
-  template<uint64_t Op>
+  template<int Op>
   declCompile(Operation1<1 COMMA Op>);
-  template<uint64_t Op>
+  template<int Op>
   declCompile(Operation1<2 COMMA Op>);
-  template<uint64_t Op>
+  template<int Op>
   declCompile(Operation1<3 COMMA Op>);
-  template<uint64_t Op>
+  template<int Op>
   declCompile(Operation1<-1 COMMA Op>);
   #undef COMMA
   declCompile(AssignOper);
@@ -247,7 +247,7 @@ namespace zlt::mylisp {
     return dest << direction::YIELD << src.then;
   }
 
-  template<uint64_t Op>
+  template<int Op>
   static consteval uint8_t operat0r() {
     if constexpr (Op == "!"_token) {
       return direction::NOT;
@@ -299,22 +299,22 @@ namespace zlt::mylisp {
     }
   }
 
-  template<uint64_t Op>
+  template<int Op>
   Compile &operator <<(Compile &dest, const Operation1<1, Op> &src) {
     return dest << src.item << operat0r<Op>();
   }
 
-  template<uint64_t Op>
+  template<int Op>
   Compile &operator <<(Compile &dest, const Operation1<2, Op> &src) {
     return dest << src.items[0] << direction::PUSH << src.items[1] << operat0r<Op>();
   }
 
-  template<uint64_t Op>
+  template<int Op>
   Compile &operator <<(Compile &dest, const Operation1<3, Op> &src) {
     return dest << src.items[0] << direction::PUSH << src.items[1] << direction::PUSH << src.items[2] << operat0r<Op>();
   }
 
-  template<uint64_t Op>
+  template<int Op>
   Compile &operator <<(Compile &dest, const Operation1<-1, Op> &src) {
     return dest << src.items << operat0r<Op>() << src.items.size();
   }

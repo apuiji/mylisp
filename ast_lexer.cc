@@ -4,7 +4,7 @@
 #include<regex>
 #include<sstream>
 #include"ast.hh"
-#include"ast_lexer.hh"
+#include"ast_parse.hh"
 #include"ast_token.hh"
 #include"myccutils/xyz.hh"
 
@@ -22,9 +22,9 @@ namespace zlt::mylisp::ast {
 
   static bool notRawChar(char c) noexcept;
   static bool isNumber(double &dest, string_view src);
-  static bool isToken(uint64_t &dest, string_view src) noexcept;
+  static bool isToken(int &dest, string_view src) noexcept;
 
-  tuple<uint64_t, It, It> Lexer::operator ()(It it, It end) {
+  tuple<int, It, It> Lexer::operator ()(It it, It end) {
     if (it == end) [[unlikely]] {
       return { token::E0F, end, end };
     }
@@ -66,7 +66,7 @@ namespace zlt::mylisp::ast {
     } catch (out_of_range) {
       throw AstBad(bad::NUMBER_LITERAL_OOR, it);
     }
-    if (uint64_t t; isToken(t, raw)) {
+    if (int t; isToken(t, raw)) {
       return { t, it, it + n };
     }
     return { token::ID, it, it + n };
@@ -200,7 +200,7 @@ namespace zlt::mylisp::ast {
     }
   }
 
-  bool isToken(uint64_t &dest, string_view raw) noexcept {
+  bool isToken(int &dest, string_view raw) noexcept {
     #define ifSymbol(symb) \
     if (raw == symb) { \
       dest = symb##_token; \
@@ -223,11 +223,9 @@ namespace zlt::mylisp::ast {
     ifSymbol("##");
     ifSymbol("#def");
     ifSymbol("#def");
-    ifSymbol("#file");
     ifSymbol("#ifdef");
     ifSymbol("#ifndef");
     ifSymbol("#include");
-    ifSymbol("#line");
     ifSymbol("#undef");
     ifSymbol("%");
     ifSymbol("&&");
