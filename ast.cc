@@ -7,6 +7,12 @@
 using namespace std;
 
 namespace zlt::mylisp::ast {
+  UNode shift(UNode &src) noexcept {
+    auto a = std::move(src);
+    src = std::move(a->next);
+    return std::move(a);
+  }
+
   int Ast::operator ()(UNode &dest, const filesystem::path &file) {
     ItSource it = load(*this, nullptr, filesystem::canonical(file));
     {

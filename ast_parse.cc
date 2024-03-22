@@ -8,9 +8,9 @@ using namespace std;
 namespace zlt::mylisp::ast {
   using It = const char *;
 
-  static It parse(UNodes &dest, Lexer &lexer, It it, It end);
+  static It parse(UNode &dest, Lexer &lexer, It it, It end);
 
-  int parse(UNodes &dest, It it, It end) {
+  int parse(UNode &dest, It it, It end) {
     Lexer lexer;
     It end0 = parse(dest, lexer, it, end);
     auto [_1, start1, end1] = lexer(end0, end);
@@ -20,89 +20,82 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
-  static It parse1(UNode &dest, Lexer &lexer, It it, It end);
-
-  It parse(UNodes &dest, Lexer &lexer, It it, It end) {
-    It it1;
-    {
-      UNode a;
-      it1 = parse1(a, lexer, it, end);
-      if (!it1) {
-        return it;
-      }
-      dest.push_back(std::move(a));
-    }
-    return parse(dest, lexer, it1, end);
-  }
-
-  It parse1(UNode &dest, Lexer &lexer, It it, It end) {
+  It parse(UNode &dest, Lexer &lexer, It it, It end) {
     auto [t0, start0, end0] = lexer(it, end);
-    if (t0 == token::E0F || t0 == ")"_token) [[unlikely]] {
-      return nullptr;
-    }
-    if (t0 == token::NUMBER) {
-      dest.reset(new NumberAtom(start0, lexer.raw, lexer.numval));
-      return end0;
-    }
-    if (t0 == token::CHAR) {
-      dest.reset(new CharAtom(start0, lexer.charval));
-      return end0;
-    }
-    if (t0 == token::STRING) {
-      auto value = rte::addString(std::move(lexer.strval));
-      dest.reset(new StringAtom(start0, value));
-      return end0;
-    }
-    if (t0 == token::ID) {
-      auto name = rte::addString(lexer.raw);
-      dest.reset(new IDAtom(start0, name));
-      return end0;
-    }
-    if (to == "("_token) {
-      UNodes items;
-      It end1 = parse(items, lexer, end0, end);
-      auto [t2, start2, end2] = lexer(end1, end);
-      if (t2 != ")"_token) {
-        throw AstBad(bad::UNTERMINATED_LIST, start0);
+    switch (t0) {
+      case ")"_token:
+        [[fallthrough]];
+      [[unlikely]] case token::E0F: {
+        return start0;
       }
-      dest.reset(new List(start0, std::move(items)));
-      return end2;
+      case token::NUMBER: {
+        dest.reset(new NumberAtom(start0, lexer.raw, lexer.numval));
+        return parse(dest->next, lexer, end0, end);
+      }
+      case token::CHAR: {
+        dest.reset(new CharAtom(start0, lexer.charval));
+        return parse(dest->next, lexer, end0, end);
+      }
+      case token::STRING: {
+        auto value = rte::addString(std::move(lexer.strval));
+        dest.reset(new StringAtom(start0, value));
+        return parse(dest->next, lexer, end0, end);
+      }
+      case token::ID: {
+        auto name = rte::addString(lexer.raw);
+        dest.reset(new IDAtom(start0, name));
+        return parse(dest->next, lexer, end0, end);
+      }
+      case "("_token: {
+        UNode first;
+        It end1 = parse(first, lexer, end0, end);
+        auto [t2, start2, end2] = lexer(end1, end);
+        if (t2 != ")"_token) {
+          throw AstBad(bad::UNTERMINATED_LIST, start0);
+        }
+        dest.reset(new List(start0, std::move(first)));
+        return parse(dest->next, lexer, end2, end);
+      }
+      default: {
+        dest.reset(new TokenAtom(start0, lexer.raw, t0));
+        return parse(dest->next, lexer, end0, end);
+      }
     }
-    dest.reset(new TokenAtom(start0, lexer.raw, t0));
-    return end0;
   }
 
   int clone(UNode &dest, const UNode &src) {
-    #define ifType(T) \
-    if (auto a = dynamic_cast<const T *>(src.get()); a) { \
-      dest.reset(new T(*a)); \
-      return 0; \
-    }
-    ifType(NumberAtom);
-    ifType(CharAtom);
-    ifType(StringAtom);
-    ifType(IDAtom);
-    ifType(TokenAtom);
-    #undef ifType
-    auto ls = static_cast<const List *>(src.get());
-    UNodes items;
-    clones(items, ls->items.begin(), ls->items.end());
-    dest.reset(new List(ls->start, std::move(items)));
-    return 0;
-  }
-
-  int clone(UNodes &dest, const UNode &src) {
-    UNode a;
-    clone(a, src);
-    dest.push_back(std::move(a));
-    return 0;
-  }
-
-  int clones(UNodes &dest, UNodes::const_iterator it, UNodes::const_iterator end) {
-    if (it == end) [[unlikely]] {
+    if (auto a = dynamic_cast<const NumberAtom *>(src.get()); a) {
+      dest.reset(new NumberAtom(a->start, a->raw, a->value));
       return 0;
     }
-    clone(dest, *it);
-    return clones(dest, ++it, end);
+    if (auto a = dynamic_cast<const CharAtom *>(src.get()); a) {
+      dest.reset(new CharAtom(a->start, a->value));
+      return 0;
+    }
+    if (auto a = dynamic_cast<const StringAtom *>(src.get()); a) {
+      dest.reset(new StringAtom(a->start, a->value));
+      return 0;
+    }
+    if (auto a = dynamic_cast<const IDAtom *>(src.get()); a) {
+      dest.reset(new IDAtom(a->start, a->name));
+      return 0;
+    }
+    if (auto a = dynamic_cast<const TokenAtom *>(src.get()); a) {
+      dest.reset(new TokenAtom(a->start, a->raw, a->token));
+      return 0;
+    }
+    auto ls = static_cast<const List *>(src.get());
+    UNode first;
+    clones(first, ls->first);
+    dest.reset(new List(ls->start, std::move(first)));
+    return 0;
+  }
+
+  UNode &clones(UNode &dest, const UNode &src) {
+    if (!src) [[unlikely]] {
+      return dest;
+    }
+    clone(dest, src);
+    return clones(dest->next, src->next);
   }
 }

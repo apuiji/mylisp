@@ -11,7 +11,7 @@ namespace zlt::mylisp::ast {
     std::tuple<int, const char *, const char *> operator ()(const char *it, const char *end);
   };
 
-  int parse(UNodes &dest, const char *it, const char *end);
+  int parse(UNode &dest, const char *it, const char *end);
 
   struct RawAtom: Node {
     std::string_view raw;
@@ -44,11 +44,10 @@ namespace zlt::mylisp::ast {
   };
 
   struct List final: Node {
-    UNodes items;
-    List(const char *start, UNode &&items = {}) noexcept: Node(start), items(std::move(items)) {}
+    UNode first;
+    List(const char *start, UNode &&first = {}) noexcept: Node(start), first(std::move(first)) {}
   };
 
   int clone(UNode &dest, const UNode &src);
-  int clone(UNodes &dest, const UNode &src);
-  int clones(UNodes &dest, UNodes::const_iterator it, UNodes::const_iterator end);
+  UNode &clones(UNode &dest, const UNode &src);
 }
