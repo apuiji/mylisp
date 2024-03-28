@@ -2,6 +2,7 @@
 
 #include<concepts>
 #include<filesystem>
+#include<forward_list>
 #include<map>
 #include<memory>
 #include<set>
@@ -13,44 +14,46 @@ namespace zlt::mylisp::ast {
   struct Node;
 
   using UNode = std::unique_ptr<Node>;
-  using UNodes = std::vector<UNode>;
+  using UNodes = std::forward_list<UNode>;
 
   struct Node {
     const char *start;
-    UNode next;
     Node(const char *start = nullptr) noexcept: start(start) {}
     virtual ~Node() = default;
   };
-
-  static inline int replace(UNode &dest, UNode &src) noexcept {
-    src->next = std::move(dest->next);
-    dest = std::move(src);
-    return 0;
-  }
-
-  static inline int replace(UNode &dest, UNode &&src) noexcept {
-    return replace(dest, src);
-  }
-
-  UNode shift(UNode &src) noexcept;
 
   struct Macro {
     using Params = std::vector<const std::string *>;
     using ItParam = Params::const_iterator;
     Params params;
-    UNode body;
+    UNodes body;
     Macro() = default;
-    Macro(Params &&params, UNode &&body) noexcept: params(std::move(params)), body(std::move(body)) {}
+    Macro(Params &&params, UNodes &&body) noexcept: params(std::move(params)), body(std::move(body)) {}
   };
 
-  using Sources = std::map<std::filesystem::path, std::pair<std::string, UNode>>;
+  using Source = std::pair<std::string, UNodes>;
+  using Sources = std::map<std::filesystem::path, Source>;
   using ItSource = Sources::const_iterator;
 
   struct Ast {
     Sources sources;
     std::map<const std::string *, Macro> macros;
-    int operator ()(UNode &dest, const std::filesystem::path &src);
+    int operator ()(UNodes &dest, const std::filesystem::path &src);
+    int operator ()(UNodes &dest, const char *it, const char *end);
   };
+
+  const char *hit(const char *it, const char *end) noexcept;
+
+  struct Lexer {
+    double numval;
+    char charval;
+    std::string strval;
+    std::string_view raw;
+    /// @return [token, end]
+    std::tuple<int, const char *> operator ()(const char *it, const char *end);
+  };
+
+  int parse(UNodes &dest, const char *it, const char *end);
 
   ItSource whichSource(const Ast &ast, const char *start) noexcept;
 

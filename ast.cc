@@ -7,22 +7,29 @@
 using namespace std;
 
 namespace zlt::mylisp::ast {
-  UNode shift(UNode &src) noexcept {
-    auto a = std::move(src);
-    src = std::move(a->next);
-    return std::move(a);
+  static int ast(UNodes &dest, Ast &ast, UNodes::const_iterator it, UNodes::const_iterator end);
+
+  int Ast::operator ()(UNodes &dest, const filesystem::path &file) {
+    ItSource it = load(*this, nullptr, filesystem::canonical(file));
+    auto &a = it->second.second;
+    return ast(dest, *this, a.begin(), a.end());
   }
 
-  int Ast::operator ()(UNode &dest, const filesystem::path &file) {
-    ItSource it = load(*this, nullptr, filesystem::canonical(file));
-    {
-      UNode a;
-      preproc(a, *this, it->second.second);
-      trans(dest, a);
-    }
-    optimize(dest);
-    trans1(dest);
-    trans2(dest);
+  int Ast::operator ()(UNodes &dest, const char *it, const char *end) {
+    UNodes a;
+    parse(a, it, end);
+    return ast(dest, *this, a.begin(), a.end());
+  }
+
+  int ast(UNodes &dest, Ast &ast, UNodes::const_iterator it, UNodes::const_iterator end) {
+    UNodes a;
+    preproc(a, *this, it, end);
+    trans(dest, a.begin(), a.end());
+    a = std::move(dest);
+    optimize(a.begin(), a.end());
+    optimizeBody(dest, a.begin(), a.end());
+    trans1(dest.begin(), dest.end());
+    trans2(dest.begin(), dest.end());
     return 0;
   }
 
