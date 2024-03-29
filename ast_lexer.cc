@@ -34,8 +34,6 @@ namespace zlt::mylisp::ast {
   };
 
   static bool notRawChar(char c) noexcept;
-  static bool isNumber(double &dest, string_view src);
-  static bool isToken(int &dest, string_view src) noexcept;
 
   tuple<int, It> Lexer::operator ()(It it, It end) {
     if (*it == '(') {
@@ -62,17 +60,7 @@ namespace zlt::mylisp::ast {
       throw AstBad(bad::UNRECOGNIZED_SYMBOL, it);
     }
     raw = string_view(it, it1);
-    try {
-      if (isNumber(numval, raw)) {
-        return { token::NUMBER, it1 };
-      }
-    } catch (out_of_range) {
-      throw AstBad(bad::NUMBER_LITERAL_OOR, it);
-    }
-    if (int t; isToken(t, raw)) {
-      return { t, it1 };
-    }
-    return { token::ID, it1 };
+    return { token::ofRaw(numval, it, raw), it1 };
   }
 
   static pair<int, size_t> esch(It it, It end);
@@ -143,103 +131,5 @@ namespace zlt::mylisp::ast {
 
   bool notRawChar(char c) noexcept {
     return strchr("\"'();", c) || isspace(c);
-  }
-
-  static bool isBaseInt(double &dest, string_view src);
-
-  bool isNumber(double &dest, string_view src) {
-    if (isBaseInt(dest, src)) {
-      return true;
-    }
-    try {
-      dest = stod(string(src));
-      return true;
-    } catch (invalid_argument) {
-      return false;
-    }
-  }
-
-  static bool isBaseInt(double &dest, const regex &re, size_t base, string_view src);
-
-  bool isBaseInt(double &dest, string_view src) {
-    static const regex re2("([+-]?)0[Bb]([01]+)");
-    static const regex re4("([+-]?)0[Qq]([0-3]+)");
-    static const regex re8("([+-]?)0[Oo]([0-7]+)");
-    static const regex re16("([+-]?)0[Xx]([[:xdigit:]]+)");
-    return
-      isBaseInt(dest, re2, 2, src) ||
-      isBaseInt(dest, re4, 4, src) ||
-      isBaseInt(dest, re8, 8, src) ||
-      isBaseInt(dest, re16, 16, src);
-  }
-
-  bool isBaseInt(double &dest, const regex &re, size_t base, string_view src) {
-    match_results<string_view::const_iterator> m;
-    if (!regex_match(src.begin(), src.end(), m, re)) {
-      return false;
-    }
-    try {
-      dest = stoi(m.str(1) + m.str(2), nullptr, base);
-      return true;
-    } catch (invalid_argument) {
-      return false;
-    }
-  }
-
-  bool isToken(int &dest, string_view raw) noexcept {
-    #define ifSymbol(symb) \
-    if (raw == symb) { \
-      dest = symb##_token; \
-      return true; \
-    }
-    #define ifKeyword(kwd) ifSymbol(#kwd)
-    ifKeyword(callee);
-    ifKeyword(def);
-    ifKeyword(defer);
-    ifKeyword(forward);
-    ifKeyword(if);
-    ifKeyword(length);
-    ifKeyword(return);
-    ifKeyword(throw);
-    ifKeyword(try);
-    ifKeyword(yield);
-    #undef ifKeyword
-    ifSymbol("!");
-    ifSymbol("#");
-    ifSymbol("##");
-    ifSymbol("#def");
-    ifSymbol("#def");
-    ifSymbol("#ifdef");
-    ifSymbol("#ifndef");
-    ifSymbol("#include");
-    ifSymbol("#undef");
-    ifSymbol("%");
-    ifSymbol("&&");
-    ifSymbol("&");
-    ifSymbol("**");
-    ifSymbol("*");
-    ifSymbol("+");
-    ifSymbol(",");
-    ifSymbol("-");
-    ifSymbol(".");
-    ifSymbol("/");
-    ifSymbol("<<");
-    ifSymbol("<=>");
-    ifSymbol("<=");
-    ifSymbol("<");
-    ifSymbol("==");
-    ifSymbol("=");
-    ifSymbol(">=");
-    ifSymbol(">>>");
-    ifSymbol(">>");
-    ifSymbol(">");
-    ifSymbol("@");
-    ifSymbol("^^");
-    ifSymbol("^");
-    ifSymbol("||");
-    ifSymbol("|");
-    ifSymbol("~");
-    #undef ifSymbol
-    return false;
   }
 }

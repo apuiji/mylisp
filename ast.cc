@@ -1,8 +1,5 @@
 #include<sstream>
-#include"ast_load.hh"
-#include"ast_optimize.hh"
-#include"ast_preproc.hh"
-#include"ast_trans2.hh"
+#include"ast_nodes2.hh"
 
 using namespace std;
 

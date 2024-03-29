@@ -3,7 +3,6 @@
 #include"ast.hh"
 
 namespace zlt::mylisp::ast {
-
   struct RawAtom: Node {
     std::string_view raw;
     RawAtom(const char *start, std::string_view raw) noexcept: Node(start), raw(raw) {}

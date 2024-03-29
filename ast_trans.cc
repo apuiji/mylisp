@@ -1,6 +1,6 @@
 #include<cmath>
+#include"ast_nodes1.hh"
 #include"ast_token.hh"
-#include"ast_trans.hh"
 #include"myccutils/xyz.hh"
 
 using namespace std;

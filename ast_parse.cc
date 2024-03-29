@@ -61,13 +61,16 @@ namespace zlt::mylisp::ast {
   }
 
   It nodes(UNodes &dest, Lexer &lexer, It end0, It end) {
-    EscRAII<UNode> _1;
-    It start1 = hit(end0, end);
-    It end1 = node(_1, lexer, start1, end);
-    if (!_1) {
-      return end0;
+    {
+      UNode _1;
+      It start1 = hit(end0, end);
+      It end1 = node(_1, lexer, start1, end);
+      if (!end1) {
+        return end0;
+      }
+      dest.push_back(std::move(_1));
+      end0 = end1;
     }
-    dest.push_back(std::move(_1));
-    return nodes(dest, lexer, end1, end);
+    return nodes(dest, lexer, end0, end);
   }
 }

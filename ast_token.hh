@@ -73,6 +73,8 @@ namespace zlt::mylisp::ast {
           "|",
           "~")) {}
     };
+
+    int ofRaw(double &numval, const char *start, std::string_view raw);
   }
 
   template<token::Symbol symb>
