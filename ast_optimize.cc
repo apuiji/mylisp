@@ -56,7 +56,6 @@ namespace zlt::mylisp::ast {
   declOptimize(LengthOper);
   declOptimize(SequenceOper);
   declOptimize(Operation<1>);
-  declOptimize(Operation<-1>);
   template<int N>
   declOptimize(Operation<N>);
   // operations end
@@ -534,20 +533,12 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
-  int optimize(UNode &dest, Operation<-1> &src) {
-    optimize(src.items.begin(), src.items.end());
-    return 0;
-  }
-
-  template<size_t N, size_t ...I>
-  static inline int operationN(Operation<N> &src, index_sequence<I...>) {
-    (optimize(src.items[I]), ...);
-    return 0;
-  }
-
   template<int N>
   int optimize(UNode &dest, Operation<N> &src) {
-    return operationN(src, make_index_sequence<N>());
+    for (auto &a : src.items) {
+      optimize(a);
+    }
+    return 0;
   }
   // operations end
 }

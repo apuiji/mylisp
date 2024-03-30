@@ -35,7 +35,6 @@ namespace zlt::mylisp::ast {
   declTrans(Yield);
   declTrans(AssignOper);
   declTrans(Operation<1>);
-  declTrans(Operation<-1>);
   template<int N>
   declTrans(Operation<N>);
   declTrans(Function1);
@@ -128,48 +127,39 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
-  int trans(UNode &dest, const Indefs &indefs, Operation<-1> &src) {
-    trans(indefs, src.items.begin(), src.items.end());
-    return 0;
-  }
-
-  template<size_t N, size_t ...I>
-  static inline int trans(const Indefs &indefs, Operation<N> &src, index_sequence<I...>) {
-    (trans(indefs, src.items[I]), ...);
-    return 0;
-  }
-
   template<int N>
   int trans(UNode &dest, const Indefs &indefs, Operation<N> &src) {
-    return trans(indefs, src, make_index_sequence<N>());
+    for (auto &a : src.items) {
+      trans(indefs, a);
+    }
+    return 0;
   }
 
-  using ItClosure = map<const string *, Reference>::const_iterator;
+  using ItClosure = Function1::ClosureDefs::const_iterator;
 
-  static int makeInputClosure(UNode &dest, ItClosure it, ItClosure end);
+  static int makeInputClosures(UNodes &dest, ItClosure it, ItClosure end);
 
   using ItPtrDef = set<const string *>::const_iterator;
 
-  static UNode &makeIndirect(UNode &dest, ItPtrDef it, ItPtrDef end);
+  static UNode &makeIndirects(UNodes &dest, ItPtrDef it, ItPtrDef end);
 
   int trans(UNode &dest, const Indefs &indefs, Function1 &src) {
-    UNode inputClosure;
-    makeInputClosure(inputClosure, src.closureDefs.begin(), src.closureDefs.end());
-    UNode body;
-    auto &next = makeIndirect(body, src.defs.begin(), src.defs.end());
-    trans(src.defs, src.body);
-    next = std::move(src.body);
-    UNode a(new Function2(src.start, std::move(body), std::move(inputClosure)));
-    replace(dest, a);
+    UNodes inputClosures;
+    makeInputClosures(inputClosures, src.closureDefs.begin(), src.closureDefs.end());
+    UNodes body;
+    makeIndirects(body, src.indefs.begin(), src.indefs.end());
+    trans(src.indefs, src.body.begin(), src.body.end());
+    body.insert_back(move_iterator(src.body.begin()), move_iterator(src.body.end()));
+    dest.reset(new Function2(src.start, std::move(body), std::move(inputClosure)));
     return 0;
   }
 
-  int makeInputClosure(UNode &dest, ItClosure it, ItClosure end) {
-    if (it == end) [[unlikely]] {
-      return 0;
+  int makeInputClosures(UNodes &dest, ItClosure it, ItClosure end) {
+    for (; it != end; ++it) {
+      UNode a(new InputClosure(it->first, it->second));
+      dest.push_back(std::move(a));
     }
-    dest.reset(new InputClosure(it->first, it->second));
-    return makeInputClosure(dest->next, ++it, end);
+    return 0;
   }
 
   UNode &makeIndirect(UNode &dest, ItPtrDef it, ItPtrDef end) {

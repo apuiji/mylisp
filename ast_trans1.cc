@@ -83,7 +83,6 @@ namespace zlt::mylisp::ast {
   declTrans(Try);
   declTrans(Yield);
   declTrans(Operation<1>);
-  declTrans(Operation<-1>);
   template<int N>
   declTrans(Operation<N>);
 
@@ -147,7 +146,7 @@ namespace zlt::mylisp::ast {
       body.push_back(UNode(new CleanArguments));
     }
     trans(fs, src.body.begin(), src.body.end());
-    body.insert(body.end(), move_iterator(src.body.begin()), move_iterator(src.body.end()));
+    body.insert_back(move_iterator(src.body.begin()), move_iterator(src.body.end()));
     dest.reset(new Function1(src.start, std::move(fs.indefs), std::move(fs.closureDefs), std::move(body)));
     return 0;
   }
@@ -198,19 +197,11 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
-  int trans(UNode &dest, Scope &scope, Operation<-1> &src) {
-    trans(scope, src.items.begin(), src.items.end());
-    return 0;
-  }
-
-  template<size_t N, size_t ...I>
-  static inline int trans(Scope &scope, Operation<N> &src, index_sequence<I...>) {
-    (trans(scope, src.items[I]), ...);
-    return 0;
-  }
-
   template<int N>
   int trans(UNode &dest, Scope &scope, Operation<N> &src) {
-    return trans(scope, src, make_index_sequence<N>());
+    for (auto &a : src.items) {
+      trans(scope, a);
+    }
+    return 0;
   }
 }

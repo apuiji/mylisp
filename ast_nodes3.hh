@@ -5,9 +5,9 @@
 namespace zlt::mylisp::ast {
   struct Function2 final: Node {
     UNodes body;
-    UNodes inputClosure;
-    Function2(const char *start, UNodes &&body, UNodes &&inputClosure) noexcept:
-    Node(start), body(std::move(body)), inputClosure(std::move(inputClosure)) {}
+    UNodes inputClosures;
+    Function2(const char *start, UNodes &&body, UNodes &&inputClosures) noexcept:
+    Node(start), body(std::move(body)), inputClosures(std::move(inputClosures)) {}
   };
 
   struct GetIndirectOper final: Operation<1> {
