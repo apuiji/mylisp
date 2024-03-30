@@ -1,7 +1,7 @@
 #pragma once
 
 #include<map>
-#include"ast.hh"
+#include"ast_nodes1.hh"
 
 namespace zlt::mylisp::ast {
   struct Argument final: Node {
@@ -28,11 +28,11 @@ namespace zlt::mylisp::ast {
   struct Function1 final: Node {
     using Defs = Function::Defs;
     using ClosureDefs = std::map<const std::string *, Reference>;
-    Defs defs;
+    Defs indefs;
     ClosureDefs closureDefs;
     UNodes body;
-    Function1(const char *start, Defs &&defs, ClosureDefs &&closureDefs, UNodes &&body) noexcept:
-    Node(start), defs(std::move(defs)), closureDefs(std::move(closureDefs)), body(std::move(body)) {}
+    Function1(const char *start, Defs &&indefs, ClosureDefs &&closureDefs, UNodes &&body) noexcept:
+    Node(start), indefs(std::move(indefs)), closureDefs(std::move(closureDefs)), body(std::move(body)) {}
   };
 
   struct Reference1 final: Node, Reference {

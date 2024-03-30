@@ -1,24 +1,25 @@
-#include"ast_trans2.hh"
+#include"ast_nodes3.hh"
 
 using namespace std;
 
 namespace zlt::mylisp::ast {
   using Indefs = Function::Defs;
+  using It = UNodes::iterator;
+
+  static int trans(const Indefs &indefs, It it, It end)
+
+  int trans2(It it, It end) {
+    return trans(Indefs(), it, end);
+  }
 
   static int trans(const Indefs &indefs, UNode &src);
 
-  int trans2(UNode &src) {
-    return trans(Indefs(), src);
-  }
-
-  static int trans1(const Indefs &indefs, UNode &src);
-
-  int trans(const Indefs &indefs, UNode &src) {
-    if (!src) [[unlikely]] {
+  int trans(const Indefs &indefs, It it, It end) {
+    if (it == end) [[unlikely]] {
       return 0;
     }
-    trans1(indefs, src);
-    return trans(indefs, src->next);
+    trans(indefs, *it);
+    return trans(indefs, ++it, end);
   }
 
   #define declTrans(T) \
@@ -34,6 +35,7 @@ namespace zlt::mylisp::ast {
   declTrans(Yield);
   declTrans(AssignOper);
   declTrans(Operation<1>);
+  declTrans(Operation<-1>);
   template<int N>
   declTrans(Operation<N>);
   declTrans(Function1);
@@ -63,15 +65,6 @@ namespace zlt::mylisp::ast {
     ifType(Reference1);
     #undef ifType
     return 0;
-  }
-
-  template<class It>
-  static int trans(const Indefs &indefs, It it, It end) {
-    if (it == end) [[unlikely]] {
-      return 0;
-    }
-    trans(indefs, *it);
-    return trans(indefs, it + 1, end);
   }
 
   int trans(UNode &dest, const Indefs &indefs, Call &src) {
@@ -109,7 +102,7 @@ namespace zlt::mylisp::ast {
   }
 
   int trans(UNode &dest, const Indefs &indefs, Try &src) {
-    trans(indefs, src.body);
+    trans(indefs, src.body.begin(), src.body.end());
     return 0;
   }
 
@@ -125,7 +118,7 @@ namespace zlt::mylisp::ast {
       array<UNode, 2> items;
       items[0] = std::move(a->item);
       items[1] = std::move(src.items[1]);
-      replace(dest, UNode(new SetIndirectOper(src.start, std::move(items))));
+      dest.reset(new SetIndirectOper(src.start, std::move(items)));
     }
     return 0;
   }
@@ -135,10 +128,20 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
-  template<int N>
-  int trans(UNode &dest, const Indefs &indefs, Operation<N> &src) {
+  int trans(UNode &dest, const Indefs &indefs, Operation<-1> &src) {
     trans(indefs, src.items.begin(), src.items.end());
     return 0;
+  }
+
+  template<size_t N, size_t ...I>
+  static inline int trans(const Indefs &indefs, Operation<N> &src, index_sequence<I...>) {
+    (trans(indefs, src.items[I]), ...);
+    return 0;
+  }
+
+  template<int N>
+  int trans(UNode &dest, const Indefs &indefs, Operation<N> &src) {
+    return trans(indefs, src, make_index_sequence<N>());
   }
 
   using ItClosure = map<const string *, Reference>::const_iterator;

@@ -83,6 +83,7 @@ namespace zlt::mylisp::ast {
   declTrans(Try);
   declTrans(Yield);
   declTrans(Operation<1>);
+  declTrans(Operation<-1>);
   template<int N>
   declTrans(Operation<N>);
 
@@ -141,35 +142,28 @@ namespace zlt::mylisp::ast {
   int trans(UNode &dest, Scope &scope, Function &src) {
     FunctionScope fs(scope, src.defs);
     UNodes body;
-    transParams(body, 0, src.params.begin(), src.params.end());
+    if (src.params.size()) {
+      transParams(body, 0, src.params.begin(), src.params.end());
+      body.push_back(UNode(new CleanArguments));
+    }
     trans(fs, src.body.begin(), src.body.end());
-    for_each();
-    next = std::move(src.body);
-    UNode a(new Function1(src.start, std::move(fs.indefs), std::move(fs.closureDefs), std::move(body)));
-    replace(dest, a);
+    body.insert(body.end(), move_iterator(src.body.begin()), move_iterator(src.body.end()));
+    dest.reset(new Function1(src.start, std::move(fs.indefs), std::move(fs.closureDefs), std::move(body)));
     return 0;
   }
 
-  UNode &transParams(UNode &dest, size_t i, ItParam it, ItParam end) {
+  int transParams(UNodes &dest, size_t i, ItParam it, ItParam end) {
     if (it == end) [[unlikely]] {
-      if (i) {
-        dest.reset(new CleanArguments);
-        return dest->next;
-      } else {
-        return dest;
-      }
+      return 0;
     }
     if (*it) {
-      {
-        array<UNode, 2> a;
-        a[0].reset(new Reference1(nullptr, Reference(Reference::LOCAL_SCOPE, *it)));
-        a[1].reset(new Argument(i));
-        dest.reset(new AssignOper(nullptr, std::move(a)));
-      }
-      return transParams(dest->next, i + 1, it + 1, end);
-    } else {
-      return transParams(dest, i + 1, it + 1, end);
+      array<UNode, 2> a;
+      a[0].reset(new Reference1(nullptr, Reference(Reference::LOCAL_SCOPE, *it)));
+      a[1].reset(new Argument(i));
+      UNode b(new AssignOper(nullptr, std::move(a)));
+      dest.push_back(std::move(b));
     }
+    return transParams(dest, i + 1, ++it, end);
   }
 
   int trans(UNode &dest, Scope &scope, If &src) {
@@ -190,7 +184,7 @@ namespace zlt::mylisp::ast {
   }
 
   int trans(UNode &dest, Scope &scope, Try &src) {
-    trans(scope, src.body);
+    trans(scope, src.body.begin(), src.body.end());
     return 0;
   }
 
@@ -204,9 +198,19 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
-  template<int N>
-  int trans(UNode &dest, Scope &scope, Operation<N> &src) {
+  int trans(UNode &dest, Scope &scope, Operation<-1> &src) {
     trans(scope, src.items.begin(), src.items.end());
     return 0;
+  }
+
+  template<size_t N, size_t ...I>
+  static inline int trans(Scope &scope, Operation<N> &src, index_sequence<I...>) {
+    (trans(scope, src.items[I]), ...);
+    return 0;
+  }
+
+  template<int N>
+  int trans(UNode &dest, Scope &scope, Operation<N> &src) {
+    return trans(scope, src, make_index_sequence<N>());
   }
 }

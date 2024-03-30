@@ -82,7 +82,7 @@ namespace zlt::mylisp::ast {
 
   int optimizeBody(UNodes &dest, It it, It end, SequenceOper &src) {
     auto a = std::move(src.items);
-    for_each(++it, end, [&a] (auto &b) { a.push_back(std::move(b)); });
+    a.insert(a.end(), move_iterator(++it), move_iterator(end));
     return optimizeBody(dest, a.begin(), a.end());
   }
 }

@@ -59,6 +59,7 @@ namespace zlt::mylisp::ast {
   int optimize(UNodes::iterator it, UNodes::iterator end);
   int optimizeBody(UNodes &dest, UNodes::iterator it, UNodes::iterator end);
   int trans1(UNodes::iterator it, UNodes::iterator end);
+  int trans2(UNodes::iterator it, UNodes::iterator end);
 
   ItSource whichSource(const Ast &ast, const char *start) noexcept;
 

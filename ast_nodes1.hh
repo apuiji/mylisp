@@ -2,7 +2,7 @@
 
 #include<array>
 #include<set>
-#include"ast.hh"
+#include"ast_nodes.hh"
 #include"ast_token.hh"
 
 namespace zlt::mylisp::ast {

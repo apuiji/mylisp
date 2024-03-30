@@ -1,14 +1,12 @@
 #pragma once
 
-#include"ast_trans1.hh"
+#include"ast_nodes2.hh"
 
 namespace zlt::mylisp::ast {
-  int trans2(UNode &src);
-
   struct Function2 final: Node {
-    UNode body;
-    UNode inputClosure;
-    Function2(const char *start, UNode &&body, UNode &&inputClosure) noexcept:
+    UNodes body;
+    UNodes inputClosure;
+    Function2(const char *start, UNodes &&body, UNodes &&inputClosure) noexcept:
     Node(start), body(std::move(body)), inputClosure(std::move(inputClosure)) {}
   };
 

@@ -539,7 +539,7 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
-  template<size_t ...I>
+  template<size_t N, size_t ...I>
   static inline int operationN(Operation<N> &src, index_sequence<I...>) {
     (optimize(src.items[I]), ...);
     return 0;
