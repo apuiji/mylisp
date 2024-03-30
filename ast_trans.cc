@@ -50,10 +50,6 @@ namespace zlt::mylisp::ast {
       dest.reset(new Number(num->start, num->value));
       return 0;
     }
-    if (auto id = dynamic_cast<const IDAtom *>(src.get()); id) {
-      dest.reset(new ID(id->start, id->name));
-      return 0;
-    }
     if (auto t = dynamic_cast<const TokenAtom *>(src.get()); t) {
       if (t->token == "callee"_token) {
         if (scope.clazz == Scope::FUNCTION_SCOPE_CLASS) {
@@ -201,7 +197,7 @@ namespace zlt::mylisp::ast {
     if (scope.clazz == Scope::FUNCTION_SCOPE_CLASS) {
       static_cast<FunctionScope &>(scope).defs.insert(id->name);
     }
-    dest.reset(new ID(id->start, id->name));
+    dest = std::move(*it);
     return 0;
   }
 
@@ -469,7 +465,7 @@ namespace zlt::mylisp::ast {
     trans1(a, scope, *it);
     UNode b;
     transItem(b, scope, ++it, end);
-    if (dynamic_cast<const ID *>(a.get())) {
+    if (dynamic_cast<const IDAtom *>(a.get())) {
       dest.reset(new AssignOper(start, { std::move(a), std::move(b) }));
       return 0;
     }

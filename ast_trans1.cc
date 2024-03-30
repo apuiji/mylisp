@@ -1,4 +1,4 @@
-#include"ast_trans1.hh"
+#include"ast_nodes2.hh"
 #include"myccutils/xyz.hh"
 
 using namespace std;
@@ -15,17 +15,20 @@ namespace zlt::mylisp::ast {
 
   struct FunctionScope: Scope {
     Scope &parent;
-    const set<const string *> &defs;
-    set<const string *> indefs;
-    map<const string *, Reference> closureDefs;
-    FunctionScope(Scope &parent, const set<const string *> &defs) noexcept:
+    const Function::Defs &defs;
+    Function::Defs indefs;
+    Function1::ClosureDefs closureDefs;
+    FunctionScope(Scope &parent, const Function::Defs &defs) noexcept:
     Scope(FUNCTION_SCOPE_CLASS), parent(parent), defs(defs) {}
   };
 
-  static int trans(Scope &scope, UNode &src);
+  using It = UNodes::iterator;
 
-  int trans1(UNode &src) {
-    return trans(rtol(Scope(Scope::GLOBAL_SCOPE_CLASS)), src);
+  static int trans(Scope &scope, It it, It end);
+
+  int trans1(It it, It end) {
+    Scope gs(Scope::GLOBAL_SCOPE_CLASS);
+    return trans(gs, it, end);
   }
 
   static Reference findDef(FunctionScope &scope, const string *name, bool cross);
@@ -58,12 +61,12 @@ namespace zlt::mylisp::ast {
 
   static int trans1(Scope &scope, UNode &src);
 
-  int trans(Scope &scope, UNode &src) {
-    if (!src) [[unlikely]] {
+  int trans(Scope &scope, It it, It end) {
+    if (it == end) [[unlikely]] {
       return 0;
     }
-    trans1(scope, src);
-    return trans(scope, src->next);
+    trans1(scope, *it);
+    return trans(scope, ++it, end);
   }
 
   #define declTrans(T) \
@@ -110,18 +113,8 @@ namespace zlt::mylisp::ast {
   }
 
   int trans(UNode &dest, Scope &scope, IDAtom &src) {
-    UNode a(new Reference1(src.start, findDef(scope, src.name, false)));
-    replace(dest, a);
+    dest.reset(new Reference1(src.start, findDef(scope, src.name, false)));
     return 0;
-  }
-
-  template<class It>
-  static int trans(Scope &scope, It it, It end) {
-    if (it == end) [[unlikely]] {
-      return 0;
-    }
-    trans(scope, *it);
-    return trans(scope, it + 1, end);
   }
 
   int trans(UNode &dest, Scope &scope, Call &src) {
@@ -141,15 +134,16 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
-  using ItParam = vector<const string *>::const_iterator;
+  using ItParam = Function::Params::const_iterator;
 
-  static UNode &transParams(UNode &dest, size_t i, ItParam it, ItParam end);
+  static int transParams(UNodes &dest, size_t i, ItParam it, ItParam end);
 
   int trans(UNode &dest, Scope &scope, Function &src) {
     FunctionScope fs(scope, src.defs);
-    UNode body;
-    auto &next = transParams(body, 0, src.params.begin(), src.params.end());
-    trans(fs, src.body);
+    UNodes body;
+    transParams(body, 0, src.params.begin(), src.params.end());
+    trans(fs, src.body.begin(), src.body.end());
+    for_each();
     next = std::move(src.body);
     UNode a(new Function1(src.start, std::move(fs.indefs), std::move(fs.closureDefs), std::move(body)));
     replace(dest, a);

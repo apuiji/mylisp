@@ -2,7 +2,7 @@
 
 #include<concepts>
 #include<filesystem>
-#include<forward_list>
+#include<list>
 #include<map>
 #include<memory>
 #include<set>
@@ -14,7 +14,7 @@ namespace zlt::mylisp::ast {
   struct Node;
 
   using UNode = std::unique_ptr<Node>;
-  using UNodes = std::forward_list<UNode>;
+  using UNodes = std::list<UNode>;
 
   struct Node {
     const char *start;
@@ -58,6 +58,7 @@ namespace zlt::mylisp::ast {
   int trans(UNodes &dest, UNodes::iterator it, UNodes::iterator end);
   int optimize(UNodes::iterator it, UNodes::iterator end);
   int optimizeBody(UNodes &dest, UNodes::iterator it, UNodes::iterator end);
+  int trans1(UNodes::iterator it, UNodes::iterator end);
 
   ItSource whichSource(const Ast &ast, const char *start) noexcept;
 

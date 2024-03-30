@@ -1,5 +1,5 @@
 #include<cmath>
-#include"ast_optimize.hh"
+#include"ast_nodes1.hh"
 #include"myccutils/xyz.hh"
 
 using namespace std;
@@ -54,6 +54,7 @@ namespace zlt::mylisp::ast {
   declOptimize(UshOper);
   // bitwise operations end
   declOptimize(LengthOper);
+  declOptimize(SequenceOper);
   declOptimize(Operation<1>);
   declOptimize(Operation<-1>);
   template<int N>
@@ -514,6 +515,16 @@ namespace zlt::mylisp::ast {
     if (auto a = dynamic_cast<const StringAtom *>(src.item.get()); a) {
       dest.reset(new Number(nullptr, a->value->size()));
       return 0;
+    }
+    return 0;
+  }
+
+  int optimize(UNode &dest, SequenceOper &src) {
+    auto items = std::move(src.items);
+    optimize(items.begin(), items.end());
+    optimizeBody(src.items, items.begin(), items.end());
+    if (src.items.size() == 1) {
+      dest = std::move(src.items[0]);
     }
     return 0;
   }

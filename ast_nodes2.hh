@@ -1,11 +1,9 @@
 #pragma once
 
 #include<map>
-#include"ast_trans.hh"
+#include"ast.hh"
 
 namespace zlt::mylisp::ast {
-  int trans1(UNode &src);
-
   struct Argument final: Node {
     size_t index;
     Argument(size_t index) noexcept: index(index) {}
@@ -32,8 +30,8 @@ namespace zlt::mylisp::ast {
     using ClosureDefs = std::map<const std::string *, Reference>;
     Defs defs;
     ClosureDefs closureDefs;
-    UNode body;
-    Function1(const char *start, Defs &&defs, ClosureDefs &&closureDefs, UNode &&body) noexcept:
+    UNodes body;
+    Function1(const char *start, Defs &&defs, ClosureDefs &&closureDefs, UNodes &&body) noexcept:
     Node(start), defs(std::move(defs)), closureDefs(std::move(closureDefs)), body(std::move(body)) {}
   };
 

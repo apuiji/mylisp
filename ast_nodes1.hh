@@ -39,11 +39,6 @@ namespace zlt::mylisp::ast {
     Node(start), defs(std::move(defs)), params(std::move(params)), body(std::move(body)) {}
   };
 
-  struct ID final: Node {
-    const std::string *name;
-    ID(const char *start, const std::string *name) noexcept: Node(start), name(name) {}
-  };
-
   struct If final: Node {
     UNode cond;
     UNode then;
