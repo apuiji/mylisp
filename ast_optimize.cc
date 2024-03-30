@@ -5,11 +5,21 @@
 using namespace std;
 
 namespace zlt::mylisp::ast {
+  using It = UNodes::iterator;
+
+  static int optimize(UNode &src);
+
+  int optimize(It it, It end) {
+    if (it == end) [[unlikely]] {
+      return 0;
+    }
+    optimize(*it);
+    return optimize(++it, end);
+  }
+
   #define declOptimize(T) \
   static int optimize(UNode &dest, T &src)
 
-  template<AnyOf<Number, CharAtom, StringAtom, IDAtom, Callee, Null> T>
-  declOptimize(T);
   declOptimize(Call);
   declOptimize(Defer);
   declOptimize(Forward);
@@ -45,6 +55,7 @@ namespace zlt::mylisp::ast {
   // bitwise operations end
   declOptimize(LengthOper);
   declOptimize(Operation<1>);
+  declOptimize(Operation<-1>);
   template<int N>
   declOptimize(Operation<N>);
   // operations end
@@ -55,12 +66,6 @@ namespace zlt::mylisp::ast {
     if (auto a = dynamic_cast<T *>(src.get()); a) { \
       return optimize(src, *a); \
     }
-    // ast_parse.hh definitions begin
-    ifType(Number);
-    ifType(CharAtom);
-    ifType(StringAtom);
-    ifType(IDAtom);
-    // ast_parse.hh definitions end
     ifType(Call);
     ifType(Callee);
     ifType(Defer);
@@ -107,38 +112,21 @@ namespace zlt::mylisp::ast {
     ifType(AssignOper);
     ifType(GetMemberOper);
     ifType(LengthOper);
+    ifType(SequenceOper);
     ifType(SetMemberOper);
     // operations end
     return 0;
   }
 
-  template<AnyOf<Number, CharAtom, StringAtom, IDAtom, Callee, Null> T>
-  int optimize(UNode &dest, T &src) {
-    if (!dest->next) {
-      return 0;
-    }
-    shift(dest);
-    return optimize(dest);
-  }
-
-  template<class It>
-  static int optimize(It it, It end) {
-    if (it == end) [[unlikely]] {
-      return 0;
-    }
-    optimize(*it);
-    return optimize(it + 1, end);
-  }
-
   int optimize(UNode &dest, Call &src) {
     optimize(src.callee);
     optimize(src.args.begin(), src.args.end());
-    return optimize(dest->next);;
+    return 0;
   }
 
   int optimize(UNode &dest, Defer &src) {
     optimize(src.item);
-    return optimize(dest->next);
+    return 0;
   }
 
   int optimize(UNode &dest, Forward &src) {
@@ -147,38 +135,29 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
-  static inline UNode nvll() {
-    return UNode(new Null);
-  }
-
   int optimize(UNode &dest, Function &src) {
-    if (src.next) {
-      shift(dest);
-      return optimize(dest);
-    }
-    optimize(src.body);
-    return optimize(dest->next);
+    auto body = std::move(src.body);
+    optimize(body.begin(), body.end());
+    optimizeBody(src.body, body.begin(), body.end());
+    return 0;
   }
 
   static bool isBoolConst(bool &dest, const UNode &src) noexcept;
-  static bool isTerminated(const UNode &src) noexcept;
 
   int optimize(UNode &dest, If &src) {
     optimize(src.cond);
     optimize(src.then);
     optimize(src.elze);
     if (bool b; isBoolConst(b, src.cond)) {
-      replace(dest, b ? src.then : src.elze);
-      return optimize(dest);
-    }
-    if (auto a = dynamic_cast<LogicNotOper *>(src.cond.get()); a) {
-      replace(src.cond, a->item);
-      swap(src.then, src.elze);
-    }
-    if (isTerminated(src.then) && isTerminated(src.elze)) {
+      dest = std::move(b ? src.then : src.elze);
       return 0;
     }
-    return optimize(dest->next);
+    if (auto a = dynamic_cast<LogicNotOper *>(src.cond.get()); a) {
+      src.cond = std::move(a->item);
+      swap(src.then, src.elze);
+      return 0;
+    }
+    return 0;
   }
 
   bool isBoolConst(bool &dest, const UNode &src) noexcept {
@@ -189,19 +168,6 @@ namespace zlt::mylisp::ast {
     if (Dynamicastable<Null> {}(*src)) {
       dest = false;
       return true;
-    }
-    return false;
-  }
-
-  bool isTerminated(const UNode &src) noexcept {
-    if (src->next) {
-      return isTerminated(src->next);
-    }
-    if (Dynamicastable<Forward, Return, Throw> {}(*src)) {
-      return true;
-    }
-    if (auto a = dynamic_cast<const If *>(src.get()); a) {
-      return isTerminated(a->then) && isTerminated(a->elze);
     }
     return false;
   }
@@ -217,66 +183,66 @@ namespace zlt::mylisp::ast {
   }
 
   int optimize(UNode &dest, Try &src) {
-    optimize(src.body);
-    return optimize(dest->next);
+    auto body = std::move(src.body);
+    optimize(body.begin(), body.end());
+    optimizeBody(src.body, body.begin(), body.end());
+    return 0;
   }
 
   int optimize(UNode &dest, Yield &src) {
     optimize(src.then);
-    return optimize(dest->next);
+    return 0;
   }
 
   // operations begin
   // arithmetical operations begin
   template<class F>
-  static int arithmetical(UNodes &dest, UNodes::iterator it, UNodes::iterator end, F &f);
+  static int arithmetical(UNodes &dest, It it, It end, F &f);
 
   template<class T, class F>
   static inline int arithmetical(UNode &dest, T &src, F &&f) {
     UNodes items;
     arithmetical(items, src.items.begin(), src.items.end(), f);
     if (items.size() == 1) {
-      replace(dest, items[0]);
-      return optimize(dest);
+      dest = std::move(items[0]);
+    } else {
+      src.items = std::move(items);
     }
-    src.items = std::move(items);
-    return optimize(dest->next);
+    return 0;
   }
 
   static bool isNumConst(double &dest, const UNode &src) noexcept;
   template<class F>
-  static int arithmetical(UNodes &dest, double d, UNodes::iterator it, UNodes::iterator end, F &f);
+  static int arithmetical(UNodes &dest, double d, It it, It end, F &f);
 
   template<class F>
-  int arithmetical(UNodes &dest, UNodes::iterator it, UNodes::iterator end, F &f) {
+  int arithmetical(UNodes &dest, It it, It end, F &f) {
     if (it == end) [[unlikely]] {
       return 0;
     }
     optimize(*it);
     if (double d; isNumConst(d, *it)) {
-      return arithmetical(dest, d, it + 1, end, f);
+      return arithmetical(dest, d, ++it, end, f);
     }
     dest.push_back(std::move(*it));
-    return arithmetical(dest, it + 1, end, f);
-  }
-
-  static inline UNode number(double d) {
-    return UNode(new Number(nullptr, d));
+    return arithmetical(dest, ++it, end, f);
   }
 
   template<class F>
-  int arithmetical(UNodes &dest, double d, UNodes::iterator it, UNodes::iterator end, F &f) {
+  int arithmetical(UNodes &dest, double d, It it, It end, F &f) {
     if (it == end) [[unlikely]] {
-      dest.push_back(number(d));
+      UNode a(new Number(nullptr, d));
+      dest.push_back(std::move(a));
       return 0;
     }
     optimize(*it);
     if (double d1; isNumConst(d1, *it)) {
-      return arithmetical(dest, f(d, d1), it + 1, end, f);
+      return arithmetical(dest, f(d, d1), ++it, end, f);
     }
-    dest.push_back(number(d));
+    UNode a(new Number(nullptr, d));
+    dest.push_back(std::move(a));
     dest.push_back(std::move(*it));
-    return arithmetical(dest, it + 1, end, f);
+    return arithmetical(dest, ++it, end, f);
   }
 
   bool isNumConst(double &dest, const UNode &src) noexcept {
@@ -317,85 +283,90 @@ namespace zlt::mylisp::ast {
   // arithmetical operations end
 
   // logical operations begin
-  template<bool B>
-  static inline int logical(UNodes &dest, UNodes::iterator it, UNodes::iterator end) {
-    optimize(*it);
-    if (it + 1 == end) [[unlikely]] {
-      dest.push_back(std::move(*it));
+  static int logicAnd(UNodes &dest, UNode &last, It it, It end) {
+    if (it == end) [[unlikely]] {
+      dest.push_back(std::move(last));
       return 0;
     }
-    if (bool b; isBoolConst(b, *it)) {
-      if constexpr (B) {
-        if (b) {
-          return logical<B>(dest, it + 1, end);
-        } else {
-          dest.push_back(nvll());
-          return 0;
-        }
-      } else {
-        if (b) {
-          dest.push_back(std::move(*it));
-          return 0;
-        } else {
-          return logical<B>(dest, it + 1, end);
-        }
-      }
+    optimize(*it);
+    if (bool b; isBoolConst(b, last)) {
+      return b ? logicAnd(dest, *it, next(it), end) : logicAnd(dest, last, end, end);
     }
-    dest.push_back(std::move(*it));
-    return logical<B>(dest, it + 1, end);
+    dest.push_back(std::move(last));
+    return logicAnd(dest, *it, next(it), end);
   }
 
-  template<bool B, class T>
-  static inline int logical(UNode &dest, T &src) {
-    if (src.items.empty()) {
-      replace(dest, nvll());
-      return optimize(dest);
+  static int logicOr(UNodes &dest, UNode &last, It it, It end) {
+    if (it == end) [[unlikely]] {
+      dest.push_back(std::move(last));
+      return 0;
+    }
+    optimize(*it);
+    if (bool b; isBoolConst(b, last)) {
+      return b ? logicOr(dest, last, end, end) : logicOr(dest, *it, next(it), end);
+    }
+    dest.push_back(std::move(last));
+    return logicOr(dest, *it, next(it), end);
+  }
+
+  template<class T>
+  inline int logicAndOrLogicOr(UNode &dest, T &src) {
+    if (src.items.empty()) [[unlikely]] {
+      dest.reset(new Null);
+      return 0;
     }
     UNodes items;
-    logical<B>(items, src.items.begin(), src.items.end());
-    if (items.size() == 1) {
-      replace(dest, items[0]);
-      return optimize(dest);
+    It it = src.items.begin();
+    It end = src.items.end();
+    optimize(*it);
+    if constexpr (is_same_v<T, LogicAndOper>) {
+      logicAnd(items, *it, next(it), end);
+    } else {
+      logicOr(items, *it, next(it), end);
     }
-    src.items = std::move(items);
-    return optimize(dest->next);
+    if (items.size() == 1) {
+      dest = std::move(items[0]);
+    } else {
+      src.items = std::move(items);
+    }
+    return 0;
   }
 
   int optimize(UNode &dest, LogicAndOper &src) {
-    return logical<true>(dest, src);
+    return logicAndOrLogicOr(dest, src);
   }
 
   int optimize(UNode &dest, LogicOrOper &src) {
-    return logical<false>(dest, src);
+    return logicAndOrLogicOr(dest, src);
   }
 
   template<bool B>
-  static inline UNode boo1() {
+  static inline int boo1(UNode &dest) {
     if constexpr (B) {
-      return number(1);
+      dest.reset(new Number(nullptr, 1));
     } else {
-      return nvll();
+      dest.reset(new Null);
     }
+    return 0;
   }
 
-  static inline UNode boo1(bool b) {
-    return b ? boo1<true>() : boo1<false>();
+  static inline int boo1(UNode &dest, bool b) {
+    return b ? boo1<true>(dest) : boo1<false>(dest);
   }
 
   int optimize(UNode &dest, LogicNotOper &src) {
     optimize(src.item);
     if (bool b; isBoolConst(b, src.item)) {
-      replace(dest, boo1(!b));
-      return optimize(dest);
+      boo1(dest, !b);
     }
-    return optimize(dest->next);
+    return 0;
   }
 
-  static int logicXor(UNodes &dest, UNodes::iterator it, UNodes::iterator end);
+  static int logicXor(UNodes &dest, It it, It end);
 
   int optimize(UNode &dest, LogicXorOper &src) {
     if (src.items.empty()) {
-      replace(dest, nvll());
+      dest.reset(new Null);
       return 0;
     }
     UNodes items;
@@ -403,56 +374,60 @@ namespace zlt::mylisp::ast {
     if (items.size() == 1) {
       bool b;
       isBoolConst(b, items[0]);
-      replace(dest, boo1(b));
-      return optimize(dest);
+      boo1(dest, b);
+    } else {
+      src.items = std::move(items);
     }
-    src.items = std::move(items);
-    return optimize(dest->next);
+    return 0;
   }
 
-  static int logicXor(UNodes &dest, bool b, UNodes::iterator it, UNodes::iterator end);
+  static int logicXor(UNodes &dest, bool b, It it, It end);
 
-  int logicXor(UNodes &dest, UNodes::iterator it, UNodes::iterator end) {
+  int logicXor(UNodes &dest, It it, It end) {
     if (it == end) [[unlikely]] {
       return 0;
     }
     optimize(*it);
     if (bool b; isBoolConst(b, *it)) {
-      return logicXor(dest, b, it + 1, end);
+      return logicXor(dest, b, ++it, end);
     }
     dest.push_back(std::move(*it));
-    return logicXor(dest, it + 1, end);
+    return logicXor(dest, ++it, end);
   }
 
-  int logicXor(UNodes &dest, bool b, UNodes::iterator it, UNodes::iterator end) {
+  int logicXor(UNodes &dest, bool b, It it, It end) {
     if (it == end) [[unlikely]] {
-      dest.push_back(boo1(b));
+      UNode a;
+      boo1(a, b);
+      dest.push_back(std::move(a));
       return 0;
     }
     optimize(*it);
     if (bool b1; isBoolConst(b1, *it)) {
-      return logicXor(dest, b ^ b1, it + 1, end);
+      return logicXor(dest, b ^ b1, ++it, end);
     }
-    dest.push_back(boo1(b));
+    UNode a;
+    boo1(a, b);
+    dest.push_back(std::move(a));
     dest.push_back(std::move(*it));
-    return logicXor(dest, it + 1, end);
+    return logicXor(dest, ++it, end);
   }
   // logical operations end
 
   // bitwise operations begin
   template<class F>
-  static int bitwise(UNodes &dest, UNodes::iterator it, UNodes::iterator end, F &f);
+  static int bitwise(UNodes &dest, It it, It end, F &f);
 
   template<class T, class F>
   static inline int bitwise(UNode &dest, T &src, F &&f) {
     UNodes items;
     bitwise(items, src.items.begin(), src.items.end(), f);
     if (items.size() == 1) {
-      replace(dest, items[0]);
-      return optimize(dest);
+      dest = std::move(items[0]);
+    } else {
+      src.items = std::move(items);
     }
-    src.items = std::move(items);
-    return optimize(dest->next);
+    return 0;
   }
 
   static inline bool isIntConst(int &dest, const UNode &src) noexcept {
@@ -465,34 +440,36 @@ namespace zlt::mylisp::ast {
   }
 
   template<class F>
-  static int bitwise(UNodes &dest, int i, UNodes::iterator it, UNodes::iterator end, F &f);
+  static int bitwise(UNodes &dest, int i, It it, It end, F &f);
 
   template<class F>
-  int bitwise(UNodes &dest, UNodes::iterator it, UNodes::iterator end, F &f) {
+  int bitwise(UNodes &dest, It it, It end, F &f) {
     if (it == end) [[unlikely]] {
       return 0;
     }
     optimize(*it);
     if (int i; isIntConst(i, *it)) {
-      return bitwise(dest, i, it + 1, end, f);
+      return bitwise(dest, i, ++it, end, f);
     }
     dest.push_back(std::move(*it));
-    return bitwise(dest, it + 1, end, f);
+    return bitwise(dest, ++it, end, f);
   }
 
   template<class F>
-  int bitwise(UNodes &dest, int i, UNodes::iterator it, UNodes::iterator end, F &f) {
+  int bitwise(UNodes &dest, int i, It it, It end, F &f) {
     if (it == end) [[unlikely]] {
-      dest.push_back(number(i));
+      UNode a(new Number(nullptr, i));
+      dest.push_back(std::move(a));
       return 0;
     }
     optimize(*it);
     if (int j; isIntConst(j, *it)) {
-      return bitwise(dest, f(i, j), it + 1, end, f);
+      return bitwise(dest, f(i, j), ++it, end, f);
     }
-    dest.push_back(number(i));
+    UNode a(new Number(nullptr, i));
+    dest.push_back(std::move(a));
     dest.push_back(std::move(*it));
-    return bitwise(dest, it + 1, end, f);
+    return bitwise(dest, ++it, end, f);
   }
 
   int optimize(UNode &dest, BitwsAndOper &src) {
@@ -506,10 +483,9 @@ namespace zlt::mylisp::ast {
   int optimize(UNode &dest, BitwsNotOper &src) {
     optimize(src.item);
     if (int i; isIntConst(i, src.item)) {
-      replace(dest, number(~i));
-      return optimize(dest);
+      dest.reset(new Number(nullptr, ~i));
     }
-    return optimize(dest->next);
+    return 0;
   }
 
   int optimize(UNode &dest, BitwsXorOper &src) {
@@ -532,25 +508,35 @@ namespace zlt::mylisp::ast {
   int optimize(UNode &dest, LengthOper &src) {
     optimize(src.item);
     if (auto a = dynamic_cast<const CharAtom *>(src.item.get()); a) {
-      replace(dest, number(1));
-      return optimize(dest);
+      dest.reset(new Number(nullptr, 1));
+      return 0;
     }
     if (auto a = dynamic_cast<const StringAtom *>(src.item.get()); a) {
-      replace(dest, number(a->value->size()));
-      return optimize(dest);
+      dest.reset(new Number(nullptr, a->value->size()));
+      return 0;
     }
-    return optimize(dest->next);
+    return 0;
   }
 
   int optimize(UNode &dest, Operation<1> &src) {
     optimize(src.item);
-    return optimize(dest->next);
+    return 0;
+  }
+
+  int optimize(UNode &dest, Operation<-1> &src) {
+    optimize(src.items.begin(), src.items.end());
+    return 0;
+  }
+
+  template<size_t ...I>
+  static inline int operationN(Operation<N> &src, index_sequence<I...>) {
+    (optimize(src.items[I]), ...);
+    return 0;
   }
 
   template<int N>
   int optimize(UNode &dest, Operation<N> &src) {
-    optimize(src.items.begin(), src.items.end());
-    return optimize(dest->next);
+    return operationN(src, make_index_sequence<N>());
   }
   // operations end
 }

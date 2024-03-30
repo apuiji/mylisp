@@ -56,6 +56,8 @@ namespace zlt::mylisp::ast {
   int parse(UNodes &dest, const char *it, const char *end);
   int preproc(UNodes &dest, Ast &ast, UNodes::const_iterator it, UNodes::const_iterator end);
   int trans(UNodes &dest, UNodes::iterator it, UNodes::iterator end);
+  int optimize(UNodes::iterator it, UNodes::iterator end);
+  int optimizeBody(UNodes &dest, UNodes::iterator it, UNodes::iterator end);
 
   ItSource whichSource(const Ast &ast, const char *start) noexcept;
 
