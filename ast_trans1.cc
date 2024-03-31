@@ -24,7 +24,14 @@ namespace zlt::mylisp::ast {
 
   using It = UNodes::iterator;
 
-  static int trans(Scope &scope, It it, It end);
+  static int trans(Scope &scope, UNode &src);
+
+  static inline int trans(Scope &scope, It it, It end) {
+    for (; it != end; ++it) {
+      trans(scope, *it);
+    }
+    return 0;
+  }
 
   int trans1(It it, It end) {
     Scope gs(Scope::GLOBAL_SCOPE_CLASS);
@@ -59,16 +66,6 @@ namespace zlt::mylisp::ast {
     return Reference(Reference::CLOSURE_SCOPE, name);
   }
 
-  static int trans1(Scope &scope, UNode &src);
-
-  int trans(Scope &scope, It it, It end) {
-    if (it == end) [[unlikely]] {
-      return 0;
-    }
-    trans1(scope, *it);
-    return trans(scope, ++it, end);
-  }
-
   #define declTrans(T) \
   static int trans(UNode &dest, Scope &scope, T &src)
 
@@ -88,7 +85,7 @@ namespace zlt::mylisp::ast {
 
   #undef declTrans
 
-  int trans1(Scope &scope, UNode &src) {
+  int trans(Scope &scope, UNode &src) {
     #define ifType(T) \
     if (auto a = dynamic_cast<T *>(src.get()); a) { \
       trans(src, scope, *a); \
@@ -146,7 +143,7 @@ namespace zlt::mylisp::ast {
       body.push_back(UNode(new CleanArguments));
     }
     trans(fs, src.body.begin(), src.body.end());
-    body.insert_back(move_iterator(src.body.begin()), move_iterator(src.body.end()));
+    body.insert(body.end(), move_iterator(src.body.begin()), move_iterator(src.body.end()));
     dest.reset(new Function1(src.start, std::move(fs.indefs), std::move(fs.closureDefs), std::move(body)));
     return 0;
   }

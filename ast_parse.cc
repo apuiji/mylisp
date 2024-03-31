@@ -11,9 +11,9 @@ namespace zlt::mylisp::ast {
   static It node(UNode &dest, Lexer &lexer, It start0, It end);
   static It nodes(UNodes &dest, Lexer &lexer, It end0, It end);
 
-  int parse(UNode &dest, It it, It end) {
+  int parse(UNodes &dest, It it, It end) {
     Lexer lexer;
-    It end0 = parse(dest, lexer, it, end);
+    It end0 = nodes(dest, lexer, it, end);
     It start1 = hit(end0, end);
     auto [_1, end1] = lexer(start1, end);
     if (_1 != token::E0F) {
@@ -47,7 +47,7 @@ namespace zlt::mylisp::ast {
     }
     if (_0 == "("_token) {
       UNodes items;
-      It end1 = parse(items, lexer, end0, end);
+      It end1 = nodes(items, lexer, end0, end);
       It start2 = hit(end1, end);
       auto [_2, end2] = lexer(start2, end);
       if (_2 != ")"_token) {

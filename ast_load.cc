@@ -1,8 +1,7 @@
 #include<fstream>
 #include<iterator>
 #include<sstream>
-#include"ast_load.hh"
-#include"ast_parse.hh"
+#include"ast.hh"
 
 using namespace std;
 
@@ -13,7 +12,7 @@ namespace zlt::mylisp::ast {
     if (auto itSrc = ast.sources.find(file); itSrc != ast.sources.end()) {
       return itSrc;
     }
-    pair<string, UNode> a;
+    Source a;
     readAll(a.first, start, file);
     parse(a.second, a.first.data(), a.first.data() + a.first.size());
     return ast.sources.insert(make_pair(std::move(file), std::move(a))).first;

@@ -36,6 +36,9 @@ namespace zlt::mylisp::ast {
   static bool notRawChar(char c) noexcept;
 
   tuple<int, It> Lexer::operator ()(It it, It end) {
+    if (it == end) [[unlikely]] {
+      return { token::E0F, end };
+    }
     if (*it == '(') {
       return { "("_token, it + 1 };
     }
@@ -44,7 +47,7 @@ namespace zlt::mylisp::ast {
     }
     if (*it == '"' || *it == '\'') {
       stringstream ss;
-      It it1 = LexerStr(ss, *it)(it + 1, end);
+      It it1 = LexerStr(ss, it, *it)(it + 1, end);
       strval = ss.str();
       int t;
       if (strval.size() == 1) {
@@ -59,7 +62,7 @@ namespace zlt::mylisp::ast {
     if (it1 == it) {
       throw AstBad(bad::UNRECOGNIZED_SYMBOL, it);
     }
-    raw = string_view(it, it1);
+    raw = string_view(it, it1 - it);
     return { token::ofRaw(numval, it, raw), it1 };
   }
 
@@ -78,14 +81,14 @@ namespace zlt::mylisp::ast {
       dest.put(c);
       return operator ()(it + 1 + n, end);
     }
-    return it;
+    return it + 1;
   }
 
   static bool esch1(int &dest, size_t &len, It it, It end) noexcept;
   static bool esch8(int &dest, size_t &len, It it, It end);
   static bool eschx(int &dest, size_t &len, It it, It end) noexcept;
 
-  pair<int, size_t> esch(int &dest, size_t &len, It it, It end) {
+  pair<int, size_t> esch(It it, It end) {
     int c;
     size_t n;
     esch1(c, n, it, end) || esch8(c, n, it, end) || eschx(c, n, it, end) || (c = '\\', n = 0);

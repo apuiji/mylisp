@@ -7,14 +7,11 @@ HHS = \
 	../myccutils/rbtree.hh \
 	../myccutils/xyz.hh \
 	ast.hh \
-	ast_load.hh \
-	ast_optimize.hh \
-	ast_parse.hh \
-	ast_preproc.hh \
+	ast_nodes.hh \
+	ast_nodes1.hh \
+	ast_nodes2.hh \
+	ast_nodes3.hh \
 	ast_token.hh \
-	ast_trans.hh \
-	ast_trans1.hh \
-	ast_trans2.hh \
 	compile.hh \
 	coroutine.hh \
 	direction.hh \
@@ -35,8 +32,10 @@ OBJS = \
 	ast_lexer.o \
 	ast_load.o \
 	ast_optimize.o \
+	ast_optimize1.o \
 	ast_parse.o \
 	ast_preproc.o \
+	ast_token.o \
 	ast_trans.o \
 	ast_trans1.o \
 	ast_trans2.o \

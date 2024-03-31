@@ -67,12 +67,10 @@ namespace zlt::mylisp::ast {
       return optimize(src, *a); \
     }
     ifType(Call);
-    ifType(Callee);
     ifType(Defer);
     ifType(Forward);
     ifType(Function);
     ifType(If);
-    ifType(Null);
     ifType(Return);
     ifType(Throw);
     ifType(Try);
@@ -204,7 +202,7 @@ namespace zlt::mylisp::ast {
     UNodes items;
     arithmetical(items, src.items.begin(), src.items.end(), f);
     if (items.size() == 1) {
-      dest = std::move(items[0]);
+      dest = std::move(items.front());
     } else {
       src.items = std::move(items);
     }
@@ -325,7 +323,7 @@ namespace zlt::mylisp::ast {
       logicOr(items, *it, next(it), end);
     }
     if (items.size() == 1) {
-      dest = std::move(items[0]);
+      dest = std::move(items.front());
     } else {
       src.items = std::move(items);
     }
@@ -373,7 +371,7 @@ namespace zlt::mylisp::ast {
     logicXor(items, src.items.begin(), src.items.end());
     if (items.size() == 1) {
       bool b;
-      isBoolConst(b, items[0]);
+      isBoolConst(b, items.front());
       boo1(dest, b);
     } else {
       src.items = std::move(items);
@@ -423,7 +421,7 @@ namespace zlt::mylisp::ast {
     UNodes items;
     bitwise(items, src.items.begin(), src.items.end(), f);
     if (items.size() == 1) {
-      dest = std::move(items[0]);
+      dest = std::move(items.front());
     } else {
       src.items = std::move(items);
     }
@@ -523,7 +521,7 @@ namespace zlt::mylisp::ast {
     optimize(items.begin(), items.end());
     optimizeBody(src.items, items.begin(), items.end());
     if (src.items.size() == 1) {
-      dest = std::move(src.items[0]);
+      dest = std::move(src.items.front());
     }
     return 0;
   }

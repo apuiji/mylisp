@@ -11,6 +11,15 @@ using namespace std;
 namespace zlt::mylisp::ast {
   using It = UNodes::const_iterator;
 
+  static int clone(UNodes &dest, const UNode &src);
+
+  static inline int clone(UNodes &dest, It it, It end) {
+    for (; it != end; ++it) {
+      clone(dest, *it);
+    }
+    return 0;
+  }
+
   template<AnyOf<NumberAtom, CharAtom, StringAtom, IDAtom, TokenAtom> T>
   static inline int clone(UNodes &dest, const T &src) {
     dest.push_back(UNode(new T(src)));
@@ -25,7 +34,7 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
-  static int clone(UNodes &dest, const UNode &src) {
+  int clone(UNodes &dest, const UNode &src) {
     #define ifType(T) \
     if (auto a = dynamic_cast<const T *>(src.get()); a) { \
       return clone(dest, *a); \
@@ -36,10 +45,8 @@ namespace zlt::mylisp::ast {
     ifType(IDAtom);
     ifType(TokenAtom);
     #undef ifType
-    return clone(dest, static_cast<const List *>(src.get()));
+    return clone(dest, static_cast<const List &>(*src));
   }
-
-  static int clone(UNodes &dest, It it, It end);
 
   static int preprocList(UNodes &dest, Ast &ast, const char *start, It it, It end);
 
@@ -242,7 +249,7 @@ namespace zlt::mylisp::ast {
     } else {
       throw AstBad(bad::ILLEGAL_PREPROC_ARG, (**it).start);
     }
-    return idcat(dest, ++it, end);
+    return rawCat(dest, ++it, end);
   }
 
   static int makeMacroParams(Macro::Params &dest, It it, It end);
@@ -287,7 +294,7 @@ namespace zlt::mylisp::ast {
       }
       return makeMacroParams(dest, ++it, end);
     }
-    if (auto ls = dynamic_cast<const List *>(src.get()); ls && ls->items.empty()) {
+    if (auto ls = dynamic_cast<const List *>(it->get()); ls && ls->items.empty()) {
       dest.push_back(nullptr);
       return makeMacroParams(dest, ++it, end);
     }
@@ -341,11 +348,10 @@ namespace zlt::mylisp::ast {
     } catch (filesystem::filesystem_error) {
       throw AstBad(bad::CANNOT_OPEN_SRC_FILE, start);
     }
-    auto itSrc = ast.sources.find(file);
-    if (itSrc == ast.sources.end()) {
-      itSrc = load(ast, start, std::move(file));
+    if (auto itSrc = ast.sources.find(file); itSrc != ast.sources.end()) {
+      return itSrc;
     }
-    return itSrc;
+    return load(ast, start, std::move(file));
   }
 
   bool getFile(filesystem::path &dest, const UNode &src) {

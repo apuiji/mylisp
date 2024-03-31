@@ -20,7 +20,7 @@ namespace zlt::mylisp::ast {
 
   int ast(UNodes &dest, Ast &ast, UNodes::const_iterator it, UNodes::const_iterator end) {
     UNodes a;
-    preproc(a, *this, it, end);
+    preproc(a, ast, it, end);
     trans(dest, a.begin(), a.end());
     a = std::move(dest);
     optimize(a.begin(), a.end());

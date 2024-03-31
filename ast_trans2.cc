@@ -6,20 +6,17 @@ namespace zlt::mylisp::ast {
   using Indefs = Function::Defs;
   using It = UNodes::iterator;
 
-  static int trans(const Indefs &indefs, It it, It end)
+  static int trans(const Indefs &indefs, UNode &src);
+
+  static inline int trans(const Indefs &indefs, It it, It end) {
+    for (; it != end; ++it) {
+      trans(indefs, *it);
+    }
+    return 0;
+  }
 
   int trans2(It it, It end) {
     return trans(Indefs(), it, end);
-  }
-
-  static int trans(const Indefs &indefs, UNode &src);
-
-  int trans(const Indefs &indefs, It it, It end) {
-    if (it == end) [[unlikely]] {
-      return 0;
-    }
-    trans(indefs, *it);
-    return trans(indefs, ++it, end);
   }
 
   #define declTrans(T) \
@@ -42,7 +39,7 @@ namespace zlt::mylisp::ast {
 
   #undef declTrans
 
-  int trans1(const Indefs &indefs, UNode &src) {
+  int trans(const Indefs &indefs, UNode &src) {
     #define ifType(T) \
     if (auto a = dynamic_cast<T *>(src.get()); a) { \
       return trans(src, indefs, *a); \
@@ -141,7 +138,7 @@ namespace zlt::mylisp::ast {
 
   using ItPtrDef = set<const string *>::const_iterator;
 
-  static UNode &makeIndirects(UNodes &dest, ItPtrDef it, ItPtrDef end);
+  static int makeIndirects(UNodes &dest, ItPtrDef it, ItPtrDef end);
 
   int trans(UNode &dest, const Indefs &indefs, Function1 &src) {
     UNodes inputClosures;
@@ -149,8 +146,8 @@ namespace zlt::mylisp::ast {
     UNodes body;
     makeIndirects(body, src.indefs.begin(), src.indefs.end());
     trans(src.indefs, src.body.begin(), src.body.end());
-    body.insert_back(move_iterator(src.body.begin()), move_iterator(src.body.end()));
-    dest.reset(new Function2(src.start, std::move(body), std::move(inputClosure)));
+    body.insert(body.end(), move_iterator(src.body.begin()), move_iterator(src.body.end()));
+    dest.reset(new Function2(src.start, std::move(body), std::move(inputClosures)));
     return 0;
   }
 
@@ -162,18 +159,16 @@ namespace zlt::mylisp::ast {
     return 0;
   }
 
-  UNode &makeIndirect(UNode &dest, ItPtrDef it, ItPtrDef end) {
-    if (it == end) [[unlikely]] {
-      return dest;
-    }
-    {
+  int makeIndirects(UNodes &dest, ItPtrDef it, ItPtrDef end) {
+    for (; it != end; ++it) {
       array<UNode, 2> items;
       Reference ref(Reference::LOCAL_SCOPE, *it);
       items[0].reset(new Reference1(nullptr, ref));
       items[1].reset(new MakeIndirect);
-      dest.reset(new AssignOper(nullptr, std::move(items)));
+      UNode a(new AssignOper(nullptr, std::move(items)));
+      dest.push_back(std::move(a));
     }
-    return makeIndirect(dest->next, ++it, end);
+    return 0;
   }
 
   static bool isIndirect(const Indefs &indefs, const Reference &src) noexcept;
@@ -181,23 +176,18 @@ namespace zlt::mylisp::ast {
   int trans(UNode &dest, const Indefs &indefs, Reference1 &src) {
     if (isIndirect(indefs, src)) {
       UNode a(new Reference1(src.start, src));
-      a.reset(new GetIndirectOper(src.start, std::move(a)));
-      replace(dest, a);
+      dest.reset(new GetIndirectOper(src.start, std::move(a)));
     }
     return 0;
   }
 
   bool isIndirect(const Indefs &indefs, const Reference &src) noexcept {
-    switch (src.scope) {
-      case Reference::LOCAL_SCOPE: {
-        return indefs.find(src.name) != indefs.end();
-      }
-      case Reference::CLOSURE_SCOPE: {
-        return true;
-      }
-      default: {
-        return false;
-      }
+    if (src.scope == Reference::LOCAL_SCOPE) {
+      return indefs.find(src.name) != indefs.end();
     }
+    if (src.scope == Reference::CLOSURE_SCOPE) {
+      return true;
+    }
+    return false;
   }
 }

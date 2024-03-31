@@ -1,5 +1,5 @@
 #include<sstream>
-#include"ast_trans2.hh"
+#include"ast_nodes3.hh"
 #include"compile.hh"
 #include"direction.hh"
 #include"rte.hh"
@@ -22,21 +22,37 @@ namespace zlt::mylisp {
 
   static Compile &operator <<(Compile &dest, const UNode &src);
 
-  int compile(string &dest, const UNode &src) {
-    stringstream ss;
-    rtol(Compile(ss)) << src;
-    dest = ss.str();
-    return 0;
+  template<class It>
+  struct Sequence {
+    It begin;
+    It end;
+    Sequence(It begin, It end) noexcept: begin(begin), end(end) {}
+  };
+
+  template<class It>
+  static inline auto makeSequence(It begin, It end) noexcept {
+    return Sequence<It>(begin, end);
   }
 
-  static Compile &compile1(Compile &dest, const UNode &src);
+  template<class R>
+  static inline auto makeSequence(R &&r) noexcept {
+    return makeSequence(r.begin(), r.end());
+  }
 
-  Compile &operator <<(Compile &dest, const UNode &src) {
-    if (!src) [[unlikely]] {
-      return dest;
+  template<class It>
+  static inline Compile &operator <<(Compile &dest, const Sequence<It> &src) {
+    for (It it = src.begin; it != src.end; ++it) {
+      dest << *it;
     }
-    compile1(dest, src);
-    return dest << src->next;
+    return dest;
+  }
+
+  int compile(string &dest, UNodes::const_iterator it, UNodes::const_iterator end) {
+    stringstream ss;
+    Compile comp(ss);
+    comp << makeSequence(it, end);
+    dest = ss.str();
+    return 0;
   }
 
   #define declCompile(T) \
@@ -83,12 +99,13 @@ namespace zlt::mylisp {
   declCompile(GetIndirectOper);
   declCompile(InputClosure);
   declCompile(MakeIndirect);
+  declCompile(SequenceOper);
   declCompile(SetIndirectOper);
   // ast_trans2.hh definitions end
 
   #undef declCompile
 
-  Compile &compile1(Compile &dest, const UNode &src) {
+  Compile &operator <<(Compile &dest, const UNode &src) {
     #define ifType(T) \
     if (auto a = dynamic_cast<const T *>(src.get()); a) { \
       return dest << *a; \
@@ -142,6 +159,7 @@ namespace zlt::mylisp {
     ifType(AssignOper);
     ifType(GetMemberOper);
     ifType(LengthOper);
+    ifType(SequenceOper);
     ifType(SetMemberOper);
     // operations end
     // ast_trans.hh definitions end
@@ -182,20 +200,32 @@ namespace zlt::mylisp {
   }
 
   template<class It>
-  static Compile &compile(Compile &dest, It it, It end) {
-    if (it == end) [[unlikely]] {
-      return dest;
-    }
-    dest << *it << direction::PUSH;
-    return compile(dest, ++it, end);
+  struct Args {
+    It begin;
+    It end;
+    Args(It begin, It end) noexcept: begin(begin), end(end) {}
+  };
+
+  template<class It>
+  static inline auto makeArgs(It begin, It end) noexcept {
+    return Args<It>(begin, end);
   }
 
-  static inline Compile &operator <<(Compile &dest, const UNodes &src) {
-    return compile(dest, src.begin(), src.end());
+  template<class R>
+  static inline auto makeArgs(const R &r) noexcept {
+    return makeArgs(r.begin(), r.end());
+  }
+
+  template<class It>
+  static inline Compile &operator <<(Compile &dest, const Args<It> &src) {
+    for (It it = src.begin; it != src.end; ++it) {
+      dest << *it << direction::PUSH;
+    }
+    return dest;
   }
 
   Compile &operator <<(Compile &dest, const Call &src) {
-    return dest << src.callee << direction::PUSH << src.args << direction::CALL << src.args.size();
+    return dest << src.callee << direction::PUSH << makeArgs(src.args) << direction::CALL << src.args.size();
   }
 
   Compile &operator <<(Compile &dest, const Callee &src) {
@@ -207,7 +237,15 @@ namespace zlt::mylisp {
   }
 
   Compile &operator <<(Compile &dest, const Forward &src) {
-    return dest << src.callee << direction::PUSH << src.args << direction::FORWARD << src.args.size();
+    return dest << src.callee << direction::PUSH << makeArgs(src.args) << direction::FORWARD << src.args.size();
+  }
+
+  static inline int compile(string &dest, const UNode &src) {
+    stringstream ss;
+    Compile comp(ss);
+    comp << src;
+    dest = ss.str();
+    return 0;
   }
 
   Compile &operator <<(Compile &dest, const If &src) {
@@ -239,7 +277,7 @@ namespace zlt::mylisp {
 
   Compile &operator <<(Compile &dest, const Try &src) {
     string body;
-    compile(body, src.body);
+    compile(body, src.body.begin(), src.body.end());
     return dest << direction::TRY << body.size() << body;
   }
 
@@ -316,20 +354,16 @@ namespace zlt::mylisp {
 
   template<int Op>
   Compile &operator <<(Compile &dest, const Operation1<-1, Op> &src) {
-    return dest << src.items << operat0r<Op>() << src.items.size();
+    return dest << makeArgs(src.items) << operat0r<Op>() << src.items.size();
   }
 
   Compile &operator <<(Compile &dest, const AssignOper &src) {
     dest << src.items[1];
     auto &ref = static_cast<const Reference1 &>(*src.items[0]);
-    switch (ref.scope) {
-      case Reference::LOCAL_SCOPE: {
-        dest << direction::SET_LOCAL;
-        break;
-      }
-      default: {
-        dest << direction::SET_GLOBAL;
-      }
+    if (ref.scope == Reference::LOCAL_SCOPE) {
+      dest << direction::SET_LOCAL;
+    } else {
+      dest << direction::SET_GLOBAL;
     }
     return dest << ref.name;
   }
@@ -343,7 +377,7 @@ namespace zlt::mylisp {
     {
       stringstream ss;
       Compile comp(ss);
-      logicAnd(comp, it + 1, end);
+      logicAnd(comp, ++it, end);
       then = ss.str();
     }
     if (then.size()) {
@@ -365,7 +399,7 @@ namespace zlt::mylisp {
     {
       stringstream ss;
       Compile comp(ss);
-      logicOr(comp, it + 1, end);
+      logicOr(comp, ++it, end);
       elze = ss.str();
     }
     if (elze.size()) {
@@ -379,8 +413,7 @@ namespace zlt::mylisp {
   }
 
   Compile &operator <<(Compile &dest, const SetMemberOper &src) {
-    compile(dest, src.items.begin(), src.items.end());
-    return dest << direction::SET_MEMB;
+    return dest << makeArgs(src.items) << direction::SET_MEMB;
   }
 
   Compile &operator <<(Compile &dest, const Argument &src) {
@@ -392,18 +425,12 @@ namespace zlt::mylisp {
   }
 
   Compile &operator <<(Compile &dest, const Reference &src) {
-    switch (src.scope) {
-      case Reference::LOCAL_SCOPE: {
-        dest << direction::GET_LOCAL;
-        break;
-      }
-      case Reference::CLOSURE_SCOPE: {
-        dest << direction::GET_CLOSURE;
-        break;
-      }
-      default: {
-        dest << direction::GET_GLOBAL;
-      }
+    if (src.scope == Reference::LOCAL_SCOPE) {
+      dest << direction::GET_LOCAL;
+    } else if (src.scope == Reference::CLOSURE_SCOPE) {
+      dest << direction::GET_CLOSURE;
+    } else {
+      dest << direction::GET_GLOBAL;
     }
     return dest << src.name;
   }
@@ -414,11 +441,11 @@ namespace zlt::mylisp {
 
   Compile &operator <<(Compile &dest, const Function2 &src) {
     string body;
-    compile(body, src.body);
+    compile(body, src.body.begin(), src.body.end());
     auto itBody = rte::fnBodies.insert(std::move(body)).first;
     dest << direction::MAKE_FN << &*itBody;
-    if (src.inputClosure) {
-      dest << direction::PUSH << src.inputClosure << direction::POP;
+    if (src.inputClosures.size()) {
+      dest << direction::PUSH << makeSequence(src.inputClosures) << direction::POP;
     }
     return dest;
   }
@@ -435,8 +462,14 @@ namespace zlt::mylisp {
     return dest << direction::MAKE_INDIRECT;
   }
 
+  Compile &operator <<(Compile &dest, const SequenceOper &src) {
+    for (auto &a : src.items) {
+      dest << a;
+    }
+    return dest;
+  }
+
   Compile &operator <<(Compile &dest, const SetIndirectOper &src) {
-    compile(dest, src.items.begin(), src.items.end());
-    return dest << direction::SET_INDIRECT;
+    return dest << src.items[0] << direction::PUSH << src.items[1] << direction::SET_INDIRECT;
   }
 }

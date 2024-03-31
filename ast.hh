@@ -53,6 +53,8 @@ namespace zlt::mylisp::ast {
     std::tuple<int, const char *> operator ()(const char *it, const char *end);
   };
 
+  /// @param file canonicalized
+  ItSource load(Ast &ast, const char *start, std::filesystem::path &&file);
   int parse(UNodes &dest, const char *it, const char *end);
   int preproc(UNodes &dest, Ast &ast, UNodes::const_iterator it, UNodes::const_iterator end);
   int trans(UNodes &dest, UNodes::iterator it, UNodes::iterator end);

@@ -20,6 +20,8 @@ namespace zlt::mylisp::ast {
     FunctionScope() noexcept: Scope(FUNCTION_SCOPE_CLASS) {}
   };
 
+  using It = UNodes::iterator;
+
   static int trans(UNodes &dest, Scope &scope, It it, It end);
 
   int trans(UNodes &dest, It it, It end) {
@@ -384,8 +386,8 @@ namespace zlt::mylisp::ast {
       return 0;
     }
     if (items.size() == 1) {
-      items.push_back(std::move(items[0]));
-      items[0].reset(new Number(nullptr, 0));
+      items.push_back(std::move(items.front()));
+      items.front().reset(new Number(nullptr, 0));
     }
     dest.reset(new ArithSubOper(start, std::move(items)));
     return 0;
@@ -430,7 +432,7 @@ namespace zlt::mylisp::ast {
   template<class T>
   static inline int trans5(UNode &dest, Scope &scope, const char *start, It it, It end) {
     array<UNode, 2> a;
-    It it1 = transItem1(a[0], scope, it, end);
+    It it1 = transItem1(a.front(), scope, it, end);
     transItem(a[1], scope, it1, end);
     dest.reset(new T(start, std::move(a)));
     return 0;
@@ -471,7 +473,11 @@ namespace zlt::mylisp::ast {
     }
     if (auto c = dynamic_cast<GetMemberOper *>(a.get()); c) {
       if (c->items.size() == 2) {
-        dest.reset(new SetMemberOper(start, { std::move(c->items[0]), std::move(c->items[1]), std::move(b) }));
+        It it1 = c->items.begin();
+        auto &x = *it1;
+        ++it1;
+        auto &y = *it1;
+        dest.reset(new SetMemberOper(start, { std::move(x), std::move(y), std::move(b) }));
       } else {
         auto d = std::move(c->items.back());
         c->items.pop_back();
@@ -506,7 +512,7 @@ namespace zlt::mylisp::ast {
 
   template<>
   int transSymbol<"@"_token>(UNode &dest, Scope &scope, const char *start, It it, It end) {
-    auto ls = dynamic_cast<const List *>(it->get());
+    auto ls = dynamic_cast<List *>(it->get());
     if (!ls) {
       throw AstBad(bad::UNEXPECTED_TOKEN, start);
     }
