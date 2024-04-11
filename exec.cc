@@ -148,10 +148,18 @@ namespace zlt::mylisp {
       f->localDefs[name] = itCoroutine->ax;
     } else if (op == opcode::SET_MEMB) {
       // TODO:
-    } else if (op == opcode::STRING_LITERAL) {}
-    SUB,
-    THROW,
-    USH,
-    YIELD
+    } else if (op == opcode::STRING_LITERAL) {
+      itCoroutine->ax = consume<const string *>();
+    } else if (op == opcode::SUB) {
+      itCoroutine->ax = staticast<double>(*--itCoroutine->sp) - (double) itCoroutine->ax;
+    } else if (op == opcode::THROW) {
+      // TODO:
+    } else if (op == opcode::USH) {
+      itCoroutine->ax = staticast<unsigned>(*--itCoroutine->sp) - (int) itCoroutine->ax;
+    } else if (op == opcode::YIELD) {
+      yield();
+      return;
+    }
+    exec();
   }
 }

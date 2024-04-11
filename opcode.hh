@@ -25,7 +25,6 @@ namespace zlt::mylisp::opcode {
     GET_MEMB,
     GLOBAL_FORWARD,
     GLOBAL_RETURN,
-    GLOBAL_THROW,
     GT,
     GTEQ,
     JIF,
