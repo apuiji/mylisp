@@ -1,154 +1,102 @@
 #pragma once
 
 #include<cmath>
+#include<compare>
 #include<concepts>
-#include<string>
-#include<tuple>
 #include<variant>
-#include"myccutils/xyz.hh"
+#include"myutils/xyz.hh"
 
 namespace zlt::mylisp {
   struct Object;
   struct Value;
 
-  using NativeFunction = Value (const Value *it, const Value *end);
+  using NativeFunction = void (Value &dest, Value *it, Value *end);
   using Null = std::monostate;
 
-  struct Value: std::variant<Null, double, char, const std::string *, Object *, NativeFunction *> {
+  struct Value {
     enum {
-      NULL_INDEX, NUM_INDEX, CHAR_INDEX, STR_INDEX, OBJ_INDEX, NAT_FN_INDEX
+      NULL_INDEX,
+      NUM_INDEX,
+      CHAR_INDEX,
+      STR_INDEX,
+      OBJ_INDEX,
+      NAT_FN_INDEX
     };
+    using Var = std::variant<Null, double, char, const std::string *, Object *, NativeFunction *>;
+    Var var;
     // constructors begin
-    Value() noexcept {}
-    Value(Null) noexcept {}
-    #define baseCons(T) \
-    Value(T t) noexcept: variant(t) {}
-    baseCons(double);
-    baseCons(char);
-    baseCons(const std::string *);
-    baseCons(Object *);
-    baseCons(NativeFunction *);
-    #undef baseCons
-    Value(int i) noexcept: variant((double) i) {}
-    Value(size_t n) noexcept: variant((double) n) {}
+    Value() = default;
+    template<class T>
+    Value(T &&t) noexcept: var(std::forward<T>(t)) {}
+    Value(std::integral auto i) noexcept: var((double) i) {}
     Value(bool b) noexcept {
-      operator =(b);
+      if (b) {
+        var = 1.;
+      }
     }
-    Value(const std::string &s): Value((std::string_view) s) {}
-    Value(std::string &&s) {
-      operator =(std::move(s));
+    Value(std::partial_ordering o) noexcept {
+      using O = std::partial_ordering;
+      var = o == O::equivalent ? 0 : o == O::less ? -1 : o == O::greater ? 1 : NAN;
     }
-    Value(std::string_view sv) {
-      operator =(sv);
-    }
-    Value(const Value &string, std::string_view view);
+    Value(std::derived_from<Object> auto *o) noexcept: var(static_cast<Object *>(o)) {}
     // constructors end
-    // assignment operations begin
-    #define baseAssign(T) \
-    Value &operator =(T t) noexcept { \
-      variant::operator =(t); \
-      return *this; \
-    }
-    baseAssign(Null);
-    baseAssign(double);
-    baseAssign(char);
-    baseAssign(const std::string *);
-    baseAssign(Object *);
-    baseAssign(NativeFunction *);
-    #undef baseAssign
-    Value &operator =(int i) noexcept {
-      variant::operator =((double) i);
+    // assigners begin
+    template<class T>
+    Value &operator =(T &&t) noexcept {
+      var = std::forward<T>(t);
       return *this;
     }
-    Value &operator =(size_t n) noexcept {
-      variant::operator =((double) n);
+    Value &operator =(std::integral auto i) noexcept {
+      var = (double) i;
       return *this;
     }
     Value &operator =(bool b) noexcept {
       if (b) {
-        variant::operator =(1.);
+        var = 1.;
       } else {
-        variant::operator =(Null());
+        var = Null();
       }
       return *this;
     }
-    Value &operator =(const std::string &s) {
-      return operator =((std::string_view) s);
-    }
-    Value &operator =(std::string &&s);
-    Value &operator =(std::string_view sv);
-    Value &operator =(std::derived_from<Object> auto *o) noexcept {
-      variant::operator =(static_cast<Object *>(o));
+    Value &operator =(std::partial_ordering o) noexcept {
+      using O = std::partial_ordering;
+      var = o == O::equivalent ? 0 : o == O::less ? -1 : o == O::greater ? 1 : NAN;
       return *this;
     }
-    // assignment operations end
-    // cast operations begin
+    Value &operator =(std::derived_from<Object> auto *o) noexcept {
+      var = static_cast<Object *>(o);
+      return *this;
+    }
+    // assigners end
+    // cast begin
     operator double() const noexcept {
-      auto d = std::get_if<double>(this);
+      auto d = get_if<double>(&var);
       return d ? *d : NAN;
     }
-    operator int() const noexcept {
-      return (int) operator double();
+    template<std::integral I>
+    operator I() const noexcept {
+      return (I) operator double();
     }
     operator bool() const noexcept {
-      return index() != NULL_INDEX;
+      return var.index() != NULL_INDEX;
     }
-    // cast operations end
+    // cast end
   };
 
-  // static cast operations begin
-  template<AnyOf<double, char, const std::string *, NativeFunction *, void *> T>
-  static inline int staticast(T &dest, const Value &src) noexcept {
-    dest = *(T *) &src;
-    return 0;
-  }
-
-  template<int I>
-  static inline int staticast(std::string_view &dest, const Value &src) noexcept {
-    if constexpr (I == Value::CHAR_INDEX) {
-      dest = std::string_view((const char *) &src, 1);
-    } else if constexpr (I == Value::STR_INDEX) {
-      dest = (std::string_view) **(const std::string **) &src;
+  // cast begin
+  template<AnyOf<double, char, const std::string *, Object *, NativeFunction *> T>
+  static inline bool dynamicast(T &dest, const Value &value) noexcept {
+    if (T *t = get_if<T>(&value.var); t) {
+      dest = *t;
+      return true;
     } else {
-      // never
+      return false;
     }
-    return 0;
   }
 
-  static inline int staticast(Object *&dest, const Value &src) noexcept {
-    dest = *(Object **) &src;
-    return 0;
-  }
-
-  template<std::derived_from<Object> T>
-  static inline int staticast(T *&dest, const Value &src) noexcept {
-    dest = static_cast<T *>(*(Object **) &src);
-    return 0;
-  }
-  // static cast operations end
-
-  // dynamic cast operations begin
-  #define baseDynamicast(T) \
-  static inline bool dynamicast(T &dest, const Value &src) noexcept { \
-    if (auto t = std::get_if<T>(&src); t) { \
-      dest = *t; \
-      return true; \
-    } else { \
-      return false; \
-    } \
-  }
-
-  baseDynamicast(double);
-  baseDynamicast(char);
-  baseDynamicast(Object *);
-  baseDynamicast(NativeFunction *);
-
-  #undef baseDynamicast
-
-  template<class I>
-  requires (std::is_integral_v<I> && !std::is_pointer_v<I>)
-  bool dynamicast(I &dest, const Value &src) noexcept {
-    if (double d; dynamicast(d, src)) {
+  template<std::integral I>
+  static inline bool dynamicast(I &dest, const Value &value) noexcept {
+    if (double d; dynamicast(d, value)) {
       dest = (I) d;
       return true;
     } else {
@@ -156,110 +104,59 @@ namespace zlt::mylisp {
     }
   }
 
-  bool dynamicast(std::string_view &dest, const Value &src) noexcept;
-
   template<std::derived_from<Object> T>
-  static inline bool dynamicast(T *&dest, const Value &src) noexcept {
-    if (Object *o; dynamicast(o, src)) {
+  static inline bool dynamicast(T *&dest, const Value &value) noexcept {
+    if (Object *o; dynamicast(o, value)) {
       dest = dynamic_cast<T *>(o);
-      return dest;
+      return dest != nullptr;
     } else {
       return false;
     }
   }
 
-  template<class T>
-  static inline bool dynamicast(T &dest, const Value *it, const Value *end) noexcept {
-    return it < end && dynamicast(dest, *it);
+  template<AnyOf<double, char, const std::string *, Object *, NativeFunction *> T>
+  static inline auto staticast(const Value &value) noexcept {
+    return *(T *) &value.var;
   }
 
-  template<int I = 0, class ...T>
-  static inline bool dynamicasts(const std::tuple<T *...> &dest, const Value *it, const Value *end) noexcept {
-    if constexpr (I == sizeof...(T)) {
-      return true;
-    } else {
-      return dynamicast(*std::get<I>(dest), it, end) && dynamicasts<I + 1>(dest, it + 1, end);
-    }
+  template<std::integral I>
+  static inline auto staticast(const Value &value) noexcept {
+    return (I) staticast<double>(value);
   }
-  // dynamic cast operations end
+
+  template<std::derived_from<Object> T>
+  static inline auto staticast(const Value &value) noexcept {
+    return static_cast<T *>(staticast<Object *>(value));
+  }
+  // cast end
 
   // comparisons begin
-  #define compBetween(T) \
-  bool operator ==(const Value &a, T b) noexcept; \
-  \
-  static inline bool operator !=(const Value &a, T b) noexcept { \
-    return !operator ==(a, b); \
-  } \
-  \
-  bool compare(int &dest, const Value &a, T b) noexcept; \
-  \
-  static inline bool operator <(const Value &a, T b) noexcept { \
-    int diff; \
-    return compare(diff, a, b) && diff < 0; \
-  } \
-  \
-  static inline bool operator >(const Value &a, T b) noexcept { \
-    int diff; \
-    return compare(diff, a, b) && diff > 0; \
-  } \
-  \
-  static inline bool operator <=(const Value &a, T b) noexcept { \
-    int diff; \
-    return compare(diff, a, b) && diff <= 0; \
-  } \
-  \
-  static inline bool operator >=(const Value &a, T b) noexcept { \
-    int diff; \
-    return compare(diff, a, b) && diff >= 0; \
+  std::partial_ordering operator <=>(const Value &a, const Value &b) noexcept;
+
+  static inline bool operator ==(const Value &a, const Value &b) noexcept {
+    return a <=> b == std::partial_ordering::equivalent;
   }
 
-  compBetween(const Value &);
-  compBetween(double);
-  compBetween(std::string_view);
-
-  #undef compBetween
-
-  #define compBetween1(T) \
-  static inline bool operator ==(T a, const Value &b) noexcept { \
-    return b == a; \
-  } \
-  \
-  static inline bool operator !=(T a, const Value &b) noexcept { \
-    return b != a; \
-  } \
-  \
-  static inline bool operator <(T a, const Value &b) noexcept { \
-    int diff; \
-    return compare(diff, b, a) && diff > 0; \
-  } \
-  \
-  static inline bool operator >(T a, const Value &b) noexcept { \
-    int diff; \
-    return compare(diff, b, a) && diff < 0; \
-  } \
-  \
-  static inline bool operator <=(T a, const Value &b) noexcept { \
-    int diff; \
-    return compare(diff, b, a) && diff >= 0; \
-  } \
-  \
-  static inline bool operator >=(T a, const Value &b) noexcept { \
-    int diff; \
-    return compare(diff, b, a) && diff <= 0; \
+  static inline bool operator !=(const Value &a, const Value &b) noexcept {
+    return a <=> b != std::partial_ordering::equivalent;
   }
 
-  compBetween1(double);
-  compBetween1(std::string_view);
+  static inline bool operator <(const Value &a, const Value &b) noexcept {
+    return a <=> b == std::partial_ordering::less;
+  }
 
-  #undef compBetween1
+  static inline bool operator >(const Value &a, const Value &b) noexcept {
+    return a <=> b == std::partial_ordering::greater;
+  }
+
+  static inline bool operator <=(const Value &a, const Value &b) noexcept {
+    auto c = a <=> b;
+    return c == std::partial_ordering::less || c == std::partial_ordering::equivalent;
+  }
+
+  static inline bool operator >=(const Value &a, const Value &b) noexcept {
+    auto c = a <=> b;
+    return c == std::partial_ordering::greater || c == std::partial_ordering::equivalent;
+  }
   // comparisons end
-
-  // member operations begin
-  Value getMemb(const Value &v, const Value &memb) noexcept;
-  int setMemb(Value &v, const Value &memb, const Value &value);
-  // member operations end
-
-  static inline bool operator !(const Value &v) noexcept {
-    return v.index() == Value::NULL_INDEX;
-  }
 }
