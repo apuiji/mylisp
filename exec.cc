@@ -19,15 +19,15 @@ namespace zlt::mylisp {
   void exec() {
     int op = *itCoroutine->pc++;
     if (op == opcode::ADD) {
-      itCoroutine->ax = staticast<double>(*--itCoroutine->sp) + (double) itCoroutine->ax;
+      staticast<double>(itCoroutine->sp[-1]) += (double) itCoroutine->ax;
     } else if (op == opcode::BIT_AND) {
-      itCoroutine->ax = staticast<int>(*--itCoroutine->sp) & (int) itCoroutine->ax;
+      staticast<double>(itCoroutine->sp[-1]) = staticast<int>(itCoroutine->sp[-1]) & (int) itCoroutine->ax;
     } else if (op == opcode::BIT_NOT) {
       itCoroutine->ax = ~(int) itCoroutine->ax;
     } else if (op == opcode::BIT_OR) {
-      itCoroutine->ax = staticast<int>(*--itCoroutine->sp) | (int) itCoroutine->ax;
+      staticast<double>(itCoroutine->sp[-1]) = staticast<int>(itCoroutine->sp[-1]) | (int) itCoroutine->ax;
     } else if (op == opcode::BIT_XOR) {
-      itCoroutine->ax = staticast<int>(*--itCoroutine->sp) ^ (int) itCoroutine->ax;
+      staticast<double>(itCoroutine->sp[-1]) = staticast<int>(itCoroutine->sp[-1]) ^ (int) itCoroutine->ax;
     } else if (op == opcode::CALL) {
       size_t argc = consume<size_t>();
       call(argc);
@@ -43,7 +43,7 @@ namespace zlt::mylisp {
     } else if (op == opcode::COMPARE) {
       itCoroutine->ax = *--itCoroutine->sp <=> itCoroutine->ax;
     } else if (op == opcode::DIV) {
-      itCoroutine->ax = staticast<double>(*--itCoroutine->sp) / itCoroutine->ax;
+      staticast<double>(itCoroutine->sp[-1]) /= itCoroutine->ax;
     } else if (op == opcode::EQ) {
       itCoroutine->ax = *--itCoroutine->sp == itCoroutine->ax;
     } else if (op == opcode::FORWARD) {
@@ -96,9 +96,9 @@ namespace zlt::mylisp {
     } else if (op == opcode::LOGIC_NOT) {
       itCoroutine->ax = !itCoroutine->ax;
     } else if (op == opcode::LOGIC_XOR) {
-      itCoroutine->ax = (bool) *--itCoroutine->sp ^ (bool) itCoroutine->ax;
+      itCoroutine->sp[-1] = (bool) itCoroutine->sp[-1] ^ (bool) itCoroutine->ax;
     } else if (op == opcode::LSH) {
-      itCoroutine->ax = staticast<int>(*--itCoroutine->sp) << (int) itCoroutine->ax;
+      staticast<double>(itCoroutine->sp[-1]) = staticast<int>(itCoroutine->sp[-1]) << (int) itCoroutine->ax;
     } else if (op == opcode::LT) {
       itCoroutine->ax = *--itCoroutine->sp < itCoroutine->ax;
     } else if (op == opcode::LTEQ) {
@@ -110,9 +110,9 @@ namespace zlt::mylisp {
     } else if (op == opcode::MAKE_HIGH_REF) {
       itCoroutine->ax = neobj<ValueObj>();
     } else if (op == opcode::MOD) {
-      itCoroutine->ax = fmod(staticast<double>(*--itCoroutine->sp), (double) itCoroutine->ax);
+      staticast<double>(itCoroutine->sp[-1])->ax = fmod(staticast<double>(itCoroutine->sp[-1]), (double) itCoroutine->ax);
     } else if (op == opcode::MUL) {
-      itCoroutine->ax = staticast<double>(*--itCoroutine->sp) * (double) itCoroutine->ax;
+      staticast<double>(itCoroutine->sp[-1]) *= (double) itCoroutine->ax;
     } else if (op == opcode::NEGATIVE) {
       itCoroutine->ax = -(double) itCoroutine->ax;
     } else if (op == opcode::NULL_LITERAL) {
@@ -124,7 +124,7 @@ namespace zlt::mylisp {
     } else if (op == opcode::POSITIVE) {
       itCoroutine->ax = (double) itCoroutine->ax;
     } else if (op == opcode::POW) {
-      itCoroutine->ax = pow(staticast<double>(*--itCoroutine->sp), (double) itCoroutine->ax);
+      staticast<double>(itCoroutine->sp[-1]) = pow(staticast<double>(itCoroutine->sp[-1]), (double) itCoroutine->ax);
     } else if (op == opcode::PUSH) {
       // TODO:
     } else if (op == opcode::PUSH_DEFER) {
@@ -134,7 +134,7 @@ namespace zlt::mylisp {
     } else if (op == opcode::RETURN) {
       // TODO:
     } else if (op == opcode::RSH) {
-      itCoroutine->ax = staticast<int>(*--itCoroutine->sp) >> (int) itCoroutine->ax;
+      staticast<double>(itCoroutine->sp[-1]) = staticast<int>(itCoroutine->sp[-1]) >> (int) itCoroutine->ax;
     } else if (op == opcode::SET_FN_CLOSURE) {
       auto f = staticast<FunctionObj *>(itCoroutine->sp[-1]);
       f->closureDefs[consume<const string *>()] = itCoroutine->ax;
@@ -151,11 +151,11 @@ namespace zlt::mylisp {
     } else if (op == opcode::STRING_LITERAL) {
       itCoroutine->ax = consume<const string *>();
     } else if (op == opcode::SUB) {
-      itCoroutine->ax = staticast<double>(*--itCoroutine->sp) - (double) itCoroutine->ax;
+      staticast<double>(itCoroutine->sp[-1]) -= (double) itCoroutine->ax;
     } else if (op == opcode::THROW) {
       // TODO:
     } else if (op == opcode::USH) {
-      itCoroutine->ax = staticast<unsigned>(*--itCoroutine->sp) - (int) itCoroutine->ax;
+      staticast<double>(itCoroutine->sp[-1]) = staticast<unsigned>(itCoroutine->sp[-1]) >> (int) itCoroutine->ax;
     } else if (op == opcode::YIELD) {
       yield();
       return;

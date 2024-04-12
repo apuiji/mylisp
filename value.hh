@@ -115,7 +115,7 @@ namespace zlt::mylisp {
   }
 
   template<AnyOf<double, char, const std::string *, Object *, NativeFunction *> T>
-  static inline auto staticast(const Value &value) noexcept {
+  static inline auto &staticast(const Value &value) noexcept {
     return *(T *) &value.var;
   }
 
