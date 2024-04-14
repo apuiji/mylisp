@@ -9,6 +9,34 @@ namespace zlt::mylisp {
   static void call(size_t argc);
   static void yield();
 
+  static inline Value &ax() noexcept {
+    return itCoroutine->ax;
+  }
+
+  static inline Value *&bp() noexcept {
+    return itCoroutine->bp;
+  }
+
+  static inline Value *&sp() noexcept {
+    return itCoroutine->sp;
+  }
+
+  static inline const char *&pc() noexcept {
+    return itCoroutine->pc;
+  }
+
+  static inline Value &peek() noexcept {
+    return sp()[-1];
+  }
+
+  static inline Value pop() noexcept {
+    return *--sp();
+  }
+
+  static inline FunctionObj *callee() noexcept {
+    return staticast<FunctionObj *>(bp()[-1]);
+  }
+
   template<class T>
   static inline T consume() noexcept {
     T t = *(T *) itCoroutine->pc;
@@ -19,112 +47,101 @@ namespace zlt::mylisp {
   void exec() {
     int op = *itCoroutine->pc++;
     if (op == opcode::ADD) {
-      staticast<double>(itCoroutine->sp[-1]) += (double) itCoroutine->ax;
+      staticast<double>(peek()) += (double) ax();
     } else if (op == opcode::BIT_AND) {
-      staticast<double>(itCoroutine->sp[-1]) = staticast<int>(itCoroutine->sp[-1]) & (int) itCoroutine->ax;
+      staticast<double>(peek()) = staticast<int>(peek()) & (int) ax();
     } else if (op == opcode::BIT_NOT) {
-      itCoroutine->ax = ~(int) itCoroutine->ax;
+      ax() = ~(int) ax();
     } else if (op == opcode::BIT_OR) {
-      staticast<double>(itCoroutine->sp[-1]) = staticast<int>(itCoroutine->sp[-1]) | (int) itCoroutine->ax;
+      staticast<double>(peek()) = staticast<int>(peek()) | (int) ax();
     } else if (op == opcode::BIT_XOR) {
-      staticast<double>(itCoroutine->sp[-1]) = staticast<int>(itCoroutine->sp[-1]) ^ (int) itCoroutine->ax;
+      staticast<double>(peek()) = staticast<int>(peek()) ^ (int) ax();
     } else if (op == opcode::CALL) {
       size_t argc = consume<size_t>();
       call(argc);
       return;
     } else if (op == opcode::CHAR_LITERAL) {
-      itCoroutine->ax = *itCoroutine->pc++;
+      ax() = consumer<char>();
     } else if (op == opcode::CLEAN_ALL_DEFERS) {
       // TODO:
-    } else if (op == opcode::CLEAN_ARGS) {
-      itCoroutine->sp = itCoroutine->bp;
     } else if (op == opcode::CLEAN_FN_DEFERS) {
       // TODO:
     } else if (op == opcode::COMPARE) {
-      itCoroutine->ax = *--itCoroutine->sp <=> itCoroutine->ax;
+      ax() = pop() <=> ax();
     } else if (op == opcode::DIV) {
-      staticast<double>(itCoroutine->sp[-1]) /= itCoroutine->ax;
+      staticast<double>(peek()) /= ax();
     } else if (op == opcode::EQ) {
-      itCoroutine->ax = *--itCoroutine->sp == itCoroutine->ax;
+      ax() = pop() == ax();
     } else if (op == opcode::FORWARD) {
       size_t argc = consume<size_t>();
-      copy(itCoroutine->sp - argc - 1, itCoroutine->sp, itCoroutine->bp - 1);
-      itCoroutine->sp = itCoroutine->bp + argc;
+      copy(sp() - argc - 1, sp(), bp() - 1);
+      sp() = bp() + argc;
       call(argc);
       return;
-    } else if (op == opcode::GET_ARG) {
-      size_t i = consume<size_t>();
-      itCoroutine->ax = itCoroutine->bp[i];
     } else if (op == opcode::GET_CALLEE) {
-      itCoroutine->ax = staticast<FunctionRTObj *>(itCoroutine->bp[-1])->callee;
+      ax() = callee();
     } else if (op == opcode::GET_CLOSURE) {
-      auto f = staticast<FunctionRTObj *>(itCoroutine->bp[-1])->callee;
-      auto name = consume<const string *>();
-      itCoroutine->ax = f->closureDefs[name];
+      size_t i = consume<size_t>();
+      ax() = callee()->closureDefs[i];
     } else if (op == opcode::GET_GLOBAL) {
       auto name = consume<const string *>();
-      itCoroutine->ax = globalDefs[name];
+      ax() = globalDefs[name];
     } else if (op == opcode::GET_HIGH_REF) {
-      itCoroutine->ax = staticast<ValueObj *>(itCoroutine->ax)->value;
+      ax() = staticast<ValueObj *>(ax())->value;
     } else if (op == opcode::GET_LOCAL) {
-      auto f = staticast<FunctionRTObj *>(itCoroutine->bp[-1]);
-      auto name = consume<const string *>();
-      itCoroutine->ax = f->localDefs[name];
+      size_t i = consume<size_t>();
+      ax() = bp()[i];
     } else if (op == opcode::GET_MEMB) {
       // TODO:
     } else if (op == opcode::GLOBAL_FORWARD) {
       size_t argc = consume<size_t>();
-      copy(itCoroutine->sp - argc - 1, itCoroutine->sp, itCoroutine->valuek.data);
-      itCoroutine->sp = itCoroutine->valuek.data + argc + 1;
+      copy(sp() - argc - 1, sp(), itCoroutine->valuek.data);
+      sp() = itCoroutine->valuek.data + argc + 1;
       call(argc);
       return;
     } else if (op == opcode::GLOBAL_RETURN) {
       // TODO:
     } else if (op == opcode::GT) {
-      itCoroutine->ax = *--itCoroutine->sp > itCoroutine->ax;
+      ax() = pop() > ax();
     } else if (op == opcode::GTEQ) {
-      itCoroutine->ax = *--itCoroutine->sp >= itCoroutine->ax;
+      ax() = pop() >= ax();
     } else if (op == opcode::JIF) {
       size_t n = consume<size_t>();
-      if (itCoroutine->ax) {
-        itCoroutine->pc += n;
+      if (ax()) {
+        pc() += n;
       }
     } else if (op == opcode::JMP) {
-      itCoroutine->pc += consume<size_t>();
+      pc() += consume<size_t>();
     } else if (op == opcode::LENGTH) {
       // TODO:
     } else if (op == opcode::LOGIC_NOT) {
-      itCoroutine->ax = !itCoroutine->ax;
+      ax() = !ax();
     } else if (op == opcode::LOGIC_XOR) {
-      itCoroutine->sp[-1] = (bool) itCoroutine->sp[-1] ^ (bool) itCoroutine->ax;
+      peek() = (bool) peek() ^ (bool) ax();
     } else if (op == opcode::LSH) {
-      staticast<double>(itCoroutine->sp[-1]) = staticast<int>(itCoroutine->sp[-1]) << (int) itCoroutine->ax;
+      staticast<double>(peek()) = staticast<int>(peek()) << (int) ax();
     } else if (op == opcode::LT) {
-      itCoroutine->ax = *--itCoroutine->sp < itCoroutine->ax;
+      ax() = pop() < ax();
     } else if (op == opcode::LTEQ) {
-      itCoroutine->ax = *--itCoroutine->sp <= itCoroutine->ax;
+      ax() = pop() <= ax();
     } else if (op == opcode::MAKE_FN) {
-      size_t paramn = consume<size_t>();
-      auto body = consumer<const string *>();
-      itCoroutine->ax = neobj<FunctionObj>(paramn, body);
-    } else if (op == opcode::MAKE_HIGH_REF) {
-      itCoroutine->ax = neobj<ValueObj>();
+      // TODO:
     } else if (op == opcode::MOD) {
-      staticast<double>(itCoroutine->sp[-1])->ax = fmod(staticast<double>(itCoroutine->sp[-1]), (double) itCoroutine->ax);
+      staticast<double>(peek()) = fmod(staticast<double>(peek()), (double) ax());
     } else if (op == opcode::MUL) {
-      staticast<double>(itCoroutine->sp[-1]) *= (double) itCoroutine->ax;
+      staticast<double>(peek()) *= (double) ax();
     } else if (op == opcode::NEGATIVE) {
-      itCoroutine->ax = -(double) itCoroutine->ax;
+      ax() = -(double) ax();
     } else if (op == opcode::NULL_LITERAL) {
-      itCoroutine->ax = Null();
+      ax() = Null();
     } else if (op == opcode::NUM_LITERAL) {
-      itCoroutine->ax = consume<double>();
+      ax() = consume<double>();
     } else if (op == opcode::POP) {
-      itCoroutine->ax = *--itCoroutine->sp;
+      ax() = pop();
     } else if (op == opcode::POSITIVE) {
-      itCoroutine->ax = (double) itCoroutine->ax;
+      ax() = (double) ax();
     } else if (op == opcode::POW) {
-      staticast<double>(itCoroutine->sp[-1]) = pow(staticast<double>(itCoroutine->sp[-1]), (double) itCoroutine->ax);
+      staticast<double>(peek()) = pow(staticast<double>(peek()), (double) ax());
     } else if (op == opcode::PUSH) {
       // TODO:
     } else if (op == opcode::PUSH_DEFER) {
@@ -134,28 +151,33 @@ namespace zlt::mylisp {
     } else if (op == opcode::RETURN) {
       // TODO:
     } else if (op == opcode::RSH) {
-      staticast<double>(itCoroutine->sp[-1]) = staticast<int>(itCoroutine->sp[-1]) >> (int) itCoroutine->ax;
+      staticast<double>(peek()) = staticast<int>(peek()) >> (int) ax();
     } else if (op == opcode::SET_FN_CLOSURE) {
-      auto f = staticast<FunctionObj *>(itCoroutine->sp[-1]);
-      f->closureDefs[consume<const string *>()] = itCoroutine->ax;
+      auto f = staticast<FunctionObj *>(peek());
+      size_t i = consume<size_t>();
+      f->closureDefs[i] = ax();
     } else if (op == opcode::SET_GLOBAL) {
-      globalDefs[consume<const string *>()] = itCoroutine->ax;
+      globalDefs[consume<const string *>()] = ax();
     } else if (op == opcode::SET_HIGH_REF) {
-      staticast<ValueObj *>(*--itCoroutine->sp)->value = itCoroutine->ax;
+      staticast<ValueObj *>(pop())->value = ax();
     } else if (op == opcode::SET_LOCAL) {
-      auto f = staticast<FunctionRTObj *>(itCoroutine->bp[-1]);
-      auto name = consume<const string *>();
-      f->localDefs[name] = itCoroutine->ax;
+      size_t i = consume<size_t>();
+      bp()[i] = ax();
     } else if (op == opcode::SET_MEMB) {
       // TODO:
     } else if (op == opcode::STRING_LITERAL) {
-      itCoroutine->ax = consume<const string *>();
+      ax() = consume<const string *>();
     } else if (op == opcode::SUB) {
-      staticast<double>(itCoroutine->sp[-1]) -= (double) itCoroutine->ax;
+      staticast<double>(peek()) -= (double) ax();
     } else if (op == opcode::THROW) {
       // TODO:
     } else if (op == opcode::USH) {
-      staticast<double>(itCoroutine->sp[-1]) = staticast<unsigned>(itCoroutine->sp[-1]) >> (int) itCoroutine->ax;
+      staticast<double>(peek()) = staticast<unsigned>(peek()) >> (int) ax();
+    } else if (op == opcode::WRAP_HIGH_REF) {
+      size_t i = consume<size_t>();
+      auto vo = neobj<ValueObj>();
+      vo->value = bp()[i];
+      bp()[i] = vo;
     } else if (op == opcode::YIELD) {
       yield();
       return;
