@@ -7,6 +7,7 @@
 
 namespace zlt::mylisp {
   static void call(size_t argc);
+  static void cleanAllDefers();
   static void yield();
 
   using namespace it_coroutine;
@@ -150,5 +151,19 @@ namespace zlt::mylisp {
       return;
     }
     exec();
+  }
+
+  void cleanAllDefers() {
+    static const auto s = make_tuple(
+      (char) opcode::JIF_ANYMORE_DEFER,
+      (size_t) 0,
+      (char) opcode::POP_DEFER,
+      (char) opcode::PUSH_TRY,
+      (char) opcode::CALL,
+      (size_t) 0,
+      (char) opcode::NULL_LITERAL,
+      (char) opcode::THROW,);
+    pushValue(ax());
+    pushOther(pc());
   }
 }
