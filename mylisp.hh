@@ -27,7 +27,6 @@ namespace zlt::mylisp {
 
   extern Coroutines coroutines;
   extern ItCoroutine itCoroutine;
-  extern std::set<std::string> bodies;
   extern std::set<std::string> strings;
 
   const std::string *addString(std::string &&s);

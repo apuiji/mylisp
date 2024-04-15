@@ -9,43 +9,10 @@ namespace zlt::mylisp {
   static void call(size_t argc);
   static void yield();
 
-  static inline Value &ax() noexcept {
-    return itCoroutine->ax;
-  }
-
-  static inline Value *&bp() noexcept {
-    return itCoroutine->bp;
-  }
-
-  static inline Value *&sp() noexcept {
-    return itCoroutine->sp;
-  }
-
-  static inline const char *&pc() noexcept {
-    return itCoroutine->pc;
-  }
-
-  static inline Value &peek() noexcept {
-    return sp()[-1];
-  }
-
-  static inline Value pop() noexcept {
-    return *--sp();
-  }
-
-  static inline FunctionObj *callee() noexcept {
-    return staticast<FunctionObj *>(bp()[-1]);
-  }
-
-  template<class T>
-  static inline T consume() noexcept {
-    T t = *(T *) itCoroutine->pc;
-    itCoroutine->pc += sizeof(T);
-    return t;
-  }
+  using namespace it_coroutine;
 
   void exec() {
-    int op = *itCoroutine->pc++;
+    int op = *pc()++;
     if (op == opcode::ADD) {
       staticast<double>(peek()) += (double) ax();
     } else if (op == opcode::BIT_AND) {
@@ -95,8 +62,8 @@ namespace zlt::mylisp {
       // TODO:
     } else if (op == opcode::GLOBAL_FORWARD) {
       size_t argc = consume<size_t>();
-      copy(sp() - argc - 1, sp(), itCoroutine->valuek.data);
-      sp() = itCoroutine->valuek.data + argc + 1;
+      copy(sp() - argc - 1, sp(), itCoroutine->valuek);
+      sp() = itCoroutine->valuek + argc + 1;
       call(argc);
       return;
     } else if (op == opcode::GLOBAL_RETURN) {
