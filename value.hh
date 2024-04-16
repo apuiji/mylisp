@@ -10,7 +10,7 @@ namespace zlt::mylisp {
   struct Object;
   struct Value;
 
-  using NativeFunction = void (Value &dest, Value *it, Value *end);
+  using NativeFunction = void (Value &dest, const Value *it, const Value *end);
   using Null = std::monostate;
 
   struct Value {
@@ -159,4 +159,8 @@ namespace zlt::mylisp {
     return c == std::partial_ordering::greater || c == std::partial_ordering::equivalent;
   }
   // comparisons end
+
+  bool length(size_t &dest, const Value &src) noexcept;
+  Value getMemb(const Value &cont, const Value &key) const noexcept;
+  void setMemb(Value &cont, const Value &key, const Value &value);
 }

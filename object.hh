@@ -13,6 +13,9 @@ namespace zlt::mylisp {
     Object *prev;
     Object *next;
     virtual ~Object() = default;
+    virtual bool length(size_t &dest) const noexcept = 0;
+    virtual Value getMemb() const noexcept = 0;
+    virtual void setMemb(const Value &key, const Value &value) = 0;
   };
 
   struct FunctionObj final: Object {

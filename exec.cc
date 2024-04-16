@@ -1,5 +1,6 @@
 #include<algorithm>
 #include<cmath>
+#include"gc.hh"
 #include"mylisp.hh"
 #include"object.hh"
 #include"opcode.hh"
@@ -72,7 +73,7 @@ namespace zlt::mylisp {
       size_t i = consume<size_t>();
       ax() = bp()[i];
     } else if (op == opcode::GET_MEMB) {
-      // TODO:
+      ax() = getMemb(pop(), ax());
     } else if (op == opcode::GLOBAL_FORWARD) {
       size_t argc = consume<size_t>();
       copy(sp() - argc - 1, sp(), itCoroutine->valuek);
@@ -93,7 +94,7 @@ namespace zlt::mylisp {
     } else if (op == opcode::JMP) {
       pc() += consume<size_t>();
     } else if (op == opcode::LENGTH) {
-      // TODO:
+      ax() = length(ax());
     } else if (op == opcode::LOGIC_NOT) {
       ax() = !ax();
     } else if (op == opcode::LOGIC_XOR) {
@@ -105,7 +106,11 @@ namespace zlt::mylisp {
     } else if (op == opcode::LTEQ) {
       ax() = pop() <= ax();
     } else if (op == opcode::MAKE_FN) {
-      // TODO:
+      size_t paramn = consume<size_t>();
+      size_t closureDefn = consume<size_t>();
+      size_t bodyn = consume<size_t>();
+      ax() = gc::neobj(new(closuren) FunctionObj(paramn, pc()));
+      pc() += bodyn;
     } else if (op == opcode::MOD) {
       staticast<double>(peek()) = fmod(staticast<double>(peek()), (double) ax());
     } else if (op == opcode::MUL) {
@@ -123,11 +128,11 @@ namespace zlt::mylisp {
     } else if (op == opcode::POW) {
       staticast<double>(peek()) = pow(staticast<double>(peek()), (double) ax());
     } else if (op == opcode::PUSH) {
-      // TODO:
+      push(ax());
     } else if (op == opcode::PUSH_DEFER) {
-      // TODO:
+      pushDefer(ax());
     } else if (op == opcode::PUSH_TRY) {
-      // TODO:
+      pushDefer(katch);
     } else if (op == opcode::RETURN) {
       // TODO:
     } else if (op == opcode::RSH) {
@@ -144,7 +149,9 @@ namespace zlt::mylisp {
       size_t i = consume<size_t>();
       bp()[i] = ax();
     } else if (op == opcode::SET_MEMB) {
-      // TODO:
+      auto key = pop();
+      auto cont = pop();
+      setMemb(cont, key, ax());
     } else if (op == opcode::STRING_LITERAL) {
       ax() = consume<const string *>();
     } else if (op == opcode::SUB) {
@@ -155,7 +162,7 @@ namespace zlt::mylisp {
       staticast<double>(peek()) = staticast<unsigned>(peek()) >> (int) ax();
     } else if (op == opcode::WRAP_HIGH_REF) {
       size_t i = consume<size_t>();
-      auto vo = neobj<ValueObj>();
+      auto vo = gc::neobj(new ValueObj);
       vo->value = bp()[i];
       bp()[i] = vo;
     } else if (op == opcode::YIELD) {
