@@ -6,13 +6,21 @@
 #include"value.hh"
 
 namespace zlt::mylisp {
+  struct CleanAllDeferBody {
+    char value[256];
+    CleanAllDeferBody();
+  };
+
+  struct CleanFnDeferBody {
+    char value[256];
+    CleanAllDeferBody();
+  };
+
   static void call(size_t argc);
-  static void cleanAllDefers();
   static void yield();
 
-  using namespace it_coroutine;
-
   void exec() {
+    using namespace it_coroutine;
     int op = *pc()++;
     if (op == opcode::ADD) {
       staticast<double>(peek()) += (double) ax();
@@ -31,9 +39,13 @@ namespace zlt::mylisp {
     } else if (op == opcode::CHAR_LITERAL) {
       ax() = consumer<char>();
     } else if (op == opcode::CLEAN_ALL_DEFERS) {
-      // TODO:
+      static CleanAllDeferBody body;
+      pushOther(pc() + 1);
+      pc() = body.value;
     } else if (op == opcode::CLEAN_FN_DEFERS) {
-      // TODO:
+      static CleanFnDeferBody body;
+      pushOther(pc() + 1);
+      pc() = body.value;
     } else if (op == opcode::COMPARE) {
       ax() = pop() <=> ax();
     } else if (op == opcode::DIV) {
@@ -153,17 +165,32 @@ namespace zlt::mylisp {
     exec();
   }
 
-  void cleanAllDefers() {
-    static const auto s = make_tuple(
-      (char) opcode::JIF_ANYMORE_DEFER,
-      (size_t) 0,
-      (char) opcode::POP_DEFER,
-      (char) opcode::PUSH_TRY,
-      (char) opcode::CALL,
-      (size_t) 0,
-      (char) opcode::NULL_LITERAL,
-      (char) opcode::THROW,);
-    pushValue(ax());
-    pushOther(pc());
+  template<class T>
+  static T &konsume(void *&p) noexcept {
+    auto &t = *(T *) p;
+    p += sizeof(T);
+    return t;
+  }
+
+  CleanAllDeferBody::CleanAllDeferBody() {
+    void *p = value;
+    konsume<char>(p) = opcode::ANYMORE_DEFER;
+    konsume<char>(p) = opcode::POP_DEFER;
+    konsume<char>(p) = opcode::PUSH_TRY;
+    konsume<char>(p) = opcode::CALL;
+    konsume<size_t>(p) = 0;
+    konsume<char>(p) = opcode::JMP_TO;
+    konsume<void *>(p) = value;
+  }
+
+  CleanFnDeferBody::CleanFnDeferBody() {
+    void *p = value;
+    konsume<char>(p) = opcode::ANYMORE_FN_DEFER;
+    konsume<char>(p) = opcode::POP_DEFER;
+    konsume<char>(p) = opcode::PUSH_TRY;
+    konsume<char>(p) = opcode::CALL;
+    konsume<size_t>(p) = 0;
+    konsume<char>(p) = opcode::JMP_TO;
+    konsume<void *>(p) = value;
   }
 }
