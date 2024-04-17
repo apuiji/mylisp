@@ -41,24 +41,24 @@ namespace zlt::mylisp {
       ax() = consumer<char>();
     } else if (op == opcode::CLEAN_ALL_DEFERS) {
       static CleanAllDeferBody body;
-      pushOther(pc() + 1);
       pc() = body.value;
     } else if (op == opcode::CLEAN_FN_DEFERS) {
       static CleanFnDeferBody body;
-      pushOther(pc() + 1);
       pc() = body.value;
     } else if (op == opcode::COMPARE) {
       ax() = pop() <=> ax();
     } else if (op == opcode::DIV) {
       staticast<double>(peek()) /= ax();
+    } else if (op == opcode::END) {
+      itCoroutine->alive = false;
+      yield();
+      return;
     } else if (op == opcode::EQ) {
       ax() = pop() == ax();
     } else if (op == opcode::FORWARD) {
       size_t argc = consume<size_t>();
       copy(sp() - argc - 1, sp(), bp() - 1);
       sp() = bp() + argc;
-      call(argc);
-      return;
     } else if (op == opcode::GET_CALLEE) {
       ax() = callee();
     } else if (op == opcode::GET_CLOSURE) {
@@ -78,10 +78,6 @@ namespace zlt::mylisp {
       size_t argc = consume<size_t>();
       copy(sp() - argc - 1, sp(), itCoroutine->valuek);
       sp() = itCoroutine->valuek + argc + 1;
-      call(argc);
-      return;
-    } else if (op == opcode::GLOBAL_RETURN) {
-      // TODO:
     } else if (op == opcode::GT) {
       ax() = pop() > ax();
     } else if (op == opcode::GTEQ) {
@@ -109,7 +105,7 @@ namespace zlt::mylisp {
       size_t paramn = consume<size_t>();
       size_t closureDefn = consume<size_t>();
       size_t bodyn = consume<size_t>();
-      ax() = gc::neobj(new(closuren) FunctionObj(paramn, pc()));
+      ax() = gc::neobj(new(closureDefn) FunctionObj(paramn, pc()));
       pc() += bodyn;
     } else if (op == opcode::MOD) {
       staticast<double>(peek()) = fmod(staticast<double>(peek()), (double) ax());
@@ -123,18 +119,30 @@ namespace zlt::mylisp {
       ax() = consume<double>();
     } else if (op == opcode::POP) {
       ax() = pop();
+    } else if (op == opcode::POP_BP) {
+      bp() = popOther<void *>();
+    } else if (op == opcode::POP_PC) {
+      pc() = popOther<void *>();
+    } else if (op == opcode::POP_SP) {
+      sp() = popOther<void *>();
     } else if (op == opcode::POSITIVE) {
       ax() = (double) ax();
     } else if (op == opcode::POW) {
       staticast<double>(peek()) = pow(staticast<double>(peek()), (double) ax());
     } else if (op == opcode::PUSH) {
       push(ax());
+    } else if (op == opcode::PUSH_BP) {
+      pushOther(bp());
     } else if (op == opcode::PUSH_DEFER) {
       pushDefer(ax());
+    } else if (op == opcode::PUSH_PC_JMP) {
+      size_t n = consume<size_t>();
+      pushOther(pc() + n);
+    } else if (op == opcode::PUSH_SP_BACK) {
+      size_t n = consume<size_t>();
+      pushOther(sp() - n);
     } else if (op == opcode::PUSH_TRY) {
       pushDefer(katch);
-    } else if (op == opcode::RETURN) {
-      // TODO:
     } else if (op == opcode::RSH) {
       staticast<double>(peek()) = staticast<int>(peek()) >> (int) ax();
     } else if (op == opcode::SET_FN_CLOSURE) {

@@ -22,9 +22,9 @@ namespace zlt::mylisp {
     size_t paramn;
     size_t defern = 0;
     const char *body;
-    Value closures[0];
+    Value closureDefs[0];
     FunctionObj(size_t paramn, const char *body) noexcept: paramn(paramn), body(body) {}
-    void *operator new(size_t size, size_t closuren);
+    void *operator new(size_t size, size_t closureDefn);
   };
 
   struct StringObj final: Object {
