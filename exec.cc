@@ -189,22 +189,48 @@ namespace zlt::mylisp {
 
   CleanAllDeferBody::CleanAllDeferBody() {
     void *p = value;
-    konsume<char>(p) = opcode::ANYMORE_DEFER;
+    konsume<char>(p) = opcode::MORE_DEFER;
+    konsume<char>(p) = opcode::JIF;
+    konsume<size_t>(p) = 1;
+    konsume<char>(p) = opcode::POP_PC;
     konsume<char>(p) = opcode::POP_DEFER;
-    konsume<char>(p) = opcode::PUSH_TRY;
+    konsume<char>(p) = opcode::PUSH;
+    konsume<char>(p) = opcode::PUSH_BP;
+    konsume<char>(p) = opcode::PUSH_SP_BACK;
+    konsume<size_t>(p) = 1;
+    konsume<char>(p) = opcode::PUSH_CATCH;
+    konsume<char>(p) = opcode::PUSH_PC_JMP;
+    konsume<size_t>(p) = 3 + sizeof(size_t);
     konsume<char>(p) = opcode::CALL;
     konsume<size_t>(p) = 0;
+    konsume<char>(p) = opcode::NULL_LITERAL;
+    konsume<char>(p) = opcode::THROW;
+    konsume<char>(p) = opcode::POP_SP;
+    konsume<char>(p) = opcode::POP_BP;
     konsume<char>(p) = opcode::JMP_TO;
     konsume<void *>(p) = value;
   }
 
   CleanFnDeferBody::CleanFnDeferBody() {
     void *p = value;
-    konsume<char>(p) = opcode::ANYMORE_FN_DEFER;
+    konsume<char>(p) = opcode::MORE_FN_DEFER;
+    konsume<char>(p) = opcode::JIF;
+    konsume<size_t>(p) = 1;
+    konsume<char>(p) = opcode::POP_PC;
     konsume<char>(p) = opcode::POP_DEFER;
-    konsume<char>(p) = opcode::PUSH_TRY;
+    konsume<char>(p) = opcode::PUSH;
+    konsume<char>(p) = opcode::PUSH_BP;
+    konsume<char>(p) = opcode::PUSH_SP_BACK;
+    konsume<size_t>(p) = 1;
+    konsume<char>(p) = opcode::PUSH_CATCH;
+    konsume<char>(p) = opcode::PUSH_PC_JMP;
+    konsume<size_t>(p) = 3 + sizeof(size_t);
     konsume<char>(p) = opcode::CALL;
     konsume<size_t>(p) = 0;
+    konsume<char>(p) = opcode::NULL_LITERAL;
+    konsume<char>(p) = opcode::THROW;
+    konsume<char>(p) = opcode::POP_SP;
+    konsume<char>(p) = opcode::POP_BP;
     konsume<char>(p) = opcode::JMP_TO;
     konsume<void *>(p) = value;
   }
