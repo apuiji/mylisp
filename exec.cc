@@ -91,6 +91,8 @@ namespace zlt::mylisp {
       ax() = pop() > ax();
     } else if (op == opcode::GTEQ) {
       ax() = pop() >= ax();
+    } else if (op == opcode::INC_FN_DEFER) {
+      ++callee()->defern;
     } else if (op == opcode::JIF) {
       size_t n = consume<size_t>();
       if (ax()) {
@@ -98,6 +100,8 @@ namespace zlt::mylisp {
       }
     } else if (op == opcode::JMP) {
       pc() += consume<size_t>();
+    } else if (op == opcode::JMP_TO) {
+      pc() = popOther<void *>();
     } else if (op == opcode::LENGTH) {
       if (size_t n; length(n, ax())) {
         ax() = n;

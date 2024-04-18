@@ -25,6 +25,7 @@ namespace zlt::mylisp::opcode {
     GLOBAL_FORWARD,
     GT,
     GTEQ,
+    INC_FN_DEFER,
     JIF,
     JMP,
     JMP_TO,
