@@ -21,6 +21,7 @@ namespace zlt::mylisp {
   };
 
   static void call(size_t argc);
+  static NativeFunction katch;
   static void yield();
 
   void exec() {
@@ -164,7 +165,12 @@ namespace zlt::mylisp {
       size_t i = consume<size_t>();
       f->closureDefs[i] = ax();
     } else if (op == opcode::SET_GLOBAL) {
-      globalDefs[consume<const string *>()] = ax();
+      auto key = consume<const string *>();
+      mymap::Node<Value, Value> *a;
+      if (mymap::insert(a, globalDefs, key, [] () { return new mymap::Node<Value, Value>(); })) {
+        a->value.first = key;
+      }
+      a->value.second = ax();
     } else if (op == opcode::SET_HIGH_REF) {
       staticast<ValueObj *>(pop())->value = ax();
     } else if (op == opcode::SET_LOCAL) {
@@ -184,7 +190,8 @@ namespace zlt::mylisp {
       staticast<double>(peek()) = staticast<unsigned>(peek()) >> (int) ax();
     } else if (op == opcode::WRAP_HIGH_REF) {
       size_t i = consume<size_t>();
-      auto vo = gc::neobj(new ValueObj);
+      auto vo = new ValueObj;
+      gc::neobj(vo);
       vo->value = bp()[i];
       bp()[i] = vo;
     } else if (op == opcode::YIELD) {
@@ -195,14 +202,14 @@ namespace zlt::mylisp {
   }
 
   template<class T>
-  static T &konsume(void *&p) noexcept {
+  static T &konsume(char *&p) noexcept {
     auto &t = *(T *) p;
     p += sizeof(T);
     return t;
   }
 
   CleanAllDeferBody::CleanAllDeferBody() {
-    void *p = value;
+    char *p = value;
     konsume<char>(p) = opcode::MORE_DEFER;
     konsume<char>(p) = opcode::JIF;
     konsume<size_t>(p) = 1;
@@ -226,7 +233,7 @@ namespace zlt::mylisp {
   }
 
   CleanFnDeferBody::CleanFnDeferBody() {
-    void *p = value;
+    char *p = value;
     konsume<char>(p) = opcode::MORE_FN_DEFER;
     konsume<char>(p) = opcode::JIF;
     konsume<size_t>(p) = 1;
