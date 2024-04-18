@@ -1,10 +1,13 @@
 #include<algorithm>
 #include<cmath>
+#include"coroutine.hh"
 #include"gc.hh"
 #include"mylisp.hh"
 #include"object.hh"
 #include"opcode.hh"
 #include"value.hh"
+
+using namespace std;
 
 namespace zlt::mylisp {
   struct CleanAllDeferBody {
@@ -14,7 +17,7 @@ namespace zlt::mylisp {
 
   struct CleanFnDeferBody {
     char value[256];
-    CleanAllDeferBody();
+    CleanFnDeferBody();
   };
 
   static void call(size_t argc);
@@ -38,7 +41,7 @@ namespace zlt::mylisp {
       call(argc);
       return;
     } else if (op == opcode::CHAR_LITERAL) {
-      ax() = consumer<char>();
+      ax() = consume<char>();
     } else if (op == opcode::CLEAN_ALL_DEFERS) {
       static CleanAllDeferBody body;
       pc() = body.value;
@@ -48,7 +51,7 @@ namespace zlt::mylisp {
     } else if (op == opcode::COMPARE) {
       ax() = pop() <=> ax();
     } else if (op == opcode::DIV) {
-      staticast<double>(peek()) /= ax();
+      staticast<double>(peek()) /= (double) ax();
     } else if (op == opcode::END) {
       itCoroutine->alive = false;
       yield();
@@ -66,7 +69,12 @@ namespace zlt::mylisp {
       ax() = callee()->closureDefs[i];
     } else if (op == opcode::GET_GLOBAL) {
       auto name = consume<const string *>();
-      ax() = globalDefs[name];
+      auto a = mymap::find(globalDefs, name);
+      if (a) {
+        ax() = a->value.second;
+      } else {
+        ax() = Null();
+      }
     } else if (op == opcode::GET_HIGH_REF) {
       ax() = staticast<ValueObj *>(ax())->value;
     } else if (op == opcode::GET_LOCAL) {
@@ -90,7 +98,11 @@ namespace zlt::mylisp {
     } else if (op == opcode::JMP) {
       pc() += consume<size_t>();
     } else if (op == opcode::LENGTH) {
-      ax() = length(ax());
+      if (size_t n; length(n, ax())) {
+        ax() = n;
+      } else {
+        ax() = Null();
+      }
     } else if (op == opcode::LOGIC_NOT) {
       ax() = !ax();
     } else if (op == opcode::LOGIC_XOR) {
@@ -105,7 +117,9 @@ namespace zlt::mylisp {
       size_t paramn = consume<size_t>();
       size_t closureDefn = consume<size_t>();
       size_t bodyn = consume<size_t>();
-      ax() = gc::neobj(new(closureDefn) FunctionObj(paramn, pc()));
+      auto f = new(closureDefn) FunctionObj(paramn, pc());
+      gc::neobj(f);
+      ax() = f;
       pc() += bodyn;
     } else if (op == opcode::MOD) {
       staticast<double>(peek()) = fmod(staticast<double>(peek()), (double) ax());
@@ -120,11 +134,11 @@ namespace zlt::mylisp {
     } else if (op == opcode::POP) {
       ax() = pop();
     } else if (op == opcode::POP_BP) {
-      bp() = popOther<void *>();
+      bp() = popOther<Value *>();
     } else if (op == opcode::POP_PC) {
-      pc() = popOther<void *>();
+      pc() = popOther<char *>();
     } else if (op == opcode::POP_SP) {
-      sp() = popOther<void *>();
+      sp() = popOther<Value *>();
     } else if (op == opcode::POSITIVE) {
       ax() = (double) ax();
     } else if (op == opcode::POW) {
@@ -133,6 +147,8 @@ namespace zlt::mylisp {
       push(ax());
     } else if (op == opcode::PUSH_BP) {
       pushOther(bp());
+    } else if (op == opcode::PUSH_CATCH) {
+      pushDefer(katch);
     } else if (op == opcode::PUSH_DEFER) {
       pushDefer(ax());
     } else if (op == opcode::PUSH_PC_JMP) {
@@ -141,8 +157,6 @@ namespace zlt::mylisp {
     } else if (op == opcode::PUSH_SP_BACK) {
       size_t n = consume<size_t>();
       pushOther(sp() - n);
-    } else if (op == opcode::PUSH_TRY) {
-      pushDefer(katch);
     } else if (op == opcode::RSH) {
       staticast<double>(peek()) = staticast<int>(peek()) >> (int) ax();
     } else if (op == opcode::SET_FN_CLOSURE) {

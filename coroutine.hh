@@ -8,6 +8,10 @@ namespace zlt::mylisp {
     Value ax;
     Value *bp;
     Value *sp;
+    /// defer stack pointer
+    Value *dsp;
+    /// other stack pointer
+    char *osp;
     const char *pc;
     bool alive;
     Value *valuek;
@@ -26,6 +30,7 @@ namespace zlt::mylisp {
   extern ItCoroutine itCoroutine;
 
   namespace it_coroutine {
+    // registers begin
     static inline Value &ax() noexcept {
       return itCoroutine->ax;
     }
@@ -38,8 +43,22 @@ namespace zlt::mylisp {
       return itCoroutine->sp;
     }
 
+    static inline Value *&dsp() noexcept {
+      return itCoroutine->dsp;
+    }
+
+    static inline char *&osp() noexcept {
+      return itCoroutine->osp;
+    }
+
     static inline const char *&pc() noexcept {
       return itCoroutine->pc;
+    }
+    // registers begin
+
+    // value stack begin
+    static inline FunctionObj *callee() noexcept {
+      return staticast<FunctionObj *>(bp()[-1]);
     }
 
     static inline Value &peek() noexcept {
@@ -50,9 +69,28 @@ namespace zlt::mylisp {
       return *--sp();
     }
 
-    static inline FunctionObj *callee() noexcept {
-      return staticast<FunctionObj *>(bp()[-1]);
+    void push(const Value &value);
+    // value stack end
+
+    // defer stack begin
+    void pushDefer(const Value &value);
+    // defer stack end
+
+    // other stack begin
+    template<class T>
+    static inline T popOther() noexcept {
+      osp() -= sizeof(T);
+      return *(T *) osp;
     }
+
+    void pushOther(void *p);
+
+    template<class T>
+    requires (!std::is_same_v<T, void>)
+    static inline void pushOther(T *p) noexcept {
+      pushOther((void *) p);
+    }
+    // other stack end
 
     template<class T>
     static inline T consume() noexcept {

@@ -3,6 +3,7 @@
 #include<cmath>
 #include<compare>
 #include<concepts>
+#include<string>
 #include<variant>
 #include"myutils/xyz.hh"
 
@@ -124,9 +125,10 @@ namespace zlt::mylisp {
     return (I) staticast<double>(value);
   }
 
-  template<std::derived_from<Object> T>
+  template<class T, class U = std::remove_pointer_t<T>>
+  requires (std::is_base_of_v<Object, U> && !std::is_same_v<Object, U>)
   static inline auto staticast(const Value &value) noexcept {
-    return static_cast<T *>(staticast<Object *>(value));
+    return static_cast<U *>(staticast<Object *>(value));
   }
   // cast end
 
@@ -161,6 +163,6 @@ namespace zlt::mylisp {
   // comparisons end
 
   bool length(size_t &dest, const Value &src) noexcept;
-  Value getMemb(const Value &cont, const Value &key) const noexcept;
+  Value getMemb(const Value &cont, const Value &key) noexcept;
   void setMemb(Value &cont, const Value &key, const Value &value);
 }
