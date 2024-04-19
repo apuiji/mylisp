@@ -21,13 +21,6 @@ namespace zlt::mymap {
     return myset::find(node, std::forward<U>(u), KeyCompare(comp));
   }
 
-  /// @param[out] parent initialized by null, the parent node of found
-  /// @return not null when already exists
-  template<class K, class T, class U, class Comp = Compare>
-  static inline Node<K, T> *&findToInsert(Node<K, T> *&parent, Node<K, T> *&node, U &&u, const Comp &comp = {}) noexcept {
-    return myset::findToInsert(parent, node, std::forward<U>(u), KeyCompare(comp));
-  }
-
   /// @param[out] dest found or inserted node
   /// @return is it inserted
   template<class K, class T, class U, class Supply, class Comp = Compare>

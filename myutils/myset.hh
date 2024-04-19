@@ -44,18 +44,18 @@ namespace zlt::myset {
   /// @param[out] parent initialized by null, the parent node of found
   /// @return not null when already exists
   template<class T, class U, class Comp = Compare>
-  Node<T> *&findToInsert(Node<T> *&parent, Node<T> *&node, U &&u, const Comp &comp = {}) noexcept {
+  rbtree::Node *&findToInsert(rbtree::Node *&parent, rbtree::Node *&node, U &&u, const Comp &comp = {}) noexcept {
     if (!node) [[unlikely]] {
       return node;
     }
-    auto diff = comp(std::forward<U>(u), node->value);
+    auto diff = comp(std::forward<U>(u), static_cast<Node<T> *>(node)->value);
     if (std::is_lt(diff)) {
       parent = node;
-      return findToInsert(parent, static_cast<Node<T> *&>(node->lchild), std::forward<U>(u), comp);
+      return findToInsert<T>(parent, node->lchild, std::forward<U>(u), comp);
     }
     if (std::is_gt(diff)) {
       parent = node;
-      return findToInsert(parent, static_cast<Node<T> *&>(node->rchild), std::forward<U>(u), comp);
+      return findToInsert<T>(parent, node->rchild, std::forward<U>(u), comp);
     }
     return node;
   }
@@ -64,16 +64,21 @@ namespace zlt::myset {
   /// @return is it inserted
   template<class T, class U, class Supply, class Comp = Compare>
   bool insert(Node<T> *&dest, Node<T> *&root, U &&u, Supply &&supply, const Comp &comp = {}) {
-    Node<T> *parent = nullptr;
-    auto &node = findToInsert(parent, root, std::forward<U>(u), comp);
+    rbtree::Node *parent = nullptr;
+    rbtree::Node *root1 = root;
+    auto &node = findToInsert<T>(parent, root1, std::forward<U>(u), comp);
     if (node) {
-      dest = node;
+      dest = static_cast<Node<T> *>(node);
       return false;
     }
     dest = supply();
     dest->parent = parent;
-    node = dest;
-    rbtree::afterInsert(root, node);
+    if (node == root1) {
+      root = dest;
+    } else {
+      node = dest;
+    }
+    rbtree::afterInsert(root1, node);
     return true;
   }
 
