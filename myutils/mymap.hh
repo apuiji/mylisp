@@ -11,7 +11,7 @@ namespace zlt::mymap {
     const Comp &comp;
     KeyCompare(const Comp &comp) noexcept: comp(comp) {}
     template<class U, class K, class T>
-    int operator ()(U &&u, const std::pair<K, T> &kt) const noexcept {
+    auto operator ()(U &&u, const std::pair<K, T> &kt) const noexcept {
       return comp(std::forward<U>(u), kt.first);
     }
   };
@@ -32,7 +32,7 @@ namespace zlt::mymap {
   /// @return is it inserted
   template<class K, class T, class U, class Supply, class Comp = Compare>
   static inline bool insert(Node<K, T> *&dest, Node<K, T> *&root, U &&u, Supply &&supply, const Comp &comp = {}) {
-    return myset::insert(dest, root, std::forward<U>(u), KeyCompare(comp));
+    return myset::insert(dest, root, std::forward<U>(u), std::forward<Supply>(supply), KeyCompare(comp));
   }
 
   /// @return is is erased
