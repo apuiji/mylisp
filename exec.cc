@@ -170,7 +170,7 @@ namespace zlt::mylisp {
       f->closureDefs[i] = ax();
     } else if (op == opcode::SET_GLOBAL) {
       auto key = consume<const string *>();
-      mymap::Node<Value, Value> *a;
+      mymap::Node<const std::string *, Value> *a;
       if (mymap::insert(a, globalDefs, key, [] () { return new mymap::Node<Value, Value>(); })) {
         a->value.first = key;
       }

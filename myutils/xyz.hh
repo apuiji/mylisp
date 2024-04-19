@@ -13,7 +13,7 @@ namespace zlt {
 
   struct Compare {
     template<class T, class U>
-    auto operator ()(T &&t, U &&u) {
+    auto operator ()(T &&t, U &&u) const {
       return t <=> u;
     }
   };
