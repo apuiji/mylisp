@@ -101,7 +101,7 @@ namespace zlt::mylisp {
     } else if (op == opcode::JMP) {
       pc() += consume<size_t>();
     } else if (op == opcode::JMP_TO) {
-      pc() = popOther<void *>();
+      pc() = popOther<const char *>();
     } else if (op == opcode::LENGTH) {
       if (size_t n; length(n, ax())) {
         ax() = n;

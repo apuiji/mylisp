@@ -27,8 +27,9 @@ namespace zlt::mylisp {
     Var var;
     // constructors begin
     Value() = default;
-    template<class T>
-    Value(T &&t) noexcept: var(std::forward<T>(t)) {}
+    template<AnyOf<Null, double, const std::string *, NativeFunction *> T>
+    Value(T t) noexcept: var(t) {}
+    Value(char c) noexcept: var(c) {}
     Value(std::integral auto i) noexcept: var((double) i) {}
     Value(bool b) noexcept {
       if (b) {
@@ -42,9 +43,13 @@ namespace zlt::mylisp {
     Value(std::derived_from<Object> auto *o) noexcept: var(static_cast<Object *>(o)) {}
     // constructors end
     // assigners begin
-    template<class T>
-    Value &operator =(T &&t) noexcept {
-      var = std::forward<T>(t);
+    template<AnyOf<Null, double, const std::string *, NativeFunction *> T>
+    Value &operator =(T t) noexcept {
+      var = t;
+      return *this;
+    }
+    Value &operator =(char c) noexcept {
+      var = c;
       return *this;
     }
     Value &operator =(std::integral auto i) noexcept {
@@ -85,7 +90,7 @@ namespace zlt::mylisp {
   };
 
   // cast begin
-  template<AnyOf<double, char, const std::string *, Object *, NativeFunction *> T>
+  template<AnyOf<double, char, const std::string *, NativeFunction *> T>
   static inline bool dynamicast(T &dest, const Value &value) noexcept {
     if (T *t = get_if<T>(&value.var); t) {
       dest = *t;
@@ -107,15 +112,15 @@ namespace zlt::mylisp {
 
   template<std::derived_from<Object> T>
   static inline bool dynamicast(T *&dest, const Value &value) noexcept {
-    if (Object *o; dynamicast(o, value)) {
-      dest = dynamic_cast<T *>(o);
+    if (auto o = get_if<Object *>(&value.var); o) {
+      dest = dynamic_cast<T *>(*o);
       return dest != nullptr;
     } else {
       return false;
     }
   }
 
-  template<AnyOf<double, char, const std::string *, Object *, NativeFunction *> T>
+  template<AnyOf<double, char, const std::string *, NativeFunction *> T>
   static inline auto &staticast(const Value &value) noexcept {
     return *(T *) &value.var;
   }
@@ -126,9 +131,9 @@ namespace zlt::mylisp {
   }
 
   template<class T, class U = std::remove_pointer_t<T>>
-  requires (std::is_base_of_v<Object, U> && !std::is_same_v<Object, U>)
+  requires (std::is_base_of_v<Object, U>)
   static inline auto staticast(const Value &value) noexcept {
-    return static_cast<U *>(staticast<Object *>(value));
+    return static_cast<U *>(*(Object **) &value.var);
   }
   // cast end
 
