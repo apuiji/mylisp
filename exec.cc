@@ -22,7 +22,6 @@ namespace zlt::mylisp {
 
   static void call(size_t argc);
   static NativeFunction katch;
-  static void yield();
 
   void exec() {
     using namespace it_coroutine;
@@ -258,5 +257,17 @@ namespace zlt::mylisp {
     konsume<char>(p) = opcode::POP_BP;
     konsume<char>(p) = opcode::JMP_TO;
     konsume<void *>(p) = value;
+  }
+
+  void call(size_t argc) {
+    auto &callee = sp()[-argc - 1];
+    if (FunctionObj *fo; dynamicast(fo, callee)) {
+      if (fo->paramn < argc) {
+        sp() -= argc - fo->paramn;
+      } else if (fo->paramn > argc) {
+        size_t n = fo->paramn - argc;
+        if (sp() + n >= )
+      }
+    }
   }
 }

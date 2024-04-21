@@ -11,6 +11,7 @@ namespace zlt::mylisp {
 
   const std::string *addString(std::string &&s);
   void exec();
+  void yield();
 
   namespace bad {}
 }
