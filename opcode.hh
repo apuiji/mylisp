@@ -2,7 +2,7 @@
 
 namespace zlt::mylisp::opcode {
   enum {
-    ADD,
+    ADD = 1,
     BIT_AND,
     BIT_NOT,
     BIT_OR,
@@ -63,7 +63,6 @@ namespace zlt::mylisp::opcode {
     SET_MEMB,
     STRING_LITERAL,
     SUB,
-    THROW,
     USH,
     WRAP_HIGH_REF
   };

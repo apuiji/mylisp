@@ -11,7 +11,7 @@ namespace zlt::mylisp {
   struct Object;
   struct Value;
 
-  using NativeFunction = void (Value &dest, const Value *it, const Value *end);
+  using NativeFunction = void (const Value *args, size_t argc);
   using Null = std::monostate;
 
   struct Value {

@@ -5,6 +5,14 @@
 #include"rbtree.hh"
 #include"xyz.hh"
 
+namespace zlt {
+  template<class T>
+  struct MySet {
+    using Value = T;
+    rbtree::Node *root;
+  };
+}
+
 namespace zlt::myset {
   template<class T>
   struct Node: rbtree::Node {
@@ -15,30 +23,46 @@ namespace zlt::myset {
     Node(T &&value) noexcept: value(std::move(value)) {}
   };
 
-  template<class T, class Del = std::default_delete<T>>
-  int clean(Node<T> *node, const Del &del = {}) noexcept {
+  template<class T, class Del = std::default_delete<Node<T>>>
+  void clean(rbtree::Node *node, const Del &del = {}) noexcept {
     if (!node) [[unlikely]] {
-      return 0;
+      return;
     }
-    clean(static_cast<Node<T> *>(node->lchild), del);
-    clean(static_cast<Node<T> *>(node->rchild), del);
-    del(node);
-    return 0;
+    clean<T>(node->lchild, del);
+    clean<T>(node->rchild, del);
+    del(static_cast<Node<T> *>(node));
+  }
+
+  template<class T, class Del = std::default_delete<Node<T>>>
+  static inline void clean(MySet<T> &set, const Del &del = {}) noexcept {
+    clean<T>(set.root, del);
   }
 
   template<class T, class U, class Comp = Compare>
-  Node<T> *find(const Node<T> *node, U &&u, const Comp &comp = {}) noexcept {
+  rbtree::Node *find(const rbtree::Node *node, U &&u, const Comp &comp = {}) noexcept {
     if (!node) [[unlikely]] {
       return nullptr;
     }
-    auto diff = comp(std::forward<U>(u), node->value);
+    auto diff = comp(std::forward<U>(u), static_cast<const Node<T> *>(node)->value);
     if (std::is_lt(diff)) {
-      return find(static_cast<Node<T> *>(node->lchild), std::forward<U>(u), comp);
+      return find<T>(node->lchild, std::forward<U>(u), comp);
     }
     if (std::is_gt(diff)) {
-      return find(static_cast<Node<T> *>(node->rchild), std::forward<U>(u), comp);
+      return find<T>(node->rchild, std::forward<U>(u), comp);
     }
-    return const_cast<Node<T> *>(node);
+    return node;
+  }
+
+  template<class T, class U, class Comp = Compare>
+  static inline Node<T> *find(MySet<T> &set, U &&u, const Comp &comp = {}) noexcept {
+    auto node = find<T>(set.root, std::forward<U>(u), comp);
+    return static_cast<Node<T> *>(node);
+  }
+
+  template<class T, class U, class Comp = Compare>
+  static inline const Node<T> *find(const MySet<T> &set, U &&u, const Comp &comp = {}) noexcept {
+    auto node = find<T>(set.root, std::forward<U>(u), comp);
+    return static_cast<const Node<T> *>(node);
   }
 
   /// @param[out] parent initialized by null, the parent node of found
@@ -63,34 +87,29 @@ namespace zlt::myset {
   /// @param[out] dest found or inserted node
   /// @return is it inserted
   template<class T, class U, class Supply, class Comp = Compare>
-  bool insert(Node<T> *&dest, Node<T> *&root, U &&u, Supply &&supply, const Comp &comp = {}) {
+  bool insert(Node<T> *&dest, MySet<T> &set, U &&u, Supply &&supply, const Comp &comp = {}) {
     rbtree::Node *parent = nullptr;
-    rbtree::Node *root1 = root;
-    auto &node = findToInsert<T>(parent, root1, std::forward<U>(u), comp);
+    auto &node = findToInsert<T>(parent, set.root, std::forward<U>(u), comp);
     if (node) {
       dest = static_cast<Node<T> *>(node);
       return false;
     }
     dest = supply();
     dest->parent = parent;
-    if (node == root1) {
-      root = dest;
-    } else {
-      node = dest;
-    }
-    rbtree::afterInsert(root1, node);
+    node = dest;
+    rbtree::afterInsert(set.root, node);
     return true;
   }
 
   /// @return is is erased
-  template<class T, class U, class Del = std::default_delete<T>, class Comp = Compare>
-  bool erase(Node<T> *&root, U &&u, Del &&del = {}, const Comp &comp = {}) {
-    auto node = find(root, std::forward<U>(u), comp);
+  template<class T, class U, class Del = std::default_delete<Node<T>>, class Comp = Compare>
+  bool erase(MySet<T> &set, U &&u, Del &&del = {}, const Comp &comp = {}) noexcept {
+    auto node = find(set.root, std::forward<U>(u), comp);
     if (!node) [[unlikely]] {
       return false;
     }
-    rbtree::beforeErase(root, node);
-    del(node);
+    rbtree::beforeErase(set.root, node);
+    del(static_cast<Node<T> *>(node));
     return true;
   }
 }

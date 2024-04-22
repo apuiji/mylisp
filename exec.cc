@@ -188,8 +188,6 @@ namespace zlt::mylisp {
       ax = consume<const string *>();
     } else if (op == opcode::SUB) {
       staticast<double>(valuek::peek()) -= (double) ax;
-    } else if (op == opcode::THROW) {
-      // TODO:
     } else if (op == opcode::USH) {
       staticast<double>(valuek::peek()) = staticast<unsigned>(valuek::peek()) >> (int) ax;
     } else if (op == opcode::WRAP_HIGH_REF) {
@@ -209,62 +207,77 @@ namespace zlt::mylisp {
     return t;
   }
 
-  CleanAllDeferBody::CleanAllDeferBody() {
-    char *p = value;
-    konsume<char>(p) = opcode::MORE_DEFER;
-    konsume<char>(p) = opcode::JIF;
-    konsume<size_t>(p) = 1;
-    konsume<char>(p) = opcode::POP_PC;
-    konsume<char>(p) = opcode::POP_DEFER;
-    konsume<char>(p) = opcode::PUSH;
-    konsume<char>(p) = opcode::PUSH_BP;
-    konsume<char>(p) = opcode::PUSH_SP_BACK;
-    konsume<size_t>(p) = 1;
-    konsume<char>(p) = opcode::PUSH_CATCH;
-    konsume<char>(p) = opcode::PUSH_PC_JMP;
-    konsume<size_t>(p) = 3 + sizeof(size_t);
-    konsume<char>(p) = opcode::CALL;
-    konsume<size_t>(p) = 0;
-    konsume<char>(p) = opcode::NULL_LITERAL;
-    konsume<char>(p) = opcode::THROW;
-    konsume<char>(p) = opcode::POP_SP;
-    konsume<char>(p) = opcode::POP_BP;
-    konsume<char>(p) = opcode::JMP_TO;
-    konsume<void *>(p) = value;
-  }
-
-  CleanFnDeferBody::CleanFnDeferBody() {
+  CleanFnGuardBody::CleanFnGuardBody() {
     char *p = value;
     konsume<char>(p) = opcode::MORE_FN_DEFER;
     konsume<char>(p) = opcode::JIF;
     konsume<size_t>(p) = 1;
     konsume<char>(p) = opcode::POP_PC;
-    konsume<char>(p) = opcode::POP_DEFER;
+    konsume<char>(p) = opcode::POP_GUARD;
     konsume<char>(p) = opcode::PUSH;
     konsume<char>(p) = opcode::PUSH_BP;
     konsume<char>(p) = opcode::PUSH_SP_BACK;
     konsume<size_t>(p) = 1;
-    konsume<char>(p) = opcode::PUSH_CATCH;
+    konsume<char>(p) = opcode::CATCH_NAT_FN;
+    konsume<char>(p) = opcode::PUSH_GUARD;
     konsume<char>(p) = opcode::PUSH_PC_JMP;
-    konsume<size_t>(p) = 3 + sizeof(size_t);
+    konsume<size_t>(p) = 4 + sizeof(size_t);
     konsume<char>(p) = opcode::CALL;
     konsume<size_t>(p) = 0;
     konsume<char>(p) = opcode::NULL_LITERAL;
-    konsume<char>(p) = opcode::THROW;
+    konsume<char>(p) = opcode::PUSH;
+    konsume<char>(p) = opcode::CLEAN_GUARDS;
     konsume<char>(p) = opcode::POP_SP;
     konsume<char>(p) = opcode::POP_BP;
     konsume<char>(p) = opcode::JMP_TO;
     konsume<void *>(p) = value;
   }
 
+  CleanGuardBody::CleanGuardBody() {
+    char *p = value;
+    konsume<char>(p) = opcode::POP_GUARD;
+    konsume<char>(p) = opcode::PUSH;
+    konsume<char>(p) = opcode::PUSH_BP;
+    konsume<char>(p) = opcode::PUSH_SP_BACK;
+    konsume<size_t>(p) = 1;
+    konsume<char>(p) = opcode::CATCH_NAT_FN;
+    konsume<char>(p) = opcode::PUSH_GUARD;
+    konsume<char>(p) = opcode::PUSH_PC_JMP;
+    konsume<size_t>(p) = 4 + sizeof(size_t);
+    konsume<char>(p) = opcode::CALL;
+    konsume<size_t>(p) = 0;
+    konsume<char>(p) = opcode::NULL_LITERAL;
+    konsume<char>(p) = opcode::PUSH;
+    konsume<char>(p) = opcode::CLEAN_GUARDS;
+    konsume<char>(p) = opcode::POP_SP;
+    konsume<char>(p) = opcode::POP_BP;
+    konsume<char>(p) = opcode::JMP_TO;
+    konsume<void *>(p) = value;
+  }
+
+  static void call(FunctionObj &fo, Value *args, size_t argc);
+  static void call(NativeFunction *nf, Value *args, size_t argc);
+
   void call(size_t argc) {
-    auto &callee = sp()[-argc - 1];
-    if (FunctionObj *fo; dynamicast(fo, callee)) {
+    using namespace vm;
+    auto args = sp - argc;
+    if (FunctionObj *fo; dynamicast(fo, args[-1])) {
+      call(*fo, args, argc);
+      return;
+    }
+    if (NativeFunction *nf; dynamicast(nf, args[-1])) {
+      nf(args, argc);
+      exec();
+      return;
+    }
       if (fo->paramn < argc) {
-        sp() -= argc - fo->paramn;
+        sp -= argc - fo->paramn;
       } else if (fo->paramn > argc) {
         size_t n = fo->paramn - argc;
-        if (sp() + n >= )
+        if (sp + n >= valuek::end) {
+          // TODO: out of stack bad
+        }
+
       }
     }
   }
