@@ -10,196 +10,194 @@
 using namespace std;
 
 namespace zlt::mylisp {
-  struct CleanAllDeferBody {
+  struct CleanFnGuardBody {
     char value[256];
-    CleanAllDeferBody();
+    CleanFnGuardBody();
   };
 
-  struct CleanFnDeferBody {
+  struct CleanGuardBody {
     char value[256];
-    CleanFnDeferBody();
+    CleanGuardBody();
   };
 
   static void call(size_t argc);
   static NativeFunction katch;
 
   void exec() {
-    using namespace it_coroutine;
-    int op = *pc()++;
+    using namespace vm;
+    int op = *pc;
+    ++pc;
     if (op == opcode::ADD) {
-      staticast<double>(peek()) += (double) ax();
+      staticast<double>(valuek::peek()) += (double) ax;
     } else if (op == opcode::BIT_AND) {
-      staticast<double>(peek()) = staticast<int>(peek()) & (int) ax();
+      staticast<double>(valuek::peek()) = staticast<int>(valuek::peek()) & (int) ax;
     } else if (op == opcode::BIT_NOT) {
-      ax() = ~(int) ax();
+      ax() = ~(int) ax;
     } else if (op == opcode::BIT_OR) {
-      staticast<double>(peek()) = staticast<int>(peek()) | (int) ax();
+      staticast<double>(valuek::peek()) = staticast<int>(valuek::peek()) | (int) ax;
     } else if (op == opcode::BIT_XOR) {
-      staticast<double>(peek()) = staticast<int>(peek()) ^ (int) ax();
+      staticast<double>(valuek::peek()) = staticast<int>(valuek::peek()) ^ (int) ax;
     } else if (op == opcode::CALL) {
       size_t argc = consume<size_t>();
       call(argc);
       return;
+    } else if (op == opcode::CATCH_NAT_FN) {
+      ax = katch;
     } else if (op == opcode::CHAR_LITERAL) {
-      ax() = consume<char>();
-    } else if (op == opcode::CLEAN_ALL_DEFERS) {
-      static CleanAllDeferBody body;
-      pc() = body.value;
-    } else if (op == opcode::CLEAN_FN_DEFERS) {
-      static CleanFnDeferBody body;
-      pc() = body.value;
+      ax = consume<char>();
+    } else if (op == opcode::CLEAN_FN_GUARDS) {
+      static CleanFnGuardBody body;
+      pc = body.value;
+    } else if (op == opcode::CLEAN_GUARDS) {
+      static CleanGuardBody body;
+      pc = body.value;
     } else if (op == opcode::COMPARE) {
-      ax() = pop() <=> ax();
+      ax = pop <=> ax;
     } else if (op == opcode::DIV) {
-      staticast<double>(peek()) /= (double) ax();
-    } else if (op == opcode::END) {
-      itCoroutine->alive = false;
-      yield();
-      return;
+      staticast<double>(valuek::peek()) /= (double) ax;
     } else if (op == opcode::EQ) {
-      ax() = pop() == ax();
+      ax = pop == ax;
     } else if (op == opcode::FORWARD) {
       size_t argc = consume<size_t>();
-      copy(sp() - argc - 1, sp(), bp() - 1);
-      sp() = bp() + argc;
+      copy(sp - argc - 1, sp, bp - 1);
+      sp = bp + argc;
     } else if (op == opcode::GET_CALLEE) {
-      ax() = callee();
+      ax = callee();
     } else if (op == opcode::GET_CLOSURE) {
       size_t i = consume<size_t>();
-      ax() = callee()->closureDefs[i];
+      ax = callee()->closureDefs[i];
     } else if (op == opcode::GET_GLOBAL) {
       auto name = consume<const string *>();
       auto a = mymap::find(globalDefs, name);
       if (a) {
-        ax() = a->value.second;
+        ax = a->value.second;
       } else {
-        ax() = Null();
+        ax = Null();
       }
     } else if (op == opcode::GET_HIGH_REF) {
-      ax() = staticast<ValueObj *>(ax())->value;
+      ax = staticast<ValueObj *>(ax)->value;
     } else if (op == opcode::GET_LOCAL) {
       size_t i = consume<size_t>();
-      ax() = bp()[i];
+      ax = bp[i];
     } else if (op == opcode::GET_MEMB) {
-      ax() = getMemb(pop(), ax());
-    } else if (op == opcode::GLOBAL_FORWARD) {
-      size_t argc = consume<size_t>();
-      copy(sp() - argc - 1, sp(), itCoroutine->valuek);
-      sp() = itCoroutine->valuek + argc + 1;
+      ax = getMemb(valuek::pop(), ax);
     } else if (op == opcode::GT) {
-      ax() = pop() > ax();
+      ax = pop() > ax;
     } else if (op == opcode::GTEQ) {
-      ax() = pop() >= ax();
-    } else if (op == opcode::INC_FN_DEFER) {
-      ++callee()->defern;
+      ax = pop() >= ax;
+    } else if (op == opcode::INC_FN_GUARD) {
+      ++callee()->guardn;
     } else if (op == opcode::JIF) {
       size_t n = consume<size_t>();
-      if (ax()) {
-        pc() += n;
+      if (ax) {
+        pc += n;
       }
     } else if (op == opcode::JMP) {
-      pc() += consume<size_t>();
+      pc += consume<size_t>();
     } else if (op == opcode::JMP_TO) {
-      pc() = popOther<const char *>();
+      pc = otherk::pop<const char *>();
     } else if (op == opcode::LENGTH) {
-      if (size_t n; length(n, ax())) {
-        ax() = n;
+      if (size_t n; length(n, ax)) {
+        ax = n;
       } else {
-        ax() = Null();
+        ax = Null();
       }
     } else if (op == opcode::LOGIC_NOT) {
-      ax() = !ax();
+      ax = !ax;
     } else if (op == opcode::LOGIC_XOR) {
-      peek() = (bool) peek() ^ (bool) ax();
+      peek() = (bool) valuek::peek() ^ (bool) ax;
     } else if (op == opcode::LSH) {
-      staticast<double>(peek()) = staticast<int>(peek()) << (int) ax();
+      staticast<double>(valuek::peek()) = staticast<int>(valuek::peek()) << (int) ax;
     } else if (op == opcode::LT) {
-      ax() = pop() < ax();
+      ax = pop() < ax;
     } else if (op == opcode::LTEQ) {
-      ax() = pop() <= ax();
+      ax = pop() <= ax;
     } else if (op == opcode::MAKE_FN) {
       size_t paramn = consume<size_t>();
       size_t closureDefn = consume<size_t>();
       size_t bodyn = consume<size_t>();
-      auto f = new(closureDefn) FunctionObj(paramn, pc());
+      auto f = new(closureDefn) FunctionObj(paramn, pc);
       gc::neobj(f);
-      ax() = f;
-      pc() += bodyn;
+      ax = f;
+      pc += bodyn;
     } else if (op == opcode::MOD) {
-      staticast<double>(peek()) = fmod(staticast<double>(peek()), (double) ax());
+      staticast<double>(valuek::peek()) = fmod(staticast<double>(valuek::peek()), (double) ax);
+    } else if (op == opcode::MORE_FN_GUARD) {
+      ax = callee()->guardn > 0;
     } else if (op == opcode::MUL) {
-      staticast<double>(peek()) *= (double) ax();
+      staticast<double>(valuek::peek()) *= (double) ax;
     } else if (op == opcode::NEGATIVE) {
-      ax() = -(double) ax();
+      ax = -(double) ax;
     } else if (op == opcode::NULL_LITERAL) {
-      ax() = Null();
+      ax = Null();
     } else if (op == opcode::NUM_LITERAL) {
-      ax() = consume<double>();
+      ax = consume<double>();
     } else if (op == opcode::POP) {
-      ax() = pop();
+      ax = valuek::pop();
     } else if (op == opcode::POP_BP) {
-      bp() = popOther<Value *>();
+      bp = otherk::pop<Value *>();
+    } else if (op == opcode::POP_DEFER) {
+      ax = deferk::pop();
+    } else if (op == opcode::POP_GUARD) {
+      ax = guardk::pop();
     } else if (op == opcode::POP_PC) {
-      pc() = popOther<char *>();
+      pc = otherk::pop<char *>();
     } else if (op == opcode::POP_SP) {
-      sp() = popOther<Value *>();
+      sp = otherk::pop<Value *>();
     } else if (op == opcode::POSITIVE) {
-      ax() = (double) ax();
+      ax = (double) ax;
     } else if (op == opcode::POW) {
-      staticast<double>(peek()) = pow(staticast<double>(peek()), (double) ax());
+      staticast<double>(peek()) = pow(staticast<double>(peek()), (double) ax);
     } else if (op == opcode::PUSH) {
-      push(ax());
+      valuek::push(ax);
     } else if (op == opcode::PUSH_BP) {
-      pushOther(bp());
-    } else if (op == opcode::PUSH_CATCH) {
-      pushDefer(katch);
+      otherk::push(bp);
     } else if (op == opcode::PUSH_DEFER) {
-      pushDefer(ax());
+      deferk::push(ax);
+    } else if (op == opcode::PUSH_GUARD) {
+      guardk::push(ax);
     } else if (op == opcode::PUSH_PC_JMP) {
       size_t n = consume<size_t>();
-      pushOther(pc() + n);
+      otherk::push(pc + n);
     } else if (op == opcode::PUSH_SP_BACK) {
       size_t n = consume<size_t>();
-      pushOther(sp() - n);
+      otherk::push(sp - n);
     } else if (op == opcode::RSH) {
-      staticast<double>(peek()) = staticast<int>(peek()) >> (int) ax();
+      staticast<double>(peek()) = staticast<int>(peek()) >> (int) ax;
     } else if (op == opcode::SET_FN_CLOSURE) {
       auto f = staticast<FunctionObj *>(peek());
       size_t i = consume<size_t>();
-      f->closureDefs[i] = ax();
+      f->closureDefs[i] = ax;
     } else if (op == opcode::SET_GLOBAL) {
       auto key = consume<const string *>();
       mymap::Node<const std::string *, Value> *a;
       if (mymap::insert(a, globalDefs, key, [] () { return new mymap::Node<const std::string *, Value>(); })) {
         a->value.first = key;
       }
-      a->value.second = ax();
+      a->value.second = ax;
     } else if (op == opcode::SET_HIGH_REF) {
-      staticast<ValueObj *>(pop())->value = ax();
+      staticast<ValueObj *>(valuek::pop())->value = ax;
     } else if (op == opcode::SET_LOCAL) {
       size_t i = consume<size_t>();
-      bp()[i] = ax();
+      bp[i] = ax;
     } else if (op == opcode::SET_MEMB) {
-      auto key = pop();
-      auto cont = pop();
-      setMemb(cont, key, ax());
+      auto key = valuek::pop();
+      auto cont = valuek::pop();
+      setMemb(cont, key, ax);
     } else if (op == opcode::STRING_LITERAL) {
-      ax() = consume<const string *>();
+      ax = consume<const string *>();
     } else if (op == opcode::SUB) {
-      staticast<double>(peek()) -= (double) ax();
+      staticast<double>(valuek::peek()) -= (double) ax;
     } else if (op == opcode::THROW) {
       // TODO:
     } else if (op == opcode::USH) {
-      staticast<double>(peek()) = staticast<unsigned>(peek()) >> (int) ax();
+      staticast<double>(valuek::peek()) = staticast<unsigned>(valuek::peek()) >> (int) ax;
     } else if (op == opcode::WRAP_HIGH_REF) {
       size_t i = consume<size_t>();
       auto vo = new ValueObj;
       gc::neobj(vo);
-      vo->value = bp()[i];
-      bp()[i] = vo;
-    } else if (op == opcode::YIELD) {
-      yield();
-      return;
+      vo->value = bp[i];
+      bp[i] = vo;
     }
     exec();
   }
