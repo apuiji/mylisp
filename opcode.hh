@@ -27,7 +27,6 @@ namespace zlt::mylisp::opcode {
     INC_FN_GUARD,
     JIF,
     JMP,
-    JMP_TO,
     LENGTH,
     LOGIC_NOT,
     LOGIC_XOR,

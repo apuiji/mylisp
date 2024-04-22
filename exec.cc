@@ -11,12 +11,12 @@ using namespace std;
 
 namespace zlt::mylisp {
   struct CleanFnGuardBody {
-    char value[256];
+    char value[128];
     CleanFnGuardBody();
   };
 
   struct CleanGuardBody {
-    char value[256];
+    char value[128];
     CleanGuardBody();
   };
 
@@ -143,7 +143,7 @@ namespace zlt::mylisp {
     } else if (op == opcode::POP_PC) {
       pc = otherk::pop<char *>();
     } else if (op == opcode::POP_SP) {
-      sp = otherk::pop<Value *>();
+      sp = bp;
     } else if (op == opcode::POSITIVE) {
       ax = (double) ax;
     } else if (op == opcode::POW) {
@@ -161,7 +161,7 @@ namespace zlt::mylisp {
       otherk::push(pc + n);
     } else if (op == opcode::PUSH_SP_BACK) {
       size_t n = consume<size_t>();
-      otherk::push(sp - n);
+      bp = sp - n;
     } else if (op == opcode::RSH) {
       staticast<double>(peek()) = staticast<int>(peek()) >> (int) ax;
     } else if (op == opcode::SET_FN_CLOSURE) {
@@ -229,8 +229,7 @@ namespace zlt::mylisp {
     konsume<char>(p) = opcode::CLEAN_GUARDS;
     konsume<char>(p) = opcode::POP_SP;
     konsume<char>(p) = opcode::POP_BP;
-    konsume<char>(p) = opcode::JMP_TO;
-    konsume<void *>(p) = value;
+    konsume<char>(p) = opcode::CLEAN_FN_GUARDS;
   }
 
   CleanGuardBody::CleanGuardBody() {
@@ -251,12 +250,10 @@ namespace zlt::mylisp {
     konsume<char>(p) = opcode::CLEAN_GUARDS;
     konsume<char>(p) = opcode::POP_SP;
     konsume<char>(p) = opcode::POP_BP;
-    konsume<char>(p) = opcode::JMP_TO;
-    konsume<void *>(p) = value;
+    konsume<char>(p) = opcode::CLEAN_GUARDS;
   }
 
   static void call(FunctionObj &fo, Value *args, size_t argc);
-  static void call(NativeFunction *nf, Value *args, size_t argc);
 
   void call(size_t argc) {
     using namespace vm;
@@ -267,18 +264,29 @@ namespace zlt::mylisp {
     }
     if (NativeFunction *nf; dynamicast(nf, args[-1])) {
       nf(args, argc);
+      pc = otherk::pop<char *>();
       exec();
       return;
     }
-      if (fo->paramn < argc) {
-        sp -= argc - fo->paramn;
-      } else if (fo->paramn > argc) {
-        size_t n = fo->paramn - argc;
-        if (sp + n >= valuek::end) {
-          // TODO: out of stack bad
-        }
+    ax = Null();
+    pc = otherk::pop<char *>();
+    exec();
+  }
 
+  void call(FunctionObj &fo, Value *args, size_t argc) {
+    if (fo.paramn < argc) {
+      sp -= argc - fo.paramn;
+    } else if (fo.paramn > argc) {
+      size_t n = fo.paramn - argc;
+      auto end = sp + n;
+      if (end > valuek::end) {
+        // TODO: out of stack bad
+      }
+      for (; sp != end; ++sp) {
+        *sp = Null();
       }
     }
+    pc = fo.body;
+    exec();
   }
 }
