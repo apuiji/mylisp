@@ -34,32 +34,6 @@ namespace zlt {
     }
   };
 
-  template<class T>
-  struct EscRAII {
-    char data[sizeof(T)];
-    template<class ...Args>
-    EscRAII(Args &&...args) {
-      std::construct_at((T *) data, std::forward<Args>(args)...);
-    }
-    T *get() const noexcept {
-      return (T *) data;
-    }
-    T &operator *() const noexcept {
-      return *get();
-    }
-    T *operator ->() const noexcept {
-      return get();
-    }
-    void operator delete(void *p) {
-      std::destroy_at(((EscRAII<T> *) p)->get());
-    }
-  };
-
-  template<class T>
-  static inline auto makeEscRAII(T &&t) {
-    return EscRAII<T>(std::move(t));
-  }
-
   template<class T, class ...U>
   static constexpr bool isAnyOf = (std::is_same_v<T, U> || ...);
 

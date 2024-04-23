@@ -6,7 +6,7 @@ namespace zlt::mylisp {
 }
 
 namespace zlt::mylisp::gc {
-  void grayObj(Object *obj) noexcept;
-  void grayValue(Value &value) noexcept;
-  void neobj(Object *obj) noexcept;
+  void gc(const Value *args, size_t argc) noexcept;
+  void mark(Object *obj) noexcept;
+  void mark(Value &value) noexcept;
 }

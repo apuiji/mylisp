@@ -61,8 +61,8 @@ namespace zlt::rbtree {
     }
   }
 
-  int afterInsert(Node *&root, Node *node) noexcept;
-  int beforeErase(Node *&root, Node *node) noexcept;
+  void afterInsert(Node *&root, Node *node) noexcept;
+  void beforeErase(Node *&root, Node *node) noexcept;
 
   template<std::derived_from<Node> T, bool Right = true>
   struct Iterator {

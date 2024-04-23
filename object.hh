@@ -1,17 +1,11 @@
 #pragma once
 
+#include<list>
 #include"value.hh"
 
 namespace zlt::mylisp {
   struct Object {
-    enum {
-      BLACK_COLOR,
-      GRAY_COLOR,
-      WHITE_COLOR
-    };
-    int color;
-    Object *prev;
-    Object *next;
+    bool mark;
     virtual ~Object() = default;
     virtual bool length(size_t &dest) const noexcept {
       return false;
@@ -22,15 +16,21 @@ namespace zlt::mylisp {
     virtual void setMemb(const Value &key, const Value &value) {
       // do nothing
     }
+    virtual void gcMarkSubjs() noexcept {
+      // do nothing
+    }
   };
+
+  extern std::list<Object *> objPool;
 
   struct FunctionObj final: Object {
     size_t paramn;
-    size_t guardn = 0;
+    size_t guardn;
     const char *body;
     Value closureDefs[0];
-    FunctionObj(size_t paramn, const char *body) noexcept: paramn(paramn), body(body) {}
+    FunctionObj(size_t paramn, const char *body) noexcept: paramn(paramn), guardn(guardn), body(body) {}
     void *operator new(size_t size, size_t closureDefn);
+    void gcMarkSubjs() noexcept override;
   };
 
   struct StringObj final: Object {
@@ -47,9 +47,11 @@ namespace zlt::mylisp {
     StringViewObj(const Value &string, std::string_view value) noexcept: string(string), value(value) {}
     bool length(size_t &dest) const noexcept override;
     Value getMemb() const noexcept override;
+    void gcMarkSubjs() noexcept override;
   };
 
   struct ValueObj final: Object {
     Value value;
+    void gcMarkSubjs() noexcept override;
   };
 }

@@ -312,5 +312,8 @@ namespace zlt::mylisp {
     ax = valuek::pop();
     // discard 1 pc
     otherk::pop<char *>();
+    sp = bp;
+    bp = otherk::pop<Value *>();
+    pc = otherk::pop<char *>();
   }
 }

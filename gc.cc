@@ -1,27 +1,12 @@
 #include<algorithm>
 #include"object.hh"
+#include"vm.hh"
 
 using namespace std;
 
 namespace zlt::mylisp::gc {
-  static int step;
-  static Object *blacks;
-  static Object *grays;
-  static Object *whites;
-
-  static void gc0();
-  static void gc1();
-  static void gc2();
-
-  void gc() {
-    if (step == 0) {
-      gc0();
-    } else if (step == 1) {
-      gc1();
-    } else {
-      gc2();
-    }
-    yield();
+  void gc(const Value *args, size_t argc) noexcept {
+    for (auto it = vm::defer)
   }
 
   void gc0() {
