@@ -92,7 +92,7 @@ namespace zlt::mylisp {
   // cast begin
   template<AnyOf<double, char, const std::string *, NativeFunction *> T>
   static inline bool dynamicast(T &dest, const Value &value) noexcept {
-    if (T *t = get_if<T>(&value.var); t) {
+    if (auto t = get_if<T>(&value.var); t) {
       dest = *t;
       return true;
     } else {

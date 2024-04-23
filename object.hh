@@ -26,7 +26,7 @@ namespace zlt::mylisp {
 
   struct FunctionObj final: Object {
     size_t paramn;
-    size_t defern = 0;
+    size_t guardn = 0;
     const char *body;
     Value closureDefs[0];
     FunctionObj(size_t paramn, const char *body) noexcept: paramn(paramn), body(body) {}

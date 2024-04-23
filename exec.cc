@@ -1,11 +1,10 @@
 #include<algorithm>
 #include<cmath>
-#include"coroutine.hh"
 #include"gc.hh"
 #include"mylisp.hh"
 #include"object.hh"
 #include"opcode.hh"
-#include"value.hh"
+#include"vm.hh"
 
 using namespace std;
 
@@ -32,7 +31,7 @@ namespace zlt::mylisp {
     } else if (op == opcode::BIT_AND) {
       staticast<double>(valuek::peek()) = staticast<int>(valuek::peek()) & (int) ax;
     } else if (op == opcode::BIT_NOT) {
-      ax() = ~(int) ax;
+      ax = ~(int) ax;
     } else if (op == opcode::BIT_OR) {
       staticast<double>(valuek::peek()) = staticast<int>(valuek::peek()) | (int) ax;
     } else if (op == opcode::BIT_XOR) {
@@ -52,11 +51,11 @@ namespace zlt::mylisp {
       static CleanGuardBody body;
       pc = body.value;
     } else if (op == opcode::COMPARE) {
-      ax = pop <=> ax;
+      ax = valuek::pop() <=> ax;
     } else if (op == opcode::DIV) {
       staticast<double>(valuek::peek()) /= (double) ax;
     } else if (op == opcode::EQ) {
-      ax = pop == ax;
+      ax = valuek::pop() == ax;
     } else if (op == opcode::FORWARD) {
       size_t argc = consume<size_t>();
       copy(sp - argc - 1, sp, bp - 1);
@@ -82,9 +81,9 @@ namespace zlt::mylisp {
     } else if (op == opcode::GET_MEMB) {
       ax = getMemb(valuek::pop(), ax);
     } else if (op == opcode::GT) {
-      ax = pop() > ax;
+      ax = valuek::pop() > ax;
     } else if (op == opcode::GTEQ) {
-      ax = pop() >= ax;
+      ax = valuek::pop() >= ax;
     } else if (op == opcode::INC_FN_GUARD) {
       ++callee()->guardn;
     } else if (op == opcode::JIF) {
@@ -94,8 +93,6 @@ namespace zlt::mylisp {
       }
     } else if (op == opcode::JMP) {
       pc += consume<size_t>();
-    } else if (op == opcode::JMP_TO) {
-      pc = otherk::pop<const char *>();
     } else if (op == opcode::LENGTH) {
       if (size_t n; length(n, ax)) {
         ax = n;
@@ -105,13 +102,13 @@ namespace zlt::mylisp {
     } else if (op == opcode::LOGIC_NOT) {
       ax = !ax;
     } else if (op == opcode::LOGIC_XOR) {
-      peek() = (bool) valuek::peek() ^ (bool) ax;
+      valuek::peek() = (bool) valuek::peek() ^ (bool) ax;
     } else if (op == opcode::LSH) {
       staticast<double>(valuek::peek()) = staticast<int>(valuek::peek()) << (int) ax;
     } else if (op == opcode::LT) {
-      ax = pop() < ax;
+      ax = valuek::pop() < ax;
     } else if (op == opcode::LTEQ) {
-      ax = pop() <= ax;
+      ax = valuek::pop() <= ax;
     } else if (op == opcode::MAKE_FN) {
       size_t paramn = consume<size_t>();
       size_t closureDefn = consume<size_t>();
@@ -147,7 +144,7 @@ namespace zlt::mylisp {
     } else if (op == opcode::POSITIVE) {
       ax = (double) ax;
     } else if (op == opcode::POW) {
-      staticast<double>(peek()) = pow(staticast<double>(peek()), (double) ax);
+      staticast<double>(valuek::peek()) = pow(staticast<double>(valuek::peek()), (double) ax);
     } else if (op == opcode::PUSH) {
       valuek::push(ax);
     } else if (op == opcode::PUSH_BP) {
@@ -163,9 +160,9 @@ namespace zlt::mylisp {
       size_t n = consume<size_t>();
       bp = sp - n;
     } else if (op == opcode::RSH) {
-      staticast<double>(peek()) = staticast<int>(peek()) >> (int) ax;
+      staticast<double>(valuek::peek()) = staticast<int>(valuek::peek()) >> (int) ax;
     } else if (op == opcode::SET_FN_CLOSURE) {
-      auto f = staticast<FunctionObj *>(peek());
+      auto f = staticast<FunctionObj *>(valuek::peek());
       size_t i = consume<size_t>();
       f->closureDefs[i] = ax;
     } else if (op == opcode::SET_GLOBAL) {
@@ -208,11 +205,21 @@ namespace zlt::mylisp {
   }
 
   CleanFnGuardBody::CleanFnGuardBody() {
+    // (
+    //   if more_fn_guard
+    //     (try (pop guardk)) ; A
+    //     (forward callee) ; B
+    //   if 1
+    //     (return) ; C
+    // )
     char *p = value;
-    konsume<char>(p) = opcode::MORE_FN_DEFER;
+    konsume<char>(p) = opcode::MORE_FN_GUARD;
     konsume<char>(p) = opcode::JIF;
     konsume<size_t>(p) = 1;
+    // C begin
     konsume<char>(p) = opcode::POP_PC;
+    // C end
+    // A begin
     konsume<char>(p) = opcode::POP_GUARD;
     konsume<char>(p) = opcode::PUSH;
     konsume<char>(p) = opcode::PUSH_BP;
@@ -229,11 +236,17 @@ namespace zlt::mylisp {
     konsume<char>(p) = opcode::CLEAN_GUARDS;
     konsume<char>(p) = opcode::POP_SP;
     konsume<char>(p) = opcode::POP_BP;
+    // A end
+    // C begin
     konsume<char>(p) = opcode::CLEAN_FN_GUARDS;
+    // C end
   }
 
   CleanGuardBody::CleanGuardBody() {
+    // (try (pop guardk)) ; A
+    // (forward callee) ; B
     char *p = value;
+    // A begin
     konsume<char>(p) = opcode::POP_GUARD;
     konsume<char>(p) = opcode::PUSH;
     konsume<char>(p) = opcode::PUSH_BP;
@@ -250,7 +263,10 @@ namespace zlt::mylisp {
     konsume<char>(p) = opcode::CLEAN_GUARDS;
     konsume<char>(p) = opcode::POP_SP;
     konsume<char>(p) = opcode::POP_BP;
+    // A end
+    // B begin
     konsume<char>(p) = opcode::CLEAN_GUARDS;
+    // B end
   }
 
   static void call(FunctionObj &fo, Value *args, size_t argc);
@@ -274,6 +290,7 @@ namespace zlt::mylisp {
   }
 
   void call(FunctionObj &fo, Value *args, size_t argc) {
+    using namespace vm;
     if (fo.paramn < argc) {
       sp -= argc - fo.paramn;
     } else if (fo.paramn > argc) {
@@ -288,5 +305,12 @@ namespace zlt::mylisp {
     }
     pc = fo.body;
     exec();
+  }
+
+  void katch(const Value *args, size_t argc) {
+    using namespace vm;
+    ax = valuek::pop();
+    // discard 1 pc
+    otherk::pop<char *>();
   }
 }

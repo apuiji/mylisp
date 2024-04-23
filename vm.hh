@@ -88,8 +88,8 @@ namespace zlt::mylisp::vm {
 
   template<class T>
   static inline T consume() noexcept {
-    T t = *(T *) itCoroutine->pc;
-    itCoroutine->pc += sizeof(T);
+    T t = *(T *) pc;
+    pc += sizeof(T);
     return t;
   }
 }

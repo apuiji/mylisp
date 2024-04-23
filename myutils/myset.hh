@@ -50,7 +50,7 @@ namespace zlt::myset {
     if (std::is_gt(diff)) {
       return find<T>(node->rchild, std::forward<U>(u), comp);
     }
-    return node;
+    return const_cast<rbtree::Node *>(node);
   }
 
   template<class T, class U, class Comp = Compare>
