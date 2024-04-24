@@ -113,9 +113,7 @@ namespace zlt::mylisp {
       size_t paramn = consume<size_t>();
       size_t closureDefn = consume<size_t>();
       size_t bodyn = consume<size_t>();
-      auto f = new(closureDefn) FunctionObj(paramn, pc);
-      gc::neobj(f);
-      ax = f;
+      ax = new(closureDefn) FunctionObj(paramn, pc);
       pc += bodyn;
     } else if (op == opcode::MOD) {
       staticast<double>(valuek::peek()) = fmod(staticast<double>(valuek::peek()), (double) ax);
@@ -190,7 +188,6 @@ namespace zlt::mylisp {
     } else if (op == opcode::WRAP_HIGH_REF) {
       size_t i = consume<size_t>();
       auto vo = new ValueObj;
-      gc::neobj(vo);
       vo->value = bp[i];
       bp[i] = vo;
     }

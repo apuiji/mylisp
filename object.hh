@@ -28,7 +28,7 @@ namespace zlt::mylisp {
     size_t guardn;
     const char *body;
     Value closureDefs[0];
-    FunctionObj(size_t paramn, const char *body) noexcept: paramn(paramn), guardn(guardn), body(body) {}
+    FunctionObj(size_t paramn, const char *body) noexcept: paramn(paramn), guardn(0), body(body) {}
     void *operator new(size_t size, size_t closureDefn);
     void gcMarkSubjs() noexcept override;
   };

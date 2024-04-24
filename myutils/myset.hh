@@ -127,8 +127,8 @@ namespace zlt::myset {
     T &operator *() noexcept {
       return static_cast<Node<T> *>(node)->value;
     }
-    Node<T> *operator ->() {
-      return static_cast<Node<T> *>(node);
+    T *operator ->() {
+      return &static_cast<Node<T> *>(node)->value;
     }
     Iterator<T, Right> &operator ++() noexcept {
       node = rbtree::next<Right>(node);
@@ -158,27 +158,6 @@ namespace zlt::myset {
   template<class T, bool Right = true>
   static inline Iterator<T, Right> end(MySet<T> &set) noexcept {
     return nullptr;
-  }
-
-  template<class T, bool Right = true>
-  static inline auto cbegin(const MySet<T> &set) noexcept {
-    auto a = rbtree::mostSide<!Right>(set.root);
-    auto b = Iterator<T, Right>(a);
-    return std::make_const_iterator(b);
-  }
-
-  static inline auto cend(const MySet<T> &set) noexcept {
-    Iterator<T, Right> a;
-    return std::make_const_iterator(a);
-  }
-
-  template<class T, bool Right = true>
-  static inline auto begin(const MySet<T> &set) noexcept {
-    return cbegin(set);
-  }
-
-  static inline auto end(const MySet<T> &set) noexcept {
-    return cend(set);
   }
   // iterators end
 }

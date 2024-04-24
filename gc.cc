@@ -1,4 +1,6 @@
 #include<algorithm>
+#include"gc.hh"
+#include"mylisp.hh"
 #include"object.hh"
 #include"vm.hh"
 
@@ -6,8 +8,12 @@ using namespace std;
 
 namespace zlt::mylisp::gc {
   void gc(const Value *args, size_t argc) noexcept {
-    for (auto &[name, value] : myiter::range(mymap::begin(globalDefs), mymap::end(globalDefs))) {
-      mark(value);
+    {
+      auto it = mymap::begin(globalDefs);
+      auto end = mymap::end(globalDefs);
+      for (; it != end; ++it) {
+        mark(it->second);
+      }
     }
     for (auto a = vm::deferk::begin; a != vm::dsp; ++a) {
       mark(*a);

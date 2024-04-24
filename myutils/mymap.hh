@@ -56,33 +56,13 @@ namespace zlt::mymap {
   using Iterator = myset::Iterator<std::pair<K, T>>;
 
   template<class K, class T, bool Right = true>
-  static inline Iterator<K, T> begin(MyMap &map) noexcept {
+  static inline Iterator<K, T> begin(MyMap<K, T> &map) noexcept {
     return myset::begin(map);
   }
 
   template<class K, class T, bool Right = true>
-  static inline Iterator<K, T> end(MyMap &map) noexcept {
+  static inline Iterator<K, T> end(MyMap<K, T> &map) noexcept {
     return myset::end(map);
-  }
-
-  template<class K, class T, bool Right = true>
-  static inline Iterator<K, T> cbegin(const MyMap &map) noexcept {
-    return myset::cbegin(map);
-  }
-
-  template<class K, class T, bool Right = true>
-  static inline Iterator<K, T> cbegin(const MyMap &map) noexcept {
-    return myset::cend(map);
-  }
-
-  template<class K, class T, bool Right = true>
-  static inline Iterator<K, T> begin(const MyMap &map) noexcept {
-    return cbegin(map);
-  }
-
-  template<class K, class T, bool Right = true>
-  static inline Iterator<K, T> end(const MyMap &map) noexcept {
-    return cend(map);
   }
   // iterators end
 }
