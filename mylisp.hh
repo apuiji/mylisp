@@ -6,7 +6,14 @@
 #include"value.hh"
 
 namespace zlt::mylisp {
-  extern MyMap<const std::string *, Value> globalDefs;
+  using GlobalDefs = MyMap<const std::string *, Value>;
+  using GlobalDef = typename GlobalDefs::Node;
+
+  extern GlobalDefs globalDefs;
+
+  using ObjectPool = std::list<Object *>;
+
+  extern ObjectPool objectPool;
   extern std::set<std::string> strings;
 
   const std::string *addString(std::string &&s);

@@ -68,10 +68,13 @@ namespace zlt {
   }
 
   /// overloaded function resolve
-  template<class R, class ...Args>
-  static inline constexpr auto ofr(R (*f)(Args...)) noexcept {
-    return f;
-  }
+  template<class ...Args>
+  struct OFR {
+    template<class R>
+    constexpr auto operator ()(R (*f)(Args...)) const noexcept {
+      return f;
+    }
+  };
 
   template<class T>
   static inline T remove(T &t) noexcept {

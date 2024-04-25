@@ -6,8 +6,14 @@
 #include"xyz.hh"
 
 namespace zlt {
+  namespace myset {
+    template<class T>
+    struct Node;
+  }
+
   template<class T>
   struct MySet {
+    using Node = myset::Node<T>;
     using Value = T;
     rbtree::Node *root;
   };

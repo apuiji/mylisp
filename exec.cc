@@ -113,7 +113,9 @@ namespace zlt::mylisp {
       size_t paramn = consume<size_t>();
       size_t closureDefn = consume<size_t>();
       size_t bodyn = consume<size_t>();
-      ax = new(closureDefn) FunctionObj(paramn, pc);
+      auto fo = new(closureDefn) FunctionObj(paramn, pc);
+      objectPool.push_back(fo);
+      ax = fo;
       pc += bodyn;
     } else if (op == opcode::MOD) {
       staticast<double>(valuek::peek()) = fmod(staticast<double>(valuek::peek()), (double) ax);
@@ -166,7 +168,7 @@ namespace zlt::mylisp {
     } else if (op == opcode::SET_GLOBAL) {
       auto key = consume<const string *>();
       mymap::Node<const std::string *, Value> *a;
-      if (mymap::insert(a, globalDefs, key, [] () { return new mymap::Node<const std::string *, Value>(); })) {
+      if (mymap::insert(a, globalDefs, key, [] () { return new GlobalDef; })) {
         a->value.first = key;
       }
       a->value.second = ax;
@@ -188,6 +190,7 @@ namespace zlt::mylisp {
     } else if (op == opcode::WRAP_HIGH_REF) {
       size_t i = consume<size_t>();
       auto vo = new ValueObj;
+      objectPool.push_back(vo);
       vo->value = bp[i];
       bp[i] = vo;
     }

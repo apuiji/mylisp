@@ -7,16 +7,24 @@
 using namespace std;
 
 namespace zlt::mylisp::gc {
+  static void sweep(ObjectPool::iterator it, ObjectPool::iterator end) noexcept;
+
   void gc(const Value *args, size_t argc) noexcept {
-    {
-      auto it = mymap::begin(globalDefs);
-      auto end = mymap::end(globalDefs);
-      for (; it != end; ++it) {
-        mark(it->second);
-      }
+    for_each(mymap::begin(globalDefs), mymap::end(globalDefs), [] (auto &p) { mark(p.second); });
+    for_each(vm::deferk::begin, vm::dsp, OFR<Value &> {}(mark));
+    sweep(objectPool.begin(), objectPool.end());
+  }
+
+  void sweep(ObjectPool::iterator it, ObjectPool::iterator end) noexcept {
+    if (it == end) [[unlikely]] {
+      return;
     }
-    for (auto a = vm::deferk::begin; a != vm::dsp; ++a) {
-      mark(*a);
+    if ((**it).mark) {
+      (**it).mark = false;
+      sweep(++it, end);
+    } else {
+      delete *it;
+      sweep(objectPool.erase(it), end);
     }
   }
 

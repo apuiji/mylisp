@@ -21,8 +21,6 @@ namespace zlt::mylisp {
     }
   };
 
-  extern std::list<Object *> objPool;
-
   struct FunctionObj final: Object {
     size_t paramn;
     size_t guardn;
