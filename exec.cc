@@ -42,8 +42,6 @@ namespace zlt::mylisp {
       return;
     } else if (op == opcode::CATCH_NAT_FN) {
       ax = katch;
-    } else if (op == opcode::CHAR_LITERAL) {
-      ax = consume<char>();
     } else if (op == opcode::CLEAN_FN_GUARDS) {
       static CleanFnGuardBody body;
       pc = body.value;
@@ -113,7 +111,7 @@ namespace zlt::mylisp {
       size_t paramn = consume<size_t>();
       size_t closureDefn = consume<size_t>();
       size_t bodyn = consume<size_t>();
-      auto fo = new(closureDefn) FunctionObj(paramn, pc);
+      auto fo = new(closureDefn) FunctionObj(paramn, pc, closureDefn);
       objectPool.push_back(fo);
       ax = fo;
       pc += bodyn;
@@ -164,7 +162,7 @@ namespace zlt::mylisp {
     } else if (op == opcode::SET_FN_CLOSURE) {
       auto f = staticast<FunctionObj *>(valuek::peek());
       size_t i = consume<size_t>();
-      f->closureDefs[i] = ax;
+      f->closureDefs[i] = staticast<ValueObj *>(ax);
     } else if (op == opcode::SET_GLOBAL) {
       auto key = consume<const string *>();
       mymap::Node<const std::string *, Value> *a;

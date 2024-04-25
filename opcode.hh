@@ -9,7 +9,6 @@ namespace zlt::mylisp::opcode {
     BIT_XOR,
     CALL,
     CATCH_NAT_FN,
-    CHAR_LITERAL,
     CLEAN_FN_GUARDS,
     CLEAN_GUARDS,
     COMPARE,

@@ -18,38 +18,29 @@ namespace zlt::mylisp {
     enum {
       NULL_INDEX,
       NUM_INDEX,
-      CHAR_INDEX,
       STR_INDEX,
       OBJ_INDEX,
       NAT_FN_INDEX
     };
-    using Var = std::variant<Null, double, char, const std::string *, Object *, NativeFunction *>;
+    using Var = std::variant<Null, double, const std::string *, Object *, NativeFunction *>;
     Var var;
     // constructors begin
     Value() = default;
     template<AnyOf<Null, double, const std::string *, NativeFunction *> T>
     Value(T t) noexcept: var(t) {}
-    Value(char c) noexcept: var(c) {}
     Value(std::integral auto i) noexcept: var((double) i) {}
     Value(bool b) noexcept {
       if (b) {
         var = 1.;
       }
     }
-    Value(std::partial_ordering o) noexcept {
-      using O = std::partial_ordering;
-      var = o == O::equivalent ? 0 : o == O::less ? -1 : o == O::greater ? 1 : NAN;
-    }
+    Value(std::partial_ordering o) noexcept;
     Value(std::derived_from<Object> auto *o) noexcept: var(static_cast<Object *>(o)) {}
     // constructors end
     // assigners begin
     template<AnyOf<Null, double, const std::string *, NativeFunction *> T>
     Value &operator =(T t) noexcept {
       var = t;
-      return *this;
-    }
-    Value &operator =(char c) noexcept {
-      var = c;
       return *this;
     }
     Value &operator =(std::integral auto i) noexcept {
@@ -64,11 +55,7 @@ namespace zlt::mylisp {
       }
       return *this;
     }
-    Value &operator =(std::partial_ordering o) noexcept {
-      using O = std::partial_ordering;
-      var = o == O::equivalent ? 0 : o == O::less ? -1 : o == O::greater ? 1 : NAN;
-      return *this;
-    }
+    Value &operator =(std::partial_ordering o) noexcept;
     Value &operator =(std::derived_from<Object> auto *o) noexcept {
       var = static_cast<Object *>(o);
       return *this;
@@ -90,7 +77,7 @@ namespace zlt::mylisp {
   };
 
   // cast begin
-  template<AnyOf<double, char, const std::string *, NativeFunction *> T>
+  template<AnyOf<double, const std::string *, NativeFunction *> T>
   static inline bool dynamicast(T &dest, const Value &value) noexcept {
     if (auto t = get_if<T>(&value.var); t) {
       dest = *t;
@@ -120,7 +107,9 @@ namespace zlt::mylisp {
     }
   }
 
-  template<AnyOf<double, char, const std::string *, NativeFunction *> T>
+  bool dynamicast(std::string_view &dest, const Value &value) noexcept;
+
+  template<AnyOf<double, const std::string *, NativeFunction *> T>
   static inline auto &staticast(const Value &value) noexcept {
     return *(T *) &value.var;
   }
@@ -134,6 +123,11 @@ namespace zlt::mylisp {
   requires (std::is_base_of_v<Object, U>)
   static inline auto staticast(const Value &value) noexcept {
     return static_cast<U *>(*(Object **) &value.var);
+  }
+
+  template<std::same_as<void *>>
+  static inline void *staticast(const Value &value) noexcept {
+    return *(void **) &value.var;
   }
   // cast end
 
