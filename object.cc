@@ -71,16 +71,15 @@ namespace zlt::mylisp {
     return mylisp::dynamicast(s, v) ? value.compare(s) <=> 0 : partial_ordering::unordered;
   }
 
-  bool StringObj::dynamicast(string_view &dest) const noexcept {
-    dest = value;
-    return true;
-  }
-
   Value StringObj::getMemb(const Value &key) const noexcept {
     if (int i; mylisp::dynamicast(i, key) && i >= 0 && i < value.size()) {
       return value[i];
     }
     return Null();
+  }
+
+  string_view StringObj::toStringView() const noexcept {
+    return value;
   }
 
   bool StringViewObj::length(size_t &dest) const noexcept {
@@ -93,11 +92,6 @@ namespace zlt::mylisp {
     return mylisp::dynamicast(s, v) ? value.compare(s) <=> 0 : partial_ordering::unordered;
   }
 
-  bool StringViewObj::dynamicast(string_view &dest) const noexcept {
-    dest = value;
-    return true;
-  }
-
   Value StringViewObj::getMemb(const Value &key) const noexcept {
     if (int i; mylisp::dynamicast(i, key) && i >= 0 && i < value.size()) {
       return value[i];
@@ -107,6 +101,10 @@ namespace zlt::mylisp {
 
   void StringViewObj::gcMarkSubjs() noexcept {
     gc::mark(string);
+  }
+
+  string_view StringViewObj::toStringView() const noexcept {
+    return value;
   }
 
   void ValueObj::gcMarkSubjs() noexcept {

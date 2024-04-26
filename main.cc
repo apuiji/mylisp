@@ -21,14 +21,14 @@ static void main1();
 
 int main(int argc, char **argv, char **env) {
   try {
-    const char **argv1 = argv;
+    auto argv1 = (const char **) argv;
     initOpts(argv1, argv1 + argc);
   } catch (init_opts::Bad bad) {
     cerr << bad.what << endl;
     return 0;
   }
   initGlobalDefs();
-  if (srcInputFile.size()) {
+  if (init_opts::srcInputFile.size()) {
   } else {
     // TODO: REPL
   }

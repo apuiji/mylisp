@@ -1,4 +1,4 @@
-#include"value.hh"
+#include"object.hh"
 
 using namespace std;
 
@@ -20,7 +20,10 @@ namespace zlt::mylisp {
       return true;
     }
     if (value.var.index() == Value::OBJ_INDEX) {
-      return staticast<Object *>(value)->dynamicast(dest);
+      auto o = staticast<Object *>(value);
+      auto s = dynamic_cast<V2StringViewObj *>(o);
+      dest = s->toStringView();
+      return true;
     }
     return false;
   }
@@ -40,7 +43,8 @@ namespace zlt::mylisp {
       if (!dynamicast(s, b)) {
         return O::unordered;
       }
-      return *staticast<const string *>(a) <=> s;
+      auto s1 = (string_view) *staticast<const string *>(a);
+      return s1.compare(s) <=> 0;
     }
     if (i == Value::OBJ_INDEX) {
       return staticast<Object *>(a)->compare(b);

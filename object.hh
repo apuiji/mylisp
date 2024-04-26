@@ -16,9 +16,6 @@ namespace zlt::mylisp {
       Object *o;
       return mylisp::dynamicast(o, v) && this == o ? std::partial_ordering::equivalent : std::partial_ordering::unordered;
     }
-    virtual bool dynamicast(std::string_view &dest) const noexcept {
-      return false;
-    }
     virtual Value getMemb(const Value &key) const noexcept {
       return Null();
     }
@@ -63,25 +60,29 @@ namespace zlt::mylisp {
     void gcMarkSubjs() noexcept override;
   };
 
-  struct StringObj final: Object {
+  struct V2StringViewObj: virtual Object {
+    virtual std::string_view toStringView() const noexcept = 0;
+  };
+
+  struct StringObj final: V2StringViewObj {
     std::string value;
     StringObj(const std::string &value): value(value) {}
     StringObj(std::string &&value) noexcept: value(std::move(value)) {}
     bool length(size_t &dest) const noexcept override;
     std::partial_ordering compare(const Value &v) const noexcept override;
-    bool dynamicast(std::string_view &dest) const noexcept override;
     Value getMemb(const Value &key) const noexcept override;
+    std::string_view toStringView() const noexcept override;
   };
 
-  struct StringViewObj final: Object {
+  struct StringViewObj final: V2StringViewObj {
     Value string;
     std::string_view value;
     StringViewObj(const Value &string, std::string_view value) noexcept: string(string), value(value) {}
     bool length(size_t &dest) const noexcept override;
     std::partial_ordering compare(const Value &v) const noexcept override;
-    bool dynamicast(std::string_view &dest) const noexcept override;
     Value getMemb(const Value &key) const noexcept override;
     void gcMarkSubjs() noexcept override;
+    std::string_view toStringView() const noexcept override;
   };
 
   struct ValueObj final: Object {
