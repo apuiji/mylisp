@@ -3,6 +3,8 @@
 #include"mylispc.hh"
 
 using namespace std;
+using namespace zlt;
+using namespace zlt::mylisp;
 
 static void initOpts(const char **it, const char **end);
 
@@ -25,6 +27,7 @@ int main(int argc, char **argv, char **env) {
     cerr << bad.what << endl;
     return 0;
   }
+  initGlobalDefs();
   if (srcInputFile.size()) {
   } else {
     // TODO: REPL

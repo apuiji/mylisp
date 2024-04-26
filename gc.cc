@@ -13,6 +13,7 @@ namespace zlt::mylisp::gc {
     for_each(mymap::begin(globalDefs), mymap::end(globalDefs), [] (auto &p) { mark(p.second); });
     for_each(vm::deferk::begin, vm::dsp, OFR<Value &> {}(mark));
     sweep(objectPool.begin(), objectPool.end());
+    deferk::push(gc);
   }
 
   void sweep(ObjectPool::iterator it, ObjectPool::iterator end) noexcept {
